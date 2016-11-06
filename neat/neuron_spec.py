@@ -71,13 +71,12 @@ class NumericParamSpec(object):
 	def mutate_value(self, current_value):
 
 		if self.min_value is not None and self.max_value is not None:
-			range_of_values = self.max_value - self.min_value
-			abs_sigma = self.mutation_sigma*range_of_values
-			new_value = current_value + random.gauss(0, abs_sigma)
+			abs_sigma = self.mutation_sigma*(self.max_value - self.min_value)
 
 		else:
-			new_value = current_value + random.gauss(0, self.mutation_sigma)
+			abs_sigma = self.mutation_sigma
 
+		new_value = current_value + random.gauss(0, abs_sigma)
 		return self.put_within_bounds(new_value)
 
 

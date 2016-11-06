@@ -70,7 +70,7 @@ class Mutator:
 
 
 
-    def mutate_neuron_params(self, genotype, probability, sigma):
+    def mutate_neuron_params(self, genotype, probability):
         """
         Each neuron gene is chosen to be mutated with probability.
         The parameter to be mutated is chosen from the set of parameters with equal probability.
@@ -85,43 +85,17 @@ class Mutator:
                 if len(neuron_params) > 0:
                     param_name = random.choice(neuron_params)
                     param_spec = neuron_spec[param_name]
+
                     if isinstance(param_spec, NumericParamSpec):
-                        current_value = neuron_gene.get_param(param_name)
+                        current_value = neuron_gene[param_name]
+
+                        new_value = param_spec.mutate_value(current_value)
+                        neuron_gene[param_name] = new_value
+
+                    else if isinstance(param_spec, NominalParamSpec):
+                        neuron_gene[param_name] = param_spec.get_random_value()
 
 
-
-
-
-                    param_name, param_spec = random.choice(neuron_params.items())
-                    current_value = neuron_gene.neuron.neuron_params[param_name]
-
-
-                    range_of_values = max_value - min_value
-                    abs_sigma = sigma*range_of_values
-
-                    param_value += random.gauss(0, abs_sigma)
-
-                    if param_value > max_value:
-                        if param_spec.max_inclusive:
-                            param_value = max_value
-                        else:
-                            param_value = max_value - param_spec.epsilon
-
-                    if param_value < min_value:
-                        if param_spec.min_inclusive:
-                            param_value = min_value
-                        else:
-                            param_value = min_value + param_spec.epsilon
-                    ###################################################################################
-
-
-                    # # FOR DEBUG
-                    # ##################################
-                    # print 'mutating param: {0} -- old value = {1}, new value = {2}'.\
-                    #     format(param_name, neuron_gene.neuron.neuron_params[param_name], param_value)
-                    # ##################################
-
-                    neuron_gene.neuron.neuron_params[param_name] = param_value
 
 
     def mutate_weights(self, genotype, probability, sigma):
