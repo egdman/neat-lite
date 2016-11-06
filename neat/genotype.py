@@ -26,6 +26,9 @@ class Gene(object):
         self.enabled = enabled
 
 
+    def get_param(self, param_name):
+        return getattr(self, param_name)
+
 
     def copy(self):
         return deepcopy(self)
@@ -36,12 +39,12 @@ class Gene(object):
 
 class NeuronGene(Gene):
 
-    def __init__(self, historical_mark=0, enabled=True, neuron_type, **attributes):
+    def __init__(self, historical_mark=0, enabled=True, neuron_type, **params):
         super(NeuronGene, self).__init__(historical_mark, enabled)
         self.neuron_type = neuron_type
 
-        for attrname in attributes:
-            setattr(self, attrname, attributes[attrname])
+        for paramname in params:
+            setattr(self, paramname, params[paramname])
 
 
     def __str__(self):
@@ -53,14 +56,14 @@ class NeuronGene(Gene):
 
 class ConnectionGene(Gene):
 
-    def __init__(self, mark_from, mark_to, weight, historical_mark=0, enabled=True, **attributes):
+    def __init__(self, mark_from, mark_to, weight, historical_mark=0, enabled=True, **params):
         super(ConnectionGene, self).__init__(historical_mark, enabled)
         self.mark_from  = mark_from
         self.mark_to    = mark_to
         self.weight     = weight
 
-        for attrname in attributes:
-            setattr(self, attrname, attributes[attrname])
+        for paramname in params:
+            setattr(self, paramname, params[paramname])
 
 
     def __str__(self):

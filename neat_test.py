@@ -10,4 +10,8 @@ linear_spec = NeuronSpec('linear',
 
 
 print(linear_spec.param_names())
+print("\nnumeric specs:")
+print(getattr(linear_spec, 'numeric_specs'))
+
+
 

@@ -51,9 +51,9 @@ class Mutator:
 
         '''
         set names of mutable parameters for each neuron type
-        (including disallowed ones, as we can still mutate parameters of
-        existing neurons of that type, even though we are not allowed to
-        add new neurons of that type)
+        (including the disallowed ones, as we still should be able to mutate
+        parameters of existing neurons of those types, even though we are not allowed to
+        add new neurons of those types)
         '''
         if mutable_params is None:
             self.mutable_params = {}
@@ -78,20 +78,23 @@ class Mutator:
 
         for neuron_gene in genotype.neuron_genes:
             if random.random() < probability:
+   
+                neuron_params = self.mutable_params[neuron_gene.neuron_type]
+                neuron_spec = self.net_spec[neuron_gene.neuron_type]
 
-                # # FOR DEBUG
-                # ##################################
-                # print 'mutating gene :{0}'.format(neuron_gene.neuron.neuron_id)
-                # ##################################
-
-
-                ###################################################################################
-                neuron_params = self.mutation_spec['params'][neuron_gene.neuron_type]
                 if len(neuron_params) > 0:
+                    param_name = random.choice(neuron_params)
+                    param_spec = neuron_spec[param_name]
+                    if isinstance(param_spec, NumericParamSpec):
+                        current_value = neuron_gene.get_param(param_name)
+
+
+
+
+
                     param_name, param_spec = random.choice(neuron_params.items())
-                    param_value = neuron_gene.neuron.neuron_params[param_name]
-                    max_value = param_spec.max
-                    min_value = param_spec.min
+                    current_value = neuron_gene.neuron.neuron_params[param_name]
+
 
                     range_of_values = max_value - min_value
                     abs_sigma = sigma*range_of_values

@@ -7,17 +7,36 @@ class NumericParamSpec(object):
 
 	An instance of this class defines restrictions on a single mutable parameter
 	of a neuron, namely its max and min bounds, or lack thereof.
-	It also contains the mean value and the standard deviation that are used
-	for random initialization of the parameter value from normal distribution.
 
-	The random distribution is used only when one or both bounds are not set.
-	When both bounds are set, the random value is drawn from the uniform distribution
-	within the range.
-	When only one bound is set, th new gaussian random value will be checked against it.
+
+	It also contains the mean value (mean_value) and the standard deviation (mutation_sigma)
+	that are used for mutation and random initialization of the parameter value.
+
+	The mutation happens as follows:
+	If both bounds are set, then the mutation_sigma is treated as fraction of the total range
+	of possible values. The new value is drawn from a normal distribution centered around
+	the current value with st.deviation = (max_value - min_value)*mutation_sigma. The resulting
+	value is checked agains the bounds.
+
+	If one or less bound is set, the mutation_sigma is treated as absolute value. The new value
+	is drawn from a normal distribution centered around the current value with
+	st.deviation = mutation_sigma. If one bound is set, the resulting value is checked against it
+	(i.e. if new_value < min_value then new_value = min_value).
+
+
+	The process of getting a random value for the parameter (using the get_random_value() method)
+	is as follows:
+
+	If both bounds are set, the value is drawn from a uniform distribution within the range of possible
+	values.
+
+	If one or less bound is set, the random value is drawn from a normal distribution with
+	mean = mean_value and st.deviation = mutation_sigma. If one bound is set, the resulting value
+	is check against it.
 	'''
 
 
-	def __init__(self, param_name, min_value=None, max_value=None, mean_value=0., sigma=1.):
+	def __init__(self, param_name, min_value=None, max_value=None, mutation_sigma=1., mean_value=0.):
 		if max_value is not None and min_value is not None and max_value < min_value:
 			raise ValueError("max_value value should not be smaller than min_value")
 
@@ -25,28 +44,41 @@ class NumericParamSpec(object):
 		self.min_value = min_value
 		self.max_value = max_value
 		self.mean_value = mean_value
-		self.sigma = sigma
+		self.mutation_sigma = mutation_sigma
 
 
 
 	def get_random_value(self):
 
 		if self.min_value is not None and self.max_value is not None:
-			return random.uniform(self.min_value, self.max_value) + self.min_value
+			return random.uniform(self.min_value, self.max_value)
 
-		new_value = random.gauss(self.mean_value, self.sigma)
-
-		# check against bounds:
-		if self.min_value is not None and new_value < self.min_value:
-			new_value = self.min_value
-
-		if self.max_value is not None and new_value > self.max_value:
-			new_value = self.max_value
-
-		return new_value
+		new_value = random.gauss(self.mean_value, self.mutation_sigma)
+		return self.put_within_bounds(new_value)
 		
 
 
+	def put_within_bounds(self, value):
+		if self.min_value is not None and value < self.min_value:
+			value = self.min_value
+
+		if self.max_value is not None and value > self.max_value:
+			value = self.max_value
+		return value
+
+
+
+	def mutate_value(self, current_value):
+
+		if self.min_value is not None and self.max_value is not None:
+			range_of_values = self.max_value - self.min_value
+			abs_sigma = self.mutation_sigma*range_of_values
+			new_value = current_value + random.gauss(0, abs_sigma)
+
+		else:
+			new_value = current_value + random.gauss(0, self.mutation_sigma)
+
+		return self.put_within_bounds(new_value)
 
 
 
@@ -81,10 +113,19 @@ class NeuronSpec(object):
 	of a neuron.
 	'''
 
-	def __init__(self, neuron_name, numeric_specs, nominal_specs):
+	def __init__(self, neuron_name, numeric_specs=[], nominal_specs=[]):
 		self.neuron_name = neuron_name
 		self.numeric_specs = {param_spec.param_name: param_spec for param_spec in numeric_specs}
 		self.nominal_specs = {param_spec.param_name: param_spec for param_spec in nominal_specs}
+
+
+
+	def __getitem__(self, key):
+		numer_spec = self.numeric_specs.get(key, None)
+		nomin_spec = self.nominal_specs.get(key, None)
+		if numer_spec is None and nomin_spec is None: raise KeyError(key)
+
+		return numer_spec or nomin_spec
 
 
 
