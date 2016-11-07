@@ -17,46 +17,16 @@ def unicode_representer(dumper, data):
 
 
 
-
-
-# class Gene(object):
-
-#     def __init__(self, historical_mark=0, enabled=True, **params):
-#         self.historical_mark = historical_mark
-#         self.enabled = enabled
-#         for param_name in params:
-#             setattr(self, param_name, params[param_name])
-
-
-#     def get_param(self, param_name):
-#         return getattr(self, param_name)
-
-
-#     def set_param(self, param_name, param_value):
-#         setattr(self, param_name, param_value)
-
-
-#     def __getitem__(self, key):
-#         return self.get_param(key)
-
-   
-#     def __setitem__(self, key, value):
-#         self.set_param(key, value)
-
-
-#     def copy(self):
-#         return deepcopy(self)
-
-
-
-
 class Gene(object):
 
-    def __init__(self, historical_mark=0, enabled=True, **params):
+    def __init__(self, historical_mark=0, enabled=True, params={}):
         self.params = params
         self.historical_mark = historical_mark
         self.enabled = enabled
 
+
+    def get_params(self):
+        return self.params
 
 
     def get_param(self, param_name):
@@ -87,8 +57,8 @@ class Gene(object):
 
 class NeuronGene(Gene):
 
-    def __init__(self, neuron_type, historical_mark=0, enabled=True, **params):
-        super(NeuronGene, self).__init__(historical_mark, enabled, **params)
+    def __init__(self, neuron_type, historical_mark=0, enabled=True, params={}):
+        super(NeuronGene, self).__init__(historical_mark, enabled, params)
         self.neuron_type = neuron_type
 
 
@@ -101,8 +71,8 @@ class NeuronGene(Gene):
 
 class ConnectionGene(Gene):
 
-    def __init__(self, mark_from, mark_to, weight, historical_mark=0, enabled=True, **params):
-        super(ConnectionGene, self).__init__(historical_mark, enabled, **params)
+    def __init__(self, mark_from, mark_to, weight, historical_mark=0, enabled=True, params={}):
+        super(ConnectionGene, self).__init__(historical_mark, enabled, params)
         self.mark_from  = mark_from
         self.mark_to    = mark_to
         self.weight     = weight
@@ -266,7 +236,6 @@ class GeneticEncoding:
                 gene_pairs.append((gene1, gene2))
 
             mark = min(jump1, jump2)
-#            mark += 1
             
         return gene_pairs
 
