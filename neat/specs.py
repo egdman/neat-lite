@@ -144,3 +144,24 @@ class NeuronSpec(object):
 		param_values.update({param_name: self.nominal_specs[param_name].get_random_value() \
 					for param_name in self.nominal_specs})
 		return param_values
+
+
+
+
+class NetworkSpec(object):
+
+	def __init__(self, neuron_specs):
+		self.neuron_specs = {nspec.neuron_name: nspec for nspec in neuron_specs}
+
+
+
+	def __getitem__(self, key):
+		return self.neuron_specs[key]
+
+
+	def __iter__(self):
+		return self.neuron_specs.__iter__()
+
+
+	def get(self, key, default=None):
+		return self.neuron_specs.get(key, default)

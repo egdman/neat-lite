@@ -1,6 +1,7 @@
 import random
+import numpy as np
 
-from . import NeuronGene, ConnectionGene, GeneticEncoding, Neuron, GenotypeCopyError, validate_genotype
+from . import NeuronGene, ConnectionGene, GeneticEncoding
 
 # def get_default_mutation_spec(net_spec):
 #     # parameters for each type of neuron that can be mutated and their specs:
@@ -36,8 +37,6 @@ class Mutator:
     def __init__(self,
         net_spec,
         innovation_number = 0,
-        new_connection_sigma = 1.,
-        max_attempts = 100,
         allowed_types=None,
         mutable_params=None):
 
@@ -49,6 +48,8 @@ class Mutator:
         else:
             self.allowed_types = allowed_types
 
+        # make allowed_types into a list of tuples (type, probability)
+        self.allowed_types = self._get_probabilities(self.allowed_types)
         '''
         set names of mutable parameters for each neuron type
         (including the disallowed ones, as we still should be able to mutate
@@ -63,17 +64,17 @@ class Mutator:
         else:
             self.mutable_params = mutable_params
 
-
         self.innovation_number = innovation_number
-        self.new_connection_sigma = new_connection_sigma
-        self.max_attempts = max_attempts
 
 
 
     def mutate_neuron_params(self, genotype, probability):
         """
-        Each neuron gene is chosen to be mutated with probability.
+        Each neuron gene is chosen to be mutated with probability=probability.
         The parameter to be mutated is chosen from the set of parameters with equal probability.
+
+        :type genotype: GeneticEncoding
+        :type probability: float
         """
 
         for neuron_gene in genotype.neuron_genes:
@@ -92,7 +93,7 @@ class Mutator:
                         new_value = param_spec.mutate_value(current_value)
                         neuron_gene[param_name] = new_value
 
-                    else if isinstance(param_spec, NominalParamSpec):
+                    elif isinstance(param_spec, NominalParamSpec):
                         neuron_gene[param_name] = param_spec.get_random_value()
 
 
@@ -101,10 +102,12 @@ class Mutator:
     def mutate_weights(self, genotype, probability, sigma):
 
         """
-        For every connection gene change weight with probability.
-        The change value is drawn from normal distribution with mean=0 and sigma
+        For every connection gene change weight with probability=probability.
+        The change value is drawn from normal distribution with mean=0 and sigma=sigma
 
         :type genotype: GeneticEncoding
+        :type probability: float
+        :type sigma: float
         """
         for connection_gene in genotype.connection_genes:
             if random.random() < probability:
@@ -112,37 +115,36 @@ class Mutator:
                 connection_gene.weight += weight_change
 
 
-    def mutate_structure(self, genotype, probability):
-        """
-        Mutates structure of the neural network. Adds new neurons and connections.
-        Chooses whether to apply a mutation with specified probability.
-        Chooses what kind of mutation to apply (new connection of new neuron)
-        with probability=0.5
-        However, if there are no connections at all, always adds a connection.
+    # def mutate_structure(self, genotype, probability):
+    #     """
+    #     Convenience wrapper that mutates the structure of the neural network.
+    #     Adds new neurons and connections.
+    #     Chooses whether to apply a mutation with probability=probability.
+    #     Chooses what kind of mutation to apply (new connection of new neuron)
+    #     with probability=0.5
+    #     However, if there are no connections at all, always adds a connection.
 
-        :type genotype: GeneticEncoding
-        """
+    #     :type genotype: GeneticEncoding
+    #     """
 
-        if random.random() < probability:
-            if len(genotype.connection_genes) == 0:
-                self.add_connection_mutation(genotype, self.new_connection_sigma)
-            else:
-                if random.random() < 0.5:
-                    self.add_connection_mutation(genotype, self.new_connection_sigma)
-                else:
-                    self.add_neuron_mutation(genotype)
+    #     if random.random() < probability:
+    #         if len(genotype.connection_genes) == 0:
+    #             self.add_connection_mutation(genotype, self.new_connection_sigma)
+    #         else:
+    #             if random.random() < 0.5:
+    #                 self.add_connection_mutation(genotype, self.new_connection_sigma)
+    #             else:
+    #                 self.add_neuron_mutation(genotype)
 
 
-    def add_connection_mutation(self, genotype, sigma):
+    def add_connection_mutation(self, genotype, sigma, max_attempts=100):
 
         """
         Pick two neurons A and B at random. Make sure that connection AB does not exist.
-        Also make sure that A is not output and B is not input.
-        If those conditions are satisfied, add new connection whose weight is drawn from
-        normal distribution with mean=0 and sigma.
+        If that's the case, add new connection whose weight is drawn from normal distribution
+        with mean=0 and sigma=sigma.
 
-        Otherwise pick two neurons again and repeat until suitable pair is found
-        or we run out of attempts.
+        Otherwise pick two neurons again and repeat until suitable pair is found or we run out of attempts.
 
         :type genotype: GeneticEncoding
         :type sigma: float
@@ -155,22 +157,21 @@ class Mutator:
 
         num_attempts = 1
 
-        # disallow incoming connections to input neurons:
-        # also disallow connections starting from output neurons:
-        while genotype.connection_exists(mark_from, mark_to) or \
-                        neuron_to.neuron.layer == "input":
+
+        while len(genotype.get_connection_genes(mark_from, mark_to)) > 0:
             neuron_from = random.choice(genotype.neuron_genes)
             neuron_to = random.choice(genotype.neuron_genes)
             mark_from = neuron_from.historical_mark
             mark_to = neuron_to.historical_mark
 
             num_attempts += 1
-            if num_attempts >= self.max_attempts:
+            if num_attempts >= max_attempts:
                 return False
 
-        self.add_connection(mark_from, mark_to, weight = random.gauss(0, sigma), genotype = genotype)
+        self._add_connection(mark_from, mark_to, weight = random.gauss(0, sigma), genotype = genotype)
 
         return True
+
 
 
     def add_neuron_mutation(self, genotype):
@@ -197,15 +198,17 @@ class Mutator:
         # delete the old connection from the genotype
         genotype.remove_connection_gene(connection_to_split_id)
 
-        neuron_from = genotype.find_gene_by_mark(mark_from).neuron
-        neuron_to = genotype.find_gene_by_mark(mark_to).neuron
+        neuron_from = genotype.find_gene_by_mark(mark_from)
+        neuron_to = genotype.find_gene_by_mark(mark_to)
 
-        # TODO make so that new neuron can be added anywhere along the path
-        body_part_id = random.choice([neuron_from.body_part_id, neuron_to.body_part_id])
 
-        new_neuron_types = self.mutation_spec["types"]
+        # body_part_id = random.choice([neuron_from.body_part_id, neuron_to.body_part_id])
 
-        new_neuron_type = random.choice(new_neuron_types)
+
+        # select new neuron type from allowed types with weights
+        types, probas = zip(*self.allowed_types)
+        new_neuron_type = np.random.choice(types, p = probas)
+
 
         new_neuron_params = self.net_spec.get(new_neuron_type).\
                     get_random_parameters(serialize=False) # returns dictionary {param_name:param_value}
@@ -219,8 +222,29 @@ class Mutator:
         )
 
         mark_middle = self.add_neuron(neuron_middle, genotype)
-        self.add_connection(mark_from, mark_middle, old_weight, genotype)
-        self.add_connection(mark_middle, mark_to, 1.0, genotype)
+        self._add_connection(mark_from, mark_middle, old_weight, genotype)
+        self._add_connection(mark_middle, mark_to, 1.0, genotype)
+
+
+
+
+    def _get_probabilities(self, seq):
+        have_probs = list(elem for elem in seq if isinstance(elem, tuple))
+        have_no_probs = list(elem for elem in seq if elem not in have_probs)
+
+        total_proba = sum(elem[1] for elem in have_probs)
+        
+        remain_proba = 1. - total_proba
+        remain_proba = max(0. , remain_proba)
+
+        num_elem = len(have_no_probs)
+        if num_elem == 0: return have_probs
+
+        proba = remain_proba / (1.*num_elem)
+        have_no_probs = list((elem, proba) for elem in have_no_probs)
+        return have_probs + have_no_probs
+
+
 
 
     def remove_connection_mutation(self, genotype):
@@ -228,6 +252,7 @@ class Mutator:
             return
         gene_id = random.choice(range(len(genotype.connection_genes)))
         genotype.remove_connection_gene(gene_id)
+
 
 
     def remove_neuron_mutation(self, genotype):
@@ -255,6 +280,7 @@ class Mutator:
 
 
 
+
     def add_neuron(self, neuron, genotype):
         new_neuron_gene = NeuronGene(neuron,
                                 innovation_number = self.innovation_number,
@@ -264,12 +290,13 @@ class Mutator:
         return new_neuron_gene.historical_mark
 
 
-    def add_connection(self, mark_from, mark_to, weight, genotype, socket=None):
+
+    def _add_connection(self, mark_from, mark_to, weight, genotype, socket=None):
         new_conn_gene = ConnectionGene(
                                   mark_from=mark_from,
                                   mark_to=mark_to,
                                   weight = weight,
-                                  innovation_number = self.innovation_number,
+                                  historical_mark = self.innovation_number,
                                   enabled = True,
                                   socket=socket)
         self.innovation_number += 1

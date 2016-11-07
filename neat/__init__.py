@@ -1,4 +1,5 @@
 __author__ = 'Dmitry Egorov'
 
-from .neuron_spec import NeuronSpec, NumericParamSpec, NominalParamSpec
+from .specs import NeuronSpec, NumericParamSpec, NominalParamSpec, NetworkSpec
 from .genotype import NeuronGene, ConnectionGene, GeneticEncoding
+from .operators import Mutator

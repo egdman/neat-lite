@@ -19,34 +19,68 @@ def unicode_representer(dumper, data):
 
 
 
+# class Gene(object):
+
+#     def __init__(self, historical_mark=0, enabled=True, **params):
+#         self.historical_mark = historical_mark
+#         self.enabled = enabled
+#         for param_name in params:
+#             setattr(self, param_name, params[param_name])
+
+
+#     def get_param(self, param_name):
+#         return getattr(self, param_name)
+
+
+#     def set_param(self, param_name, param_value):
+#         setattr(self, param_name, param_value)
+
+
+#     def __getitem__(self, key):
+#         return self.get_param(key)
+
+   
+#     def __setitem__(self, key, value):
+#         self.set_param(key, value)
+
+
+#     def copy(self):
+#         return deepcopy(self)
+
+
+
+
 class Gene(object):
 
     def __init__(self, historical_mark=0, enabled=True, **params):
+        self.params = params
         self.historical_mark = historical_mark
         self.enabled = enabled
-        for param_name in params:
-            setattr(self, param_name, params[param_name])
+
 
 
     def get_param(self, param_name):
-        return getattr(self, param_name)
+        return self.params[param_name]
 
 
     def set_param(self, param_name, param_value):
-        setattr(self, param_name, param_value)
+        self.params[param_name] = param_value
 
 
     def __getitem__(self, key):
         return self.get_param(key)
 
-   
+
     def __setitem__(self, key, value):
         self.set_param(key, value)
 
 
+    # def __getattr__(self, key):
+    #     return self.get_param(key)
+
+
     def copy(self):
         return deepcopy(self)
-
 
 
 
