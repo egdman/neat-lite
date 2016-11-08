@@ -1,21 +1,21 @@
 import yaml
-from neat import NumericParamSpec, NominalParamSpec, NeuronSpec, NetworkSpec, NeuronGene, ConnectionGene, Mutator
+from neat import NumericParamSpec, NominalParamSpec, GeneSpec, NetworkSpec, NeuronGene, ConnectionGene, Mutator
 
 
-linear_spec = NeuronSpec('linear',
+linear_spec = GeneSpec('linear',
 	[NumericParamSpec('bias', -1., 1.),
-	 NumericParamSpec('gain', 0., 1.)],
-	[NominalParamSpec('some_thing', ['surprise', 'motherfucker'])]
+	 NumericParamSpec('gain', 0., 1.),
+	 NominalParamSpec('some_thing', ['surprise', 'motherfucker'])]
 )
 
 
-sigmoid_spec = NeuronSpec('sigmoid',
+sigmoid_spec = GeneSpec('sigmoid',
 	[NumericParamSpec('bias', -1., 1.),
 	 NumericParamSpec('gain', 0., 1.)]
 )
 
 
-diff_spec = NeuronSpec('differential',
+diff_spec = GeneSpec('differential',
 	[NumericParamSpec('bias', -1., 1.)]
 )
 

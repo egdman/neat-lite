@@ -1,9 +1,7 @@
 import random
-import numpy as np
-import numbers
 
-from . import NeuronGene, ConnectionGene, GeneticEncoding
-
+from .genotype import NeuronGene, ConnectionGene, GeneticEncoding
+from .utils import zip_with_probabilities, weighted_random
 
 class Mutator:
 
@@ -23,7 +21,7 @@ class Mutator:
             self.allowed_types = allowed_types
 
         # make allowed_types into a list of tuples (type, probability)
-        self.allowed_types = self._get_probabilities(self.allowed_types)
+        self.allowed_types = zip_with_probabilities(self.allowed_types)
         '''
         set names of mutable parameters for each neuron type
         (including the disallowed ones, as we still should be able to mutate
@@ -70,7 +68,7 @@ class Mutator:
         gene_params = self.mutable_params[gene.gene_type]
         gene_spec = self.net_spec[gene.gene_type]
 
-         if len(gene_params) > 0:
+        if len(gene_params) > 0:
             param_name = random.choice(gene_params)
             param_spec = gene_spec[param_name]
 
@@ -170,10 +168,7 @@ class Mutator:
 
 
         # select new neuron type from allowed types with weights
-        types, probas = zip(*self.allowed_types)
-
-        # TODO make my own weighted random to not depend on numpy
-        new_neuron_type = np.random.choice(types, p = probas)
+        new_neuron_type = weighted_random(self.allowed_types)
 
         new_neuron_params = self.net_spec.get(new_neuron_type).get_random_parameters()
 
@@ -212,32 +207,6 @@ class Mutator:
         # remove the neuron gene:
         genotype.remove_neuron_gene(gene_id)
 
-
-
-    def _has_probability(self, obj):
-        try:
-            proba = obj[-1]
-            return isinstance(proba, numbers.Number)
-        except (IndexError, TypeError):
-            return False
-
-
-
-    def _get_probabilities(self, seq):
-        have_probs = list(elem for elem in seq if self._has_probability(elem))
-        have_no_probs = list(elem for elem in seq if elem not in have_probs)
-
-        total_proba = sum(elem[1] for elem in have_probs)
-        
-        remain_proba = 1. - total_proba
-        remain_proba = max(0. , remain_proba)
-
-        num_elem = len(have_no_probs)
-        if num_elem == 0: return have_probs
-
-        proba = remain_proba / (1.*num_elem)
-        have_no_probs = list((elem, proba) for elem in have_no_probs)
-        return have_probs + have_no_probs
 
 
 

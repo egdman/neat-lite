@@ -1,4 +1,6 @@
 import random
+from .utils import zip_with_probabilities, weighted_random
+
 
 class NumericParamSpec(object):
 
@@ -93,12 +95,12 @@ class NominalParamSpec(object):
 
 	def __init__(self, param_name, set_of_values):
 		self.param_name = param_name
-		self.set_of_values = set_of_values
+		self.set_of_values = zip_with_probabilities(set_of_values)
 
 
 	def get_random_value(self):
 		if len(self.set_of_values) == 0: return None
-		return random.choice(self.set_of_values)
+		return weighted_random(self.set_of_values)
 
 
 
@@ -112,24 +114,29 @@ class GeneSpec(object):
 	of a gene.
 	'''
 
-	def __init__(self, type_name, numeric_specs=[], nominal_specs=[]):
+	def __init__(self, type_name, param_specs=[]):
 		self.type_name = type_name
-		self.numeric_specs = {param_spec.param_name: param_spec for param_spec in numeric_specs}
-		self.nominal_specs = {param_spec.param_name: param_spec for param_spec in nominal_specs}
+		self.param_specs = {param_spec.param_name: param_spec for param_spec in param_specs}
 
 
 
 	def __getitem__(self, key):
-		numer_spec = self.numeric_specs.get(key, None)
-		nomin_spec = self.nominal_specs.get(key, None)
-		if numer_spec is None and nomin_spec is None: raise KeyError(key)
+		return self.param_specs[key]
+	
 
-		return numer_spec or nomin_spec
+
+	def __iter__(self):
+		return self.param_specs.__iter__()
+
+
+
+	def get(self, key, default=None):
+		return self.param_specs.get(key, default)
 
 
 
 	def param_names(self):
-		return list(self.numeric_specs.keys()) + list(self.nominal_specs.keys())	
+		return list(self.param_specs.keys())
 
 
 
@@ -137,13 +144,8 @@ class GeneSpec(object):
 		'''
 		Return a dictionary where keys are parameter names and values are random parameter values.
 		'''
-
-		param_values = {param_name: self.numeric_specs[param_name].get_random_value() \
-				for param_name in self.numeric_specs}
-
-		param_values.update({param_name: self.nominal_specs[param_name].get_random_value() \
-					for param_name in self.nominal_specs})
-		return param_values
+		return {param_name: self.param_specs[param_name].get_random_value() \
+				for param_name in self.param_specs}
 
 
 
