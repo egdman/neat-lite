@@ -28,13 +28,6 @@ print(linear_spec.get_random_parameters())
 
 
 
-ng = NeuronGene('my neuron is linear', gain=0.44, bias=99.5, somethingelse='hello')
-
-print(ng['gain'])
-print(ng['bias'])
-print(ng['somethingelse'])
-
-
 net_spec = NetworkSpec([linear_spec, sigmoid_spec, diff_spec])
 
 # check NetworkSpec's __getitem__()
@@ -51,7 +44,50 @@ mutator = Mutator(net_spec)
 print(mutator)
 
 
+# check Mutator's _has_probability()
+elem = 'linear'
+expect = False
+print(expect == mutator._has_probability(elem))
+
+elem = 55.9
+expect = False
+print(expect == mutator._has_probability(elem))
+
+elem = 's'
+expect = False
+print(expect == mutator._has_probability(elem))
+
+elem = ''
+expect = False
+print(expect == mutator._has_probability(elem))
+
+elem = ('sigmoid', '0.5')
+expect = False
+print(expect == mutator._has_probability(elem))
+
+elem = ('sigmoid', 0.45)
+expect = True
+print(expect == mutator._has_probability(elem))
+
+elem = ['sigmoid', 0.45]
+expect = True
+print(expect == mutator._has_probability(elem))
+
+
+
 # check Mutator's _get_probabilities()
+items = ['a', 'b', 'c', 'd', 'e']
+expect = set([('a', 0.2), ('b', 0.2), ('c', 0.2), ('d', 0.2), ('e', 0.2)])
+result = set(  (elem[0], round(elem[1], 5))  for elem in mutator._get_probabilities(items))
+print(result)
+print(expect == result)
+
+items = [('a', 0.1), ('b', 0.2), ('c', 0.05)]
+expect = set([('a', 0.1), ('b', 0.2), ('c', 0.05)])
+result = set(  (elem[0], round(elem[1], 5))  for elem in mutator._get_probabilities(items))
+print(result)
+print(expect == result)
+
 items = [('a', 0.1), ('b', 0.2), ('c', 0.05), 'd', 'e', 'f', 'g']
 expect = set([('a', 0.1), ('b', 0.2), ('c', 0.05), ('d', 0.1625), ('e', 0.1625) , ('f', 0.1625), ('g', 0.1625)])
 result = set(  (elem[0], round(elem[1], 5))  for elem in mutator._get_probabilities(items))

@@ -1,35 +1,8 @@
 import random
 import numpy as np
+import numbers
 
 from . import NeuronGene, ConnectionGene, GeneticEncoding
-
-# def get_default_mutation_spec(net_spec):
-#     # parameters for each type of neuron that can be mutated and their specs:
-#     mutable_params = {}
-
-#     # types of neurons that can be added by structural mutation:
-#     new_types = []
-
-#     all_types = net_spec.keys()
-
-#     for neuron_type in net_spec:
-#         neuron_spec = net_spec[neuron_type]
-#         mutable_params[neuron_type] = neuron_spec
-
-#     for neuron_type in all_types:
-#         neuron_spec = net_spec.get(neuron_type)
-#         neuron_params = neuron_spec.parameters
-#         param_specs = {name: neuron_params[name] for name in neuron_params}
-#         mutable_params[neuron_type] = param_specs
-#         if "hidden" in neuron_spec.layers:
-#             new_types.append(neuron_type)
-
-#     return {"types" : new_types, "params" : mutable_params}
-
-# def get_default_mutation_spec(net_spec):
-#     avail_types = list(neuron_type for neuron_type in net_spec)
-
-
 
 
 class Mutator:
@@ -53,12 +26,12 @@ class Mutator:
         '''
         set names of mutable parameters for each neuron type
         (including the disallowed ones, as we still should be able to mutate
-        parameters of existing neurons of those types, even though we are not allowed to
-        add new neurons of those types)
+        parameters of existing neurons of disallowed types, even though we are not
+        allowed to add new neurons of those types)
         '''
         if mutable_params is None:
             self.mutable_params = {}
-            for neuron_type in self.net_spec:
+            for neuron_type in net_spec:
                 neuron_spec = net_spec[neuron_type]
                 self.mutable_params[neuron_type] = neuron_spec.param_names()
         else:
@@ -114,27 +87,6 @@ class Mutator:
                 weight_change = random.gauss(0, sigma)
                 connection_gene.weight += weight_change
 
-
-    # def mutate_structure(self, genotype, probability):
-    #     """
-    #     Convenience wrapper that mutates the structure of the neural network.
-    #     Adds new neurons and connections.
-    #     Chooses whether to apply a mutation with probability=probability.
-    #     Chooses what kind of mutation to apply (new connection of new neuron)
-    #     with probability=0.5
-    #     However, if there are no connections at all, always adds a connection.
-
-    #     :type genotype: GeneticEncoding
-    #     """
-
-    #     if random.random() < probability:
-    #         if len(genotype.connection_genes) == 0:
-    #             self.add_connection_mutation(genotype, self.new_connection_sigma)
-    #         else:
-    #             if random.random() < 0.5:
-    #                 self.add_connection_mutation(genotype, self.new_connection_sigma)
-    #             else:
-    #                 self.add_neuron_mutation(genotype)
 
 
 
@@ -205,6 +157,7 @@ class Mutator:
         # select new neuron type from allowed types with weights
         types, probas = zip(*self.allowed_types)
 
+        # TODO make my own weighted random to not depend on numpy
         new_neuron_type = np.random.choice(types, p = probas)
 
         new_neuron_params = self.net_spec.get(new_neuron_type).get_random_parameters()
@@ -246,9 +199,17 @@ class Mutator:
 
 
 
+    def _has_probability(self, obj):
+        try:
+            proba = obj[-1]
+            return isinstance(proba, numbers.Number)
+        except (IndexError, TypeError):
+            return False
+
+
 
     def _get_probabilities(self, seq):
-        have_probs = list(elem for elem in seq if isinstance(elem, tuple))
+        have_probs = list(elem for elem in seq if self._has_probability(elem))
         have_no_probs = list(elem for elem in seq if elem not in have_probs)
 
         total_proba = sum(elem[1] for elem in have_probs)
@@ -270,7 +231,7 @@ class Mutator:
                                 neuron_type=neuron_type,
                                 historical_mark = self.innovation_number,
                                 enabled = True,
-                                neuron_params)
+                                params = neuron_params)
 
         self.innovation_number += 1
         genotype.add_neuron_gene(new_neuron_gene)
@@ -278,14 +239,14 @@ class Mutator:
 
 
 
-    def _add_connection(self, genotype, mark_from, mark_to, weight, conn_params={}):
+    def _add_connection(self, genotype, mark_from, mark_to, weight, connection_params={}):
         new_conn_gene = ConnectionGene(
                                   mark_from=mark_from,
                                   mark_to=mark_to,
                                   weight = weight,
                                   historical_mark = self.innovation_number,
                                   enabled = True,
-                                  conn_params)
+                                  params = connection_params)
 
         self.innovation_number += 1
         genotype.add_connection_gene(new_conn_gene)
@@ -293,45 +254,43 @@ class Mutator:
 
 
 
-class Crossover:
 
-    @staticmethod
-    def crossover(genotype_more_fit, genotype_less_fit):
-        # copy original genotypes to keep them intact:
+def crossover(genotype_more_fit, genotype_less_fit):
+    # copy original genotypes to keep them intact:
 
-        genotype_more_fit = genotype_more_fit.copy()
-        genotype_less_fit = genotype_less_fit.copy()
+    genotype_more_fit = genotype_more_fit.copy()
+    genotype_less_fit = genotype_less_fit.copy()
 
 
-        # sort genes by historical marks:
-        genes_better = sorted(genotype_more_fit.neuron_genes + genotype_more_fit.connection_genes,
-                        key = lambda gene: gene.historical_mark)
+    # sort genes by historical marks:
+    genes_better = sorted(genotype_more_fit.neuron_genes + genotype_more_fit.connection_genes,
+                    key = lambda gene: gene.historical_mark)
 
-        genes_worse = sorted(genotype_less_fit.neuron_genes + genotype_less_fit.connection_genes,
-                        key = lambda gene: gene.historical_mark)
+    genes_worse = sorted(genotype_less_fit.neuron_genes + genotype_less_fit.connection_genes,
+                    key = lambda gene: gene.historical_mark)
 
-        gene_pairs = GeneticEncoding.get_pairs(genes_better, genes_worse)
+    gene_pairs = GeneticEncoding.get_pairs(genes_better, genes_worse)
 
-        child_genes = []
+    child_genes = []
 
-        for pair in gene_pairs:
+    for pair in gene_pairs:
 
-            # if gene is paired, inherit one of the pair with 50/50 chance:
-            if pair[0] is not None and pair[1] is not None:
-                if random.random() < 0.5:
-                    child_genes.append(pair[0])
-                else:
-                    child_genes.append(pair[1])
-
-            # inherit unpaired gene from the more fit parent:
-            elif pair[0] is not None:
+        # if gene is paired, inherit one of the pair with 50/50 chance:
+        if pair[0] is not None and pair[1] is not None:
+            if random.random() < 0.5:
                 child_genes.append(pair[0])
+            else:
+                child_genes.append(pair[1])
 
-        child_genotype = GeneticEncoding()
-        for gene in child_genes:
-            if isinstance(gene, NeuronGene):
-                child_genotype.add_neuron_gene(gene)
-            elif isinstance(gene, ConnectionGene):
-                child_genotype.add_connection_gene(gene)
+        # inherit unpaired gene from the more fit parent:
+        elif pair[0] is not None:
+            child_genes.append(pair[0])
 
-        return child_genotype
+    child_genotype = GeneticEncoding()
+    for gene in child_genes:
+        if isinstance(gene, NeuronGene):
+            child_genotype.add_neuron_gene(gene)
+        elif isinstance(gene, ConnectionGene):
+            child_genotype.add_connection_gene(gene)
+
+    return child_genotype
