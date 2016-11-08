@@ -3,13 +3,13 @@ import random
 class NumericParamSpec(object):
 
 	'''
-	Specification for a mutable numerical parameter of a neuron.
+	Specification for a mutable numerical parameter of a gene.
 
 	An instance of this class defines restrictions on a single mutable parameter
-	of a neuron, namely its max and min bounds, or lack thereof.
+	of a gene, namely its max and min bounds, or lack thereof. It also contains the name
+	of the parameter.
 
-
-	It also contains the mean value (mean_value) and the standard deviation (mutation_sigma)
+	Additionally, it contains the mean value (mean_value) and the standard deviation (mutation_sigma)
 	that are used for mutation and random initialization of the parameter value.
 
 	The mutation happens as follows:
@@ -18,7 +18,7 @@ class NumericParamSpec(object):
 	the current value with st.deviation = (max_value - min_value)*mutation_sigma. The resulting
 	value is checked agains the bounds.
 
-	If one or less bound is set, the mutation_sigma is treated as absolute value. The new value
+	If less than two bouns are set, then the mutation_sigma is treated as absolute value. The new value
 	is drawn from a normal distribution centered around the current value with
 	st.deviation = mutation_sigma. If one bound is set, the resulting value is checked against it
 	(i.e. if new_value < min_value then new_value = min_value).
@@ -27,10 +27,10 @@ class NumericParamSpec(object):
 	The process of getting a random value for the parameter (using the get_random_value() method)
 	is as follows:
 
-	If both bounds are set, the value is drawn from a uniform distribution within the range of possible
+	If both bounds are set, then the value is drawn from a uniform distribution within the range of possible
 	values.
 
-	If one or less bound is set, the random value is drawn from a normal distribution with
+	If less than two bouns are set, then the random value is drawn from a normal distribution with
 	mean = mean_value and st.deviation = mutation_sigma. If one bound is set, the resulting value
 	is check against it.
 	'''
@@ -85,10 +85,10 @@ class NumericParamSpec(object):
 class NominalParamSpec(object):
 
 	'''
-	Specification for a nominal (non-numeric) parameter of a neuron.
+	Specification for a nominal (non-numeric) parameter of a gene.
 
 	An instance of this class defines a set of possible values of a single mutable
-	nominal parameter of a neuron. It also contains the name of the parameter.
+	nominal parameter of a gene. It also contains the name of the parameter.
 	'''
 
 	def __init__(self, param_name, set_of_values):
@@ -104,16 +104,16 @@ class NominalParamSpec(object):
 
 
 
-class NeuronSpec(object):
+class GeneSpec(object):
 	'''
-	A collection of parameter specifications for a neuron.
+	A collection of parameter specifications for a gene.
 
 	An instance of this class contains specifications of all parameters
-	of a neuron.
+	of a gene.
 	'''
 
-	def __init__(self, neuron_name, numeric_specs=[], nominal_specs=[]):
-		self.neuron_name = neuron_name
+	def __init__(self, type_name, numeric_specs=[], nominal_specs=[]):
+		self.type_name = type_name
 		self.numeric_specs = {param_spec.param_name: param_spec for param_spec in numeric_specs}
 		self.nominal_specs = {param_spec.param_name: param_spec for param_spec in nominal_specs}
 
@@ -150,18 +150,18 @@ class NeuronSpec(object):
 
 class NetworkSpec(object):
 
-	def __init__(self, neuron_specs):
-		self.neuron_specs = {nspec.neuron_name: nspec for nspec in neuron_specs}
+	def __init__(self, gene_specs):
+		self.gene_specs = {gspec.type_name: gspec for gspec in gene_specs}
 
 
 
 	def __getitem__(self, key):
-		return self.neuron_specs[key]
+		return self.gene_specs[key]
 
 
 	def __iter__(self):
-		return self.neuron_specs.__iter__()
+		return self.gene_specs.__iter__()
 
 
 	def get(self, key, default=None):
-		return self.neuron_specs.get(key, default)
+		return self.gene_specs.get(key, default)

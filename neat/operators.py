@@ -9,7 +9,8 @@ class Mutator:
 
     def __init__(self,
         net_spec,
-        innovation_number = 0,
+        fixed_gene_marks=None, # historical marks of genes that the mutator cannot remove
+        innovation_number = 0, # from what innovation number to start
         allowed_types=None,
         mutable_params=None):
 
@@ -52,27 +53,40 @@ class Mutator:
 
         for neuron_gene in genotype.neuron_genes:
             if random.random() < probability:
-   
-                neuron_params = self.mutable_params[neuron_gene.neuron_type]
-                neuron_spec = self.net_spec[neuron_gene.neuron_type]
-
-                if len(neuron_params) > 0:
-                    param_name = random.choice(neuron_params)
-                    param_spec = neuron_spec[param_name]
-
-                    if isinstance(param_spec, NumericParamSpec):
-                        current_value = neuron_gene[param_name]
-
-                        new_value = param_spec.mutate_value(current_value)
-                        neuron_gene[param_name] = new_value
-
-                    elif isinstance(param_spec, NominalParamSpec):
-                        neuron_gene[param_name] = param_spec.get_random_value()
+                self.mutate_gene_params(neuron_gene)
 
 
 
 
-    def mutate_weights(self, genotype, probability, sigma):
+    def mutate_connection_params(self, genotype, probability):
+        for connection_gene in genotype.connection_genes:
+            if random.random() < probability:
+                self.mutate_gene_params(neuron_gene)
+
+
+
+
+    def mutate_gene_params(self, gene):
+        gene_params = self.mutable_params[gene.gene_type]
+        gene_spec = self.net_spec[gene.gene_type]
+
+         if len(gene_params) > 0:
+            param_name = random.choice(gene_params)
+            param_spec = gene_spec[param_name]
+
+            if isinstance(param_spec, NumericParamSpec):
+                current_value = gene[param_name]
+
+                new_value = param_spec.mutate_value(current_value)
+                gene[param_name] = new_value
+
+            elif isinstance(param_spec, NominalParamSpec):
+                gene[param_name] = param_spec.get_random_value()
+
+
+
+
+    def mutate_connection_weights(self, genotype, probability, sigma):
 
         """
         For every connection gene change weight with probability=probability.
@@ -84,6 +98,7 @@ class Mutator:
         """
         for connection_gene in genotype.connection_genes:
             if random.random() < probability:
+
                 weight_change = random.gauss(0, sigma)
                 connection_gene.weight += weight_change
 
