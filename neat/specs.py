@@ -1,4 +1,5 @@
 import random
+from itertools import chain
 from .utils import zip_with_probabilities, weighted_random
 
 
@@ -114,7 +115,7 @@ class GeneSpec(object):
 	of a gene.
 	'''
 
-	def __init__(self, type_name, param_specs=[]):
+	def __init__(self, type_name, *param_specs):
 		self.type_name = type_name
 		self.param_specs = {param_spec.param_name: param_spec for param_spec in param_specs}
 
@@ -167,3 +168,7 @@ class NetworkSpec(object):
 		if nspec is None and cspec is None: raise KeyError(key)
 
 		return nspec or cspec
+
+
+	def __iter__(self):
+		return chain(self.neuron_specs.__iter__(), self.connection_specs.__iter__())
