@@ -22,6 +22,10 @@ class Gene(object):
         return deepcopy(self.params)
 
 
+    def get_params(self):
+        return self.params
+
+
     def get_param(self, param_name):
         return self.params[param_name]
 
@@ -36,6 +40,12 @@ class Gene(object):
 
     def __setitem__(self, key, value):
         self.set_param(key, value)
+
+
+    def __getattr__(self, key):
+        ret = self.params.get(key, None)
+        if ret is None: raise AttributeError()
+        return ret
 
 
     def get_type(self):
@@ -55,7 +65,7 @@ class NeuronGene(Gene):
 
 
     neuron_type = property(Gene.get_type)
-
+    neuron_params = property(Gene.get_params)
 
     def __str__(self):
         return "NEAT Neuron gene, mark: {}, type: {}".format(self.historical_mark, self.neuron_type)
@@ -72,6 +82,7 @@ class ConnectionGene(Gene):
         self.mark_to    = mark_to
 
     connection_type = property(Gene.get_type)
+    connection_params = property(Gene.get_params)
 
     def __str__(self):
         return "NEAT Connection gene, mark: {}, type: {}, from: {}, to: {}".format(
