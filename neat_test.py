@@ -34,7 +34,7 @@ print(linear_spec.get_random_parameters())
 net_spec = NetworkSpec([linear_spec, sigmoid_spec, diff_spec], [conn_spec])
 
 # check NetworkSpec's __getitem__()
-print(net_spec['linear'])
+print(net_spec['linear'].type_name)
 
 # check NetworkSpec's __iter__()
 print(list(neutype for neutype in net_spec))
