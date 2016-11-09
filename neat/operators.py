@@ -3,38 +3,58 @@ import random
 from .genotype import NeuronGene, ConnectionGene, GeneticEncoding
 from .utils import zip_with_probabilities, weighted_random
 
+
+
 class Mutator:
 
     def __init__(self,
         net_spec,
         fixed_gene_marks=None, # historical marks of genes that the mutator cannot remove
         innovation_number = 0, # from what innovation number to start
-        allowed_types=None,
+        allowed_neuron_types=None,
+        allowed_connection_types=None,
         mutable_params=None):
 
         self.net_spec = net_spec
 
-        # set types of neurons that are allowed to be added to the net
-        if allowed_types is None:
-            self.allowed_types = list(neuron_type for neuron_type in self.net_spec)
-        else:
-            self.allowed_types = allowed_types
 
-        # make allowed_types into a list of tuples (type, probability)
-        self.allowed_types = zip_with_probabilities(self.allowed_types)
+
+        # set types of neurons that are allowed to be added to the net
+        if allowed_neuron_types is None:
+            self.allowed_neuron_types = list(self.net_spec.neuron_specs.keys())
+        else:
+            self.allowed_neuron_types = allowed_neuron_types
+
+        # make allowed types into a list of tuples (type, probability)
+        self.allowed_neuron_types = zip_with_probabilities(self.allowed_neuron_types)
+
+
+
+        # set types of connections that are allowed to be added to the net
+        if allowed_connection_types is None:
+            self.allowed_connection_types = list(self.net_spec.connection_specs.keys())
+        else:
+            self.allowed_connection_types = allowed_connection_types
+
+        # make allowed types into a list of tuples (type, probability)
+        self.allowed_connection_types = zip_with_probabilities(self.allowed_connection_types)
+
+
+
         '''
-        set names of mutable parameters for each neuron type
+        set names of mutable parameters for each gene type
         (including the disallowed ones, as we still should be able to mutate
-        parameters of existing neurons of disallowed types, even though we are not
-        allowed to add new neurons of those types)
+        parameters of existing genes of disallowed types, even though we are not
+        allowed to add new genes of those types)
         '''
         if mutable_params is None:
             self.mutable_params = {}
-            for neuron_type in net_spec:
-                neuron_spec = net_spec[neuron_type]
-                self.mutable_params[neuron_type] = neuron_spec.param_names()
+            for gene_type in net_spec.gene_types():
+                gene_spec = net_spec[gene_type]
+                self.mutable_params[gene_type] = gene_spec.param_names()
         else:
             self.mutable_params = mutable_params
+
 
         self.innovation_number = innovation_number
 
@@ -84,36 +104,17 @@ class Mutator:
 
 
 
-    def mutate_connection_weights(self, genotype, probability, sigma):
-
-        """
-        For every connection gene change weight with probability=probability.
-        The change value is drawn from normal distribution with mean=0 and sigma=sigma
-
-        :type genotype: GeneticEncoding
-        :type probability: float
-        :type sigma: float
-        """
-        for connection_gene in genotype.connection_genes:
-            if random.random() < probability:
-
-                weight_change = random.gauss(0, sigma)
-                connection_gene.weight += weight_change
-
-
-
-
-    def add_connection_mutation(self, genotype, sigma, max_attempts=100):
+    def add_connection_mutation(self, genotype, max_attempts=100):
 
         """
         Pick two neurons A and B at random. Make sure that connection AB does not exist.
-        If that's the case, add new connection whose weight is drawn from normal distribution
-        with mean=0 and sigma=sigma.
+        If that's the case, add new connection whose type is randomly selected from the set
+        of allowed types and whose parameters are initialized according to spec for that type.
 
         Otherwise pick two neurons again and repeat until suitable pair is found or we run out of attempts.
 
         :type genotype: GeneticEncoding
-        :type sigma: float
+        :type max_attempts: int
         """
 
         neuron_from = random.choice(genotype.neuron_genes)
@@ -133,7 +134,16 @@ class Mutator:
             num_attempts += 1
             if num_attempts >= max_attempts: return False
 
-        self._add_connection(genotype, mark_from, mark_to, weight = random.gauss(0, sigma))
+
+        new_connection_type = weighted_random(self.allowed_connection_types)
+        new_connection_params = self.net_spec[new_connection_type].get_random_parameters()
+
+        self._add_connection(
+            genotype,
+            new_connection_type,
+            mark_from,
+            mark_to,
+            connection_params=new_connection_params)
 
         return True
 
@@ -144,10 +154,11 @@ class Mutator:
         """
         Pick a connection at random from neuron A to neuron B.
         And add a neuron C in between A and B.
-        Old connection AB becomes disabled.
+        Old connection AB gets deleted.
         Two new connections AC and CB are added.
-        Weight of AC = weight of AB.
-        Weight of CB = 1.0
+        Connection AC will have the same type and parameters as AB.
+        Connection CB will have random type (chosen from the allowed ones)
+        and randomly initialized parameters.
 
         :type genotype: GeneticEncoding
         """
@@ -155,10 +166,13 @@ class Mutator:
         connection_to_split_id = random.choice(range(len(genotype.connection_genes)))
         connection_to_split = genotype.connection_genes[connection_to_split_id]
 
-        old_weight = connection_to_split.weight
 
+        # get all the info about the old connection
+        old_connection_type = connection_to_split.connection_type
+        old_connection_params = connection_to_split.copy_params()
         mark_from = connection_to_split.mark_from
         mark_to = connection_to_split.mark_to
+
 
         # delete the old connection from the genotype
         genotype.remove_connection_gene(connection_to_split_id)
@@ -168,13 +182,32 @@ class Mutator:
 
 
         # select new neuron type from allowed types with weights
-        new_neuron_type = weighted_random(self.allowed_types)
+        new_neuron_type = weighted_random(self.allowed_neuron_types)
+        new_neuron_params = self.net_spec[new_neuron_type].get_random_parameters()
 
-        new_neuron_params = self.net_spec.get(new_neuron_type).get_random_parameters()
-
+        # insert new neuron
         mark_middle = self._add_neuron(genotype, new_neuron_type, new_neuron_params)
-        self._add_connection(genotype, mark_from, mark_middle, weight=old_weight)
-        self._add_connection(genotype, mark_middle, mark_to, weight=1.0)
+
+
+        # initialize new connection type and params
+        new_connection_type = weighted_random(self.allowed_connection_types)
+        new_connection_params = self.net_spec[new_connection_type].get_random_parameters()
+
+
+        self._add_connection(
+            genotype,
+            old_connection_type,
+            mark_from,
+            mark_middle,
+            connection_params=old_connection_params)
+
+
+        self._add_connection(
+            genotype,
+            new_connection_type,
+            mark_middle,
+            mark_to,
+            connection_params=new_connection_params)
 
 
 
@@ -223,11 +256,11 @@ class Mutator:
 
 
 
-    def _add_connection(self, genotype, mark_from, mark_to, weight, connection_params={}):
+    def _add_connection(self, genotype, connection_type, mark_from, mark_to, connection_params={}):
         new_conn_gene = ConnectionGene(
-                                  mark_from=mark_from,
-                                  mark_to=mark_to,
-                                  weight = weight,
+                                  connection_type = connection_type,
+                                  mark_from = mark_from,
+                                  mark_to = mark_to,
                                   historical_mark = self.innovation_number,
                                   enabled = True,
                                   params = connection_params)

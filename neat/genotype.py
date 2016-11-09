@@ -3,14 +3,6 @@ from copy import copy, deepcopy
 
 
 
-# def validate_genotype(genotype, err_message):
-#     if not genotype.check_validity():
-#         ex = GenotypeInvalidError(message=err_message, genotype=genotype)
-#         print ex.debug_string()
-#         raise RuntimeError
-#     return True
-
-
 
 def unicode_representer(dumper, data):
     return dumper.represent_scalar(u'tag:yaml.org,2002:str', data)
@@ -19,14 +11,15 @@ def unicode_representer(dumper, data):
 
 class Gene(object):
 
-    def __init__(self, historical_mark=0, enabled=True, params={}):
+    def __init__(self, gene_type, historical_mark=0, enabled=True, params={}):
+        self.gene_type = gene_type
         self.params = params
         self.historical_mark = historical_mark
         self.enabled = enabled
 
 
-    def get_params(self):
-        return self.params
+    def copy_params(self):
+        return deepcopy(self.params)
 
 
     def get_param(self, param_name):
@@ -45,8 +38,8 @@ class Gene(object):
         self.set_param(key, value)
 
 
-    # def __getattr__(self, key):
-    #     return self.get_param(key)
+    def get_type(self):
+        return self.gene_type
 
 
     def copy(self):
@@ -58,8 +51,10 @@ class Gene(object):
 class NeuronGene(Gene):
 
     def __init__(self, neuron_type, historical_mark=0, enabled=True, params={}):
-        super(NeuronGene, self).__init__(historical_mark, enabled, params)
-        self.neuron_type = neuron_type
+        super(NeuronGene, self).__init__(neuron_type, historical_mark, enabled, params)
+
+
+    neuron_type = property(Gene.get_type)
 
 
     def __str__(self):
@@ -71,19 +66,19 @@ class NeuronGene(Gene):
 
 class ConnectionGene(Gene):
 
-    def __init__(self, mark_from, mark_to, weight, historical_mark=0, enabled=True, params={}):
-        super(ConnectionGene, self).__init__(historical_mark, enabled, params)
+    def __init__(self, connection_type, mark_from, mark_to, historical_mark=0, enabled=True, params={}):
+        super(ConnectionGene, self).__init__(connection_type, historical_mark, enabled, params)
         self.mark_from  = mark_from
         self.mark_to    = mark_to
-        self.weight     = weight
 
+    connection_type = property(Gene.get_type)
 
     def __str__(self):
-        return "NEAT Connection gene, mark: {}, from: {}, to: {}, weight: {}".format(
+        return "NEAT Connection gene, mark: {}, type: {}, from: {}, to: {}".format(
             self.historical_mark,
+            self.connection_type,
             self.mark_from,
-            self.mark_to,
-            self.weight
+            self.mark_to
         )
 
 

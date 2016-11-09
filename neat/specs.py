@@ -152,18 +152,18 @@ class GeneSpec(object):
 
 class NetworkSpec(object):
 
-	def __init__(self, gene_specs):
-		self.gene_specs = {gspec.type_name: gspec for gspec in gene_specs}
+	def __init__(self, neuron_specs, connection_specs):
+		self.neuron_specs		= {nspec.type_name: nspec for nspec in neuron_specs}
+		self.connection_specs	= {cspec.type_name: cspec for cspec in connection_specs}
 
+
+	def gene_types(self):
+		return self.neuron_specs.keys() + self.connection_specs.keys()
 
 
 	def __getitem__(self, key):
-		return self.gene_specs[key]
+		nspec = self.neuron_specs.get(key, None)
+		cspec = self.connection_specs.get(key, None)
+		if nspec is None and cspec is None: raise KeyError(key)
 
-
-	def __iter__(self):
-		return self.gene_specs.__iter__()
-
-
-	def get(self, key, default=None):
-		return self.gene_specs.get(key, default)
+		return nspec or cspec
