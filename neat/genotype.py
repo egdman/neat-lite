@@ -11,7 +11,7 @@ def unicode_representer(dumper, data):
 
 class Gene(object):
 
-    def __init__(self, gene_type, historical_mark=0, enabled=True, params={}):
+    def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
         self.gene_type = gene_type
         self.params = params
         self.historical_mark = historical_mark
@@ -50,8 +50,8 @@ class Gene(object):
 
 class NeuronGene(Gene):
 
-    def __init__(self, neuron_type, historical_mark=0, enabled=True, params={}):
-        super(NeuronGene, self).__init__(neuron_type, historical_mark, enabled, params)
+    def __init__(self, neuron_type, historical_mark=0, enabled=True, **params):
+        super(NeuronGene, self).__init__(neuron_type, historical_mark, enabled, **params)
 
 
     neuron_type = property(Gene.get_type)
@@ -66,8 +66,8 @@ class NeuronGene(Gene):
 
 class ConnectionGene(Gene):
 
-    def __init__(self, connection_type, mark_from, mark_to, historical_mark=0, enabled=True, params={}):
-        super(ConnectionGene, self).__init__(connection_type, historical_mark, enabled, params)
+    def __init__(self, connection_type, mark_from, mark_to, historical_mark=0, enabled=True, **params):
+        super(ConnectionGene, self).__init__(connection_type, historical_mark, enabled, **params)
         self.mark_from  = mark_from
         self.mark_to    = mark_to
 
@@ -87,9 +87,9 @@ class ConnectionGene(Gene):
 
 class GeneticEncoding:
     
-    def __init__(self):
-        self.neuron_genes = []
-        self.connection_genes = []
+    def __init__(self, neuron_genes=[], connection_genes=[]):
+        self.neuron_genes = neuron_genes
+        self.connection_genes = connection_genes
     
 
     

@@ -143,7 +143,7 @@ class Mutator:
             new_connection_type,
             mark_from,
             mark_to,
-            connection_params=new_connection_params)
+            **new_connection_params)
 
         return True
 
@@ -186,7 +186,7 @@ class Mutator:
         new_neuron_params = self.net_spec[new_neuron_type].get_random_parameters()
 
         # insert new neuron
-        mark_middle = self._add_neuron(genotype, new_neuron_type, new_neuron_params)
+        mark_middle = self._add_neuron(genotype, new_neuron_type, **new_neuron_params)
 
 
         # initialize new connection type and params
@@ -199,7 +199,7 @@ class Mutator:
             old_connection_type,
             mark_from,
             mark_middle,
-            connection_params=old_connection_params)
+            **old_connection_params)
 
 
         self._add_connection(
@@ -207,7 +207,7 @@ class Mutator:
             new_connection_type,
             mark_middle,
             mark_to,
-            connection_params=new_connection_params)
+            **new_connection_params)
 
 
 
@@ -243,12 +243,12 @@ class Mutator:
 
 
 
-    def _add_neuron(self, genotype, neuron_type, neuron_params={}):
+    def _add_neuron(self, genotype, neuron_type, **neuron_params):
         new_neuron_gene = NeuronGene(
                                 neuron_type=neuron_type,
                                 historical_mark = self.innovation_number,
                                 enabled = True,
-                                params = neuron_params)
+                                **neuron_params)
 
         self.innovation_number += 1
         genotype.add_neuron_gene(new_neuron_gene)
@@ -256,14 +256,14 @@ class Mutator:
 
 
 
-    def _add_connection(self, genotype, connection_type, mark_from, mark_to, connection_params={}):
+    def _add_connection(self, genotype, connection_type, mark_from, mark_to, **connection_params):
         new_conn_gene = ConnectionGene(
                                   connection_type = connection_type,
                                   mark_from = mark_from,
                                   mark_to = mark_to,
                                   historical_mark = self.innovation_number,
                                   enabled = True,
-                                  params = connection_params)
+                                  **connection_params)
 
         self.innovation_number += 1
         genotype.add_connection_gene(new_conn_gene)

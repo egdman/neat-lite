@@ -30,6 +30,12 @@ print(linear_spec.param_names())
 print(linear_spec.get_random_parameters())
 
 
+ng = NeuronGene('sigmoid', params={'bias': 0, 'gain': 0})
+print(ng.neuron_type)
+print(ng.gene_type)
+print(ng.gain)
+
+
 
 net_spec = NetworkSpec([linear_spec, sigmoid_spec, diff_spec], [conn_spec])
 
