@@ -336,7 +336,7 @@ class GeneticEncoding:
         st = ''
         st += 'neurons:\n'
         st += str(self.neuron_genes) + '\n'
-        st += 'connections:\n':
+        st += 'connections:\n'
         st += str(self.connection_genes)
         return st
         # return "NEAT Genotype at " + hex(id(self))
