@@ -35,6 +35,7 @@ print(ng.neuron_type)
 print(ng.gene_type)
 print(ng.gain)
 print(ng.neuron_params)
+print(ng.params)
 print(ng.__dict__)
 
 
