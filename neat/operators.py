@@ -170,7 +170,9 @@ class Mutator:
 
         # get all the info about the old connection
         old_connection_type = connection_to_split.connection_type
-        old_connection_params = connection_to_split.copy_params()
+        old_connection_params = (connection_to_split
+            .copy_params(self.mutable_params[old_connection_type]))
+
         mark_from = connection_to_split.mark_from
         mark_to = connection_to_split.mark_to
 
@@ -178,8 +180,8 @@ class Mutator:
         # delete the old connection from the genotype
         genotype.remove_connection_gene(connection_to_split_id)
 
-        neuron_from = genotype.find_gene_by_mark(mark_from)
-        neuron_to = genotype.find_gene_by_mark(mark_to)
+        # neuron_from = genotype.find_gene_by_mark(mark_from)
+        # neuron_to = genotype.find_gene_by_mark(mark_to)
 
 
         # select new neuron type from allowed types with weights

@@ -8,22 +8,84 @@ def unicode_representer(dumper, data):
     return dumper.represent_scalar(u'tag:yaml.org,2002:str', data)
 
 
+class Gene(object):
+
+    def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
+        self.gene_type = gene_type
+        self.historical_mark = historical_mark
+        self.enabled = enabled
+        for key, value in params.items():
+            setattr(self, key, value)
+
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+
+    def get_type(self):
+        return self.gene_type
+
+
+    def get_params(self, names=None):
+        if names is None:
+            return self.__dict__.copy()
+        else:
+            return {pname: self[pname] for pname in names}
+
+
+    gene_params = property(get_params)
+
+
+    def copy_params(self, names=None):
+        return deepcopy(self.get_params(names))
+
+
+    def copy(self):
+        return deepcopy(self)
+
+
+
 # class Gene(object):
 
 #     def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
 #         self.gene_type = gene_type
+#         self.params = params
 #         self.historical_mark = historical_mark
 #         self.enabled = enabled
-#         for key, value in params.items():
-#             setattr(self, key, value)
+
+
+#     def copy_params(self):
+#         return deepcopy(self.params)
+
+
+#     def get_params(self):
+#         return self.params
+
+
+#     def get_param(self, param_name):
+#         return self.params[param_name]
+
+
+#     def set_param(self, param_name, param_value):
+#         self.params[param_name] = param_value
 
 
 #     def __getitem__(self, key):
-#         return getattr(self, key)
+#         return self.get_param(key)
 
 
 #     def __setitem__(self, key, value):
-#         setattr(self, key, value)
+#         self.set_param(key, value)
+
+
+#     def __getattr__(self, key):
+#         ret = self.params.get(key, None)
+#         if ret is None: raise AttributeError(key)
+#         return ret
 
 
 #     def get_type(self):
@@ -32,54 +94,6 @@ def unicode_representer(dumper, data):
 
 #     def copy(self):
 #         return deepcopy(self)
-
-
-
-class Gene(object):
-
-    def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
-        self.gene_type = gene_type
-        self.params = params
-        self.historical_mark = historical_mark
-        self.enabled = enabled
-
-
-    def copy_params(self):
-        return deepcopy(self.params)
-
-
-    def get_params(self):
-        return self.params
-
-
-    def get_param(self, param_name):
-        return self.params[param_name]
-
-
-    def set_param(self, param_name, param_value):
-        self.params[param_name] = param_value
-
-
-    def __getitem__(self, key):
-        return self.get_param(key)
-
-
-    def __setitem__(self, key, value):
-        self.set_param(key, value)
-
-
-    def __getattr__(self, key):
-        ret = self.params.get(key, None)
-        if ret is None: raise AttributeError(key)
-        return ret
-
-
-    def get_type(self):
-        return self.gene_type
-
-
-    def copy(self):
-        return deepcopy(self)
 
 
 

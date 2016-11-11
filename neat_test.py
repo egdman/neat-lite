@@ -30,22 +30,9 @@ print(linear_spec.param_names())
 print(linear_spec.get_random_parameters())
 
 
-ng = NeuronGene('sigmoid', bias=0.3, gain=0.96)
-print(ng.neuron_type)
-print(ng.gene_type)
-print(ng.gain)
-print(ng.neuron_params)
-print(ng.params)
-print(ng.__dict__)
-
-print("hasattr(ng, id) = " + str(hasattr(ng, 'id')))
-if not hasattr(ng, 'id'): ng.params['id'] = "IIIDDD"
-print("hasattr(ng, id) = " + str(hasattr(ng, 'id')))
-
-print(ng.id)
-print(ng.__dict__)
 
 
+print("\nNetworkSpec tests")
 net_spec = NetworkSpec([linear_spec, sigmoid_spec, diff_spec], [conn_spec])
 
 # check NetworkSpec's __getitem__()
