@@ -8,92 +8,101 @@ def unicode_representer(dumper, data):
     return dumper.represent_scalar(u'tag:yaml.org,2002:str', data)
 
 
-class Gene(object):
-
-    def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
-        self.gene_type = gene_type
-        self.historical_mark = historical_mark
-        self.enabled = enabled
-        for key, value in params.items():
-            setattr(self, key, value)
-
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-
-    def get_type(self):
-        return self.gene_type
-
-
-    def get_params(self, names=None):
-        if names is None:
-            return self.__dict__.copy()
-        else:
-            return {pname: self[pname] for pname in names}
-
-
-    gene_params = property(get_params)
-
-
-    def copy_params(self, names=None):
-        return deepcopy(self.get_params(names))
-
-
-    def copy(self):
-        return deepcopy(self)
-
-
-
 # class Gene(object):
 
 #     def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
 #         self.gene_type = gene_type
-#         self.params = params
 #         self.historical_mark = historical_mark
 #         self.enabled = enabled
-
-
-#     def copy_params(self):
-#         return deepcopy(self.params)
-
-
-#     def get_params(self):
-#         return self.params
-
-
-#     def get_param(self, param_name):
-#         return self.params[param_name]
-
-
-#     def set_param(self, param_name, param_value):
-#         self.params[param_name] = param_value
+#         for key, value in params.items():
+#             setattr(self, key, value)
 
 
 #     def __getitem__(self, key):
-#         return self.get_param(key)
+#         return getattr(self, key)
 
 
 #     def __setitem__(self, key, value):
-#         self.set_param(key, value)
-
-
-#     def __getattr__(self, key):
-#         ret = self.params.get(key, None)
-#         if ret is None: raise AttributeError(key)
-#         return ret
+#         setattr(self, key, value)
 
 
 #     def get_type(self):
 #         return self.gene_type
 
 
+#     def get_params(self, names=None):
+#         if names is None:
+#             return self.__dict__.copy()
+#         else:
+#             return {pname: self[pname] for pname in names}
+
+
+#     gene_params = property(get_params)
+
+
+#     def copy_params(self, names=None):
+#         return deepcopy(self.get_params(names))
+
+
 #     def copy(self):
 #         return deepcopy(self)
+
+
+
+class Gene(object):
+
+    def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
+        super(Gene, self).__setattr__('gene_type', gene_type)
+        super(Gene, self).__setattr__('historical_mark', historical_mark)
+        super(Gene, self).__setattr__('enabled', enabled)
+        super(Gene, self).__setattr__('params', {})
+        # self.gene_type = gene_type
+        # self.historical_mark = historical_mark
+        # self.enabled = enabled
+        self.params = {key: params[key] for key in params}
+
+
+
+    def __getitem__(self, key):
+        return self.params[key]
+
+
+    def __setitem__(self, key, value):
+        self.params[key] = value
+
+
+    # this is called when default lookup finds nothing
+    def __getattr__(self, key):
+        try:
+            return self.params[key]
+        except KeyError:
+            raise AttributeError(key)
+
+
+    # this is called always
+    def __setattr__(self, key, value):
+        if key in self.__dict__:
+            super(Gene, self).__setattr__(key, value)
+        else:
+            self.params[key] = value
+
+
+    def get_type(self):
+        return self.gene_type
+
+
+    def get_params(self):
+        return self.params
+ 
+
+    def copy_params(self):
+        return deepcopy(self.params)
+
+
+    def copy(self):
+        return deepcopy(self)
+
+    gene_params = property(get_params)
 
 
 
@@ -118,8 +127,10 @@ class ConnectionGene(Gene):
 
     def __init__(self, connection_type, mark_from, mark_to, historical_mark=0, enabled=True, **params):
         super(ConnectionGene, self).__init__(connection_type, historical_mark, enabled, **params)
-        self.mark_from  = mark_from
-        self.mark_to    = mark_to
+
+        super(Gene, self).__setattr__('mark_from', mark_from)
+        super(Gene, self).__setattr__('mark_to', mark_to)
+
 
     connection_type = property(Gene.get_type)
     connection_params = property(Gene.get_params)

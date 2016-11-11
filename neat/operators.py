@@ -170,8 +170,7 @@ class Mutator:
 
         # get all the info about the old connection
         old_connection_type = connection_to_split.connection_type
-        old_connection_params = (connection_to_split
-            .copy_params(self.mutable_params[old_connection_type]))
+        old_connection_params = connection_to_split.copy_params()
 
         mark_from = connection_to_split.mark_from
         mark_to = connection_to_split.mark_to
