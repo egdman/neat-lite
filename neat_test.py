@@ -38,6 +38,12 @@ print(ng.neuron_params)
 print(ng.params)
 print(ng.__dict__)
 
+print("hasattr(ng, id) = " + str(hasattr(ng, 'id')))
+if not hasattr(ng, 'id'): ng.params['id'] = "IIIDDD"
+print("hasattr(ng, id) = " + str(hasattr(ng, 'id')))
+
+print(ng.id)
+print(ng.__dict__)
 
 
 net_spec = NetworkSpec([linear_spec, sigmoid_spec, diff_spec], [conn_spec])
