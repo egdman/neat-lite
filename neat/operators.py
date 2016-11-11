@@ -79,7 +79,7 @@ class Mutator:
     def mutate_connection_params(self, genotype, probability):
         for connection_gene in genotype.connection_genes:
             if random.random() < probability:
-                self.mutate_gene_params(neuron_gene)
+                self.mutate_gene_params(connection_gene)
 
 
 
