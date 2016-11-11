@@ -44,7 +44,7 @@ class Gene(object):
 
     def __getattr__(self, key):
         ret = self.params.get(key, None)
-        if ret is None: raise AttributeError()
+        if ret is None: raise AttributeError(key)
         return ret
 
 
@@ -98,9 +98,9 @@ class ConnectionGene(Gene):
 
 class GeneticEncoding:
     
-    def __init__(self, neuron_genes=[], connection_genes=[]):
-        self.neuron_genes = neuron_genes
-        self.connection_genes = connection_genes
+    def __init__(self, neuron_genes=None, connection_genes=None):
+        self.neuron_genes = neuron_genes if neuron_genes else []
+        self.connection_genes = connection_genes if connection_genes else []
     
 
     
