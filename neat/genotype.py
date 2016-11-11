@@ -2,51 +2,8 @@ import yaml
 from copy import copy, deepcopy
 
 
-
-
 def unicode_representer(dumper, data):
     return dumper.represent_scalar(u'tag:yaml.org,2002:str', data)
-
-
-# class Gene(object):
-
-#     def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
-#         self.gene_type = gene_type
-#         self.historical_mark = historical_mark
-#         self.enabled = enabled
-#         for key, value in params.items():
-#             setattr(self, key, value)
-
-
-#     def __getitem__(self, key):
-#         return getattr(self, key)
-
-
-#     def __setitem__(self, key, value):
-#         setattr(self, key, value)
-
-
-#     def get_type(self):
-#         return self.gene_type
-
-
-#     def get_params(self, names=None):
-#         if names is None:
-#             return self.__dict__.copy()
-#         else:
-#             return {pname: self[pname] for pname in names}
-
-
-#     gene_params = property(get_params)
-
-
-#     def copy_params(self, names=None):
-#         return deepcopy(self.get_params(names))
-
-
-#     def copy(self):
-#         return deepcopy(self)
-
 
 
 class Gene(object):
@@ -56,9 +13,7 @@ class Gene(object):
         super(Gene, self).__setattr__('historical_mark', historical_mark)
         super(Gene, self).__setattr__('enabled', enabled)
         super(Gene, self).__setattr__('params', {})
-        # self.gene_type = gene_type
-        # self.historical_mark = historical_mark
-        # self.enabled = enabled
+
         self.params = {key: params[key] for key in params}
 
 
@@ -386,8 +341,7 @@ class GeneticEncoding:
     def __str__(self):
         st = ''
         st += 'neurons:\n'
-        st += str(self.neuron_genes) + '\n'
+        for ng in self.neuron_genes: st += str(ng.__dict__) + '\n'
         st += 'connections:\n'
-        st += str(self.connection_genes)
+        for cg in self.connection_genes: st += str(cg.__dict__) + '\n'
         return st
-        # return "NEAT Genotype at " + hex(id(self))
