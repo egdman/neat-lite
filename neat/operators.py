@@ -1,6 +1,6 @@
 import random
 
-from .genotype import NeuronGene, ConnectionGene, GeneticEncoding
+from .genes import NeuronGene, ConnectionGene, GeneticEncoding
 from .specs import NumericParamSpec, NominalParamSpec
 from .utils import zip_with_probabilities, weighted_random
 

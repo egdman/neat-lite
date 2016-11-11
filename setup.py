@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-	name='neat-light',
+	name='neat-lite',
 	version='0.0.1.dev',
 	description='A lightweight library that implements NeuroEvolution through Augmenting Topologies.',
 	url='https://github.com/egdman/neat',
