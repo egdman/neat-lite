@@ -1,4 +1,5 @@
 __author__ = 'Dmitry Egorov'
+__version__ = '0.0.1.dev'
 
 from .specs import GeneSpec, NumericParamSpec, NominalParamSpec, NetworkSpec
 from .genes import NeuronGene, ConnectionGene, GeneticEncoding

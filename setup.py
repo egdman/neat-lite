@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
-
+from neat import __version__
 
 setup(
 	name='neat-lite',
-	version='0.0.1.dev',
+	version=__version__,
 	description='A lightweight library that implements NeuroEvolution through Augmenting Topologies.',
 	url='https://github.com/egdman/neat',
 	author='Dmitry Egorov',
