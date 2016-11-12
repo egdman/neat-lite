@@ -43,42 +43,32 @@ class Mutator:
 
 
         '''
-        set names of mutable parameters for each gene type
+        set names of mutable parameters for each gene type in the network spec
         (including the disallowed ones, as we still should be able to mutate
         parameters of existing genes of disallowed types, even though we are not
         allowed to add new genes of those types)
         '''
-        if mutable_params is None:
-            self.mutable_params = {}
-            for gene_type in net_spec.gene_types():
-                gene_spec = net_spec[gene_type]
-                self.mutable_params[gene_type] = zip_with_probabilities(gene_spec.param_names())
-        else:
-            self.mutable_params = mutable_params
-
-
+        self._parse_mutable_params(mutable_params)
         self.innovation_number = innovation_number
 
 
 
-    # def _parse_mutable_params(self, mutpar):
-    #     if mutpar is None:
-            
-    #         mutpar = {}
-    #         for gene_type in net_spec.gene_types():
-    #             gene_spec = net_spec[gene_type]
-    #             mutpar[gene_type] = zip_with_probabilities(gene_spec.param_names())
+    def _parse_mutable_params(self, param_dict):
+        if param_dict is None:
+            self.mutable_params = {}
+        else:
+            self.mutable_params = param_dict.copy()
+
+        for gene_type in self.net_spec:
+            if gene_type not in self.mutable_params:
+                gene_spec = net_spec[gene_type]
+                self.mutable_params[gene_type] = zip_with_probabilities(gene_spec.param_names())
+            else:
+                self.mutable_params[gene_type] = zip_with_probabilities(self.mutable_params[gene_type])
+
 
 
     def mutate_neuron_params(self, genotype, probability):
-        """
-        Each neuron gene is chosen to be mutated with probability=probability.
-        The parameter to be mutated is chosen from the set of parameters with equal probability.
-
-        :type genotype: GeneticEncoding
-        :type probability: float
-        """
-
         for neuron_gene in genotype.neuron_genes:
             if random.random() < probability:
                 self.mutate_gene_params(neuron_gene)
@@ -95,11 +85,21 @@ class Mutator:
 
 
     def mutate_gene_params(self, gene):
+
+        """
+        Only one parameter of the gene is chosen to be mutated.
+        The parameter to be mutated is chosen from the set of parameters
+        with associated probabilitied.
+
+        :type gene: Gene
+        """
+
         gene_params = self.mutable_params[gene.gene_type]
         gene_spec = self.net_spec[gene.gene_type]
 
         if len(gene_params) > 0:
-            param_name = random.choice(gene_params)
+
+            param_name = weighted_random(gene_params)
             param_spec = gene_spec[param_name]
 
             if isinstance(param_spec, NumericParamSpec):
