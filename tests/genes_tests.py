@@ -158,7 +158,3 @@ class TestGenes(unittest.TestCase):
 			cg.second_param,
 			msg="cg.second_param <- 62 : addition of a new parameter did not work"
 			)
-
-
-
-

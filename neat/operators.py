@@ -52,13 +52,22 @@ class Mutator:
             self.mutable_params = {}
             for gene_type in net_spec.gene_types():
                 gene_spec = net_spec[gene_type]
-                self.mutable_params[gene_type] = gene_spec.param_names()
+                self.mutable_params[gene_type] = zip_with_probabilities(gene_spec.param_names())
         else:
             self.mutable_params = mutable_params
 
 
         self.innovation_number = innovation_number
 
+
+
+    # def _parse_mutable_params(self, mutpar):
+    #     if mutpar is None:
+            
+    #         mutpar = {}
+    #         for gene_type in net_spec.gene_types():
+    #             gene_spec = net_spec[gene_type]
+    #             mutpar[gene_type] = zip_with_probabilities(gene_spec.param_names())
 
 
     def mutate_neuron_params(self, genotype, probability):
@@ -194,7 +203,6 @@ class Mutator:
         # initialize new connection type and params
         new_connection_type = weighted_random(self.allowed_connection_types)
         new_connection_params = self.net_spec[new_connection_type].get_random_parameters()
-
 
         self._add_connection(
             genotype,

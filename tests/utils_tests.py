@@ -40,10 +40,9 @@ class TestUtils(unittest.TestCase):
 
 
 	def test_weighted_random(self):
-		print("Testing weighted_random()")
+		print("Testing weighted_random() (this one takes a long time, it's OK)")
 
-		types = ['a', 'b', 'c', 'd', ('e', 0.6)]
-		types = zip_with_probabilities(types)
+		types = [('a', 0.1), ('b', 0.1), ('c', 0.1), ('d', 0.1), ('e', 0.6)]
 
 		n_trials = 250000
 		freqs = {'a':0, 'b':0, 'c':0, 'd':0, 'e':0}

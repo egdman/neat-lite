@@ -33,4 +33,8 @@ def zip_with_probabilities(items):
 # TODO: write own implementation to remove dependency from numpy
 def weighted_random(items_with_probas):
 	items, probas = zip(*items_with_probas)
-	return np.random.choice(items, p = probas)
+
+	# NOTE: tolist() call is necessary because numpy.random.choice returns
+	# objects of numpy types such as numpy.string_ or numpy.float64.
+	# They don't look pretty when saved by YAML.
+	return np.random.choice(items, p = probas).tolist()
