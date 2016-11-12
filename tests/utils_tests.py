@@ -37,3 +37,24 @@ class TestUtils(unittest.TestCase):
 			[('a', .25), ('b', .25), ('c', .5)],
 			zp([('a', .25), ('b', .25), ('c', .5)]),
 			msg="zip_with_probabilities([('a', .25), ('b', .25), ('c', .5)]) : Failed")
+
+
+	def test_weighted_random(self):
+		print("Testing weighted_random()")
+
+		types = ['a', 'b', 'c', 'd', ('e', 0.6)]
+		types = zip_with_probabilities(types)
+
+		n_trials = 250000
+		freqs = {'a':0, 'b':0, 'c':0, 'd':0, 'e':0}
+
+		for _ in range(n_trials):
+			freqs[weighted_random(types)] += 1
+
+		freqs = {t: round(freqs[t] / (1.*n_trials), 2) for t in freqs}
+
+		self.assertEquals(
+			set(freqs.items()),
+			set(types),
+			msg="weighted_random gives wrong frequencies of choices"
+			)
