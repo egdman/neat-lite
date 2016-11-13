@@ -11,10 +11,12 @@ class Mutator:
     def __init__(self,
         net_spec,
         fixed_gene_marks=None, # historical marks of genes that the mutator cannot remove
-        innovation_number = 0, # from what innovation number to start
-        allowed_neuron_types=None,
-        allowed_connection_types=None,
-        mutable_params=None):
+        innovation_number = 0, # starting innovation number
+        allowed_neuron_types=None, # only neurons of these types will be added through mutations
+        allowed_connection_types=None, # only connections of these types will be added through mutations
+        mutable_params=None # dictionary {gene_type: [list of param names, optionally with probabilities]}
+                            # these are names of params for each type of gene that can be mutated
+        ):
 
         self.net_spec = net_spec
 
@@ -43,7 +45,7 @@ class Mutator:
 
 
         '''
-        set names of mutable parameters for each gene type in the network spec
+        Set names of mutable parameters for each gene type in the network spec
         (including the disallowed ones, as we still should be able to mutate
         parameters of existing genes of disallowed types, even though we are not
         allowed to add new genes of those types)
@@ -89,7 +91,7 @@ class Mutator:
         """
         Only one parameter of the gene is chosen to be mutated.
         The parameter to be mutated is chosen from the set of parameters
-        with associated probabilitied.
+        with associated probabilities.
 
         :type gene: Gene
         """
@@ -281,10 +283,13 @@ class Mutator:
 
 
 
-
 def crossover(genotype_more_fit, genotype_less_fit):
-    # copy original genotypes to keep them intact:
+    '''
+    Perform crossover of two genotypes. The input genotypes are kept unchanged.
+    The first genotype in the arguments must be the more fit one.
+    '''
 
+    # copy original genotypes to keep them intact:
     genotype_more_fit = genotype_more_fit.copy()
     genotype_less_fit = genotype_less_fit.copy()
 
