@@ -10,16 +10,22 @@ class Mutator:
 
     def __init__(self,
         net_spec,
-        fixed_gene_marks=None, # historical marks of genes that the mutator cannot remove
+        protected_gene_marks=None, # historical marks of genes that the mutator cannot remove
+
         innovation_number = 0, # starting innovation number
-        allowed_neuron_types=None, # only neurons of these types will be added through mutations
-        allowed_connection_types=None, # only connections of these types will be added through mutations
+
+        allowed_neuron_types=None, # only neurons of these types can be added through mutations
+                                   # otherwise, all types in the net_spec can be added
+
+        allowed_connection_types=None, # only connections of these types can be added through mutations
+                                       # otherwise, all types in the net_spec can be added
+
         mutable_params=None # dictionary {gene_type: [list of param names, optionally with probabilities]}
                             # these are names of params for each type of gene that can be mutated
         ):
 
         self.net_spec = net_spec
-
+        if protected_gene_marks is None: self.protected_gene_marks = []
 
 
         # set types of neurons that are allowed to be added to the net
@@ -63,7 +69,7 @@ class Mutator:
 
         for gene_type in self.net_spec:
             if gene_type not in self.mutable_params:
-                gene_spec = net_spec[gene_type]
+                gene_spec = self.net_spec[gene_type]
                 self.mutable_params[gene_type] = zip_with_probabilities(gene_spec.param_names())
             else:
                 self.mutable_params[gene_type] = zip_with_probabilities(self.mutable_params[gene_type])
@@ -256,11 +262,17 @@ class Mutator:
 
 
     def _add_neuron(self, genotype, neuron_type, **neuron_params):
+        # initialize params
+        init_params = self.net_spec[neuron_type].get_random_parameters()
+
+        # overwrite params that are provided in arguments
+        init_params.update(neuron_params)
+
         new_neuron_gene = NeuronGene(
-                                neuron_type=neuron_type,
+                                neuron_type = neuron_type,
                                 historical_mark = self.innovation_number,
                                 enabled = True,
-                                **neuron_params)
+                                **init_params)
 
         self.innovation_number += 1
         genotype.add_neuron_gene(new_neuron_gene)
@@ -269,17 +281,30 @@ class Mutator:
 
 
     def _add_connection(self, genotype, connection_type, mark_from, mark_to, **connection_params):
+        # initialize params
+        init_params = self.net_spec[connection_type].get_random_parameters()
+
+        # overwrite params that are provided in arguments
+        init_params.update(connection_params)
+
         new_conn_gene = ConnectionGene(
                                   connection_type = connection_type,
                                   mark_from = mark_from,
                                   mark_to = mark_to,
                                   historical_mark = self.innovation_number,
                                   enabled = True,
-                                  **connection_params)
+                                  **init_params)
 
         self.innovation_number += 1
         genotype.add_connection_gene(new_conn_gene)
         return new_conn_gene.historical_mark
+
+
+
+    # protect gene with the specified historical_mark from being deleted 
+    def protect_gene(self, historical_mark):
+        self.protected_gene_marks.append(historical_mark)
+
 
 
 
