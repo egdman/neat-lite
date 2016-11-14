@@ -29,7 +29,7 @@ class Gene(object):
     # this is called when default lookup finds nothing
     def __getattr__(self, key):
         try:
-            return self.params[key]
+            return super(Gene, self).__getattribute__('params')[key]
         except KeyError:
             raise AttributeError(key)
 
