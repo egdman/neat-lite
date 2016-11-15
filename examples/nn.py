@@ -1,4 +1,3 @@
-from __future__ import print_function
 import math
 from itertools import izip
 from copy import copy
@@ -59,9 +58,13 @@ class NN:
 
         for ng in genome.neuron_genes:
             if ng.gene_type == 'sigmoid':
-                
-                node = ComputeNode(act_func = lambda x: sigmoid(x, ng.bias, ng.gain))
-                # node = ComputeNode(act_func = lambda x: print(ng))
+
+                # it is important to save these values in separate
+                # variables that lambda can later access
+                gain = ng.gain
+                bias = ng.bias
+
+                node = ComputeNode(act_func = lambda x: sigmoid(x, bias, gain))
 
                 # output nodes go in both compute list and output list
                 # hidden nodes only go in compute list
@@ -88,7 +91,7 @@ class NN:
             in_node.set(in_value)
 
         # compute
-        for _ in range(3):
+        for _ in range(2):
             for node in self.comp_nodes: node.compute()
             for node in self.comp_nodes: node.flip()
 

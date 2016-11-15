@@ -63,7 +63,7 @@ mutator = Mutator(net_spec,
 neat_obj = NEAT(mutator = mutator, **conf)
 
 
-# CREATE INITIAL GENOTYPE ##
+## CREATE INITIAL GENOTYPE ##
 init_genome = neat_obj.get_init_genome(
         in1=neuron('input', layer='input'),
         in2=neuron('input', layer='input'),
@@ -71,40 +71,26 @@ init_genome = neat_obj.get_init_genome(
     )
 
 
-# init_genome = GeneticEncoding()
-# # add input neurons and protect them from deletion
-# mutator.protect_gene(mutator.add_neuron(init_genome, neuron_type='input', layer='input'))
-# mutator.protect_gene(mutator.add_neuron(init_genome, neuron_type='input', layer='input'))
-# # add output neuron and protect it from deletion
-# mutator.protect_gene(mutator.add_neuron(init_genome, neuron_type='sigmoid', layer='output'))
-
-
-
 ## CREATE INITIAL GENERATION ##
 init_gen = neat_obj.produce_init_generation(init_genome)
 
 
-with open('init_genome.yaml', 'w+') as outfile:
-    for geno in init_gen:
-        outfile.write(geno.to_yaml())
-        outfile.write('\n')
-
-
 ## RUN EVOLUTION ##
-def evaluate(genomes):
-    xor_inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
-    xor_outputs = (0, 1, 1, 0)
+inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
+true_outputs = (0, 1, 1, 0)
 
+
+def rmse(X, Y):
+    return math.sqrt( sum( (x - y)**2 for x, y in izip(X, Y) ) )
+
+
+def evaluate(genomes):
     fitnesses = []
     for genome in genomes:
-        fitn = 1.
         nn = NN().from_genome(genome)
-        for inp, true_outp in izip(xor_inputs, xor_outputs):
-            # evaluate error
-            nn_outp = nn.compute(inp)[0]
-            fitn -= (nn_outp - true_outp) ** 2
 
-        fitnesses.append(fitn)
+        nn_outputs = list(nn.compute(inp)[0] for inp in inputs)
+        fitnesses.append(-rmse(true_outputs, nn_outputs))
 
     return zip(genomes, fitnesses)
 
@@ -117,8 +103,10 @@ for num_gen in range(num_generations):
     evaluated_gen = evaluate(current_gen)
     current_gen = neat_obj.produce_new_generation(evaluated_gen)
 
+    best_gen, best_fit = sorted(evaluated_gen, key = itemgetter(1))[-1]
+
     if num_gen % 10 == 0: 
-        best_gen, best_fit = sorted(evaluated_gen, key = itemgetter(1))[-1]
+        
         print("{}, size = {}N, {}C, fitness = {}"
             .format(
                 num_gen,
@@ -131,9 +119,21 @@ for num_gen in range(num_generations):
         #     with open('genomes/gen_{}.yaml'.format(num_gen), 'w+') as genfile:
         #         genfile.write(best_gen.to_yaml())
 
-        if 1. - best_fit < 0.000001: break 
+    if abs(best_fit) < 0.00001: break
 
 
+
+print("Final test:")
+
+final_nn = NN().from_genome(best_gen)
+
+for inp in inputs:
+    print("{} -> {}".format(inp, final_nn.compute(inp)[0]))
+
+
+# write final genome as YAML file
+with open('xor_genome.yaml'.format(num_gen), 'w+') as genfile:
+            genfile.write(best_gen.to_yaml())
 
 
 
