@@ -10,7 +10,7 @@ class Mutator:
 
     def __init__(self,
         net_spec,
-        protected_gene_marks=None, # historical marks of genes that the mutator cannot remove
+        
 
         innovation_number = 0, # starting innovation number
 
@@ -20,8 +20,10 @@ class Mutator:
         allowed_connection_types=None, # only connections of these types can be added through mutations
                                        # otherwise, all types in the net_spec can be added
 
-        mutable_params=None # dictionary {gene_type: [list of param names, optionally with probabilities]}
-                            # these are names of params for each type of gene that can be mutated
+        # mutable_params=None # dictionary {gene_type: [list of param names, optionally with probabilities]}
+        #                     # these are names of params for each type of gene that can be mutated
+
+        protected_gene_marks=None # historical marks of genes that the mutator cannot remove
         ):
 
         self.net_spec = net_spec
@@ -56,23 +58,23 @@ class Mutator:
         parameters of existing genes of disallowed types, even though we are not
         allowed to add new genes of those types)
         '''
-        self._parse_mutable_params(mutable_params)
+        # self._parse_mutable_params(mutable_params)
         self.innovation_number = innovation_number
 
 
 
-    def _parse_mutable_params(self, param_dict):
-        if param_dict is None:
-            self.mutable_params = {}
-        else:
-            self.mutable_params = param_dict.copy()
+    # def _parse_mutable_params(self, param_dict):
+    #     if param_dict is None:
+    #         self.mutable_params = {}
+    #     else:
+    #         self.mutable_params = param_dict.copy()
 
-        for gene_type in self.net_spec:
-            if gene_type not in self.mutable_params:
-                gene_spec = self.net_spec[gene_type]
-                self.mutable_params[gene_type] = zip_with_probabilities(gene_spec.param_names())
-            else:
-                self.mutable_params[gene_type] = zip_with_probabilities(self.mutable_params[gene_type])
+    #     for gene_type in self.net_spec:
+    #         if gene_type not in self.mutable_params:
+    #             gene_spec = self.net_spec[gene_type]
+    #             self.mutable_params[gene_type] = zip_with_probabilities(gene_spec.param_names())
+    #         else:
+    #             self.mutable_params[gene_type] = zip_with_probabilities(self.mutable_params[gene_type])
 
 
 
@@ -102,8 +104,9 @@ class Mutator:
         :type gene: Gene
         """
 
-        gene_params = self.mutable_params[gene.gene_type]
+        # gene_params = self.mutable_params[gene.gene_type]
         gene_spec = self.net_spec[gene.gene_type]
+        gene_params = gene_spec.mutable_param_names()
 
         if len(gene_params) > 0:
 

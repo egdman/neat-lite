@@ -118,27 +118,27 @@ class NEAT(object):
             # if no connections, add connection
             if len(genotype.connection_genes) == 0:
                 self.mutator.add_connection_mutation(genotype)
-                validate_genotype(genotype, "inserting new CONNECTION created invalid genotype")
+                # validate_genotype(genotype, "inserting new CONNECTION created invalid genotype")
 
             # otherwise add connection or neuron with equal probability
             else:
                 if random.random() < 0.5:
                     self.mutator.add_connection_mutation(genotype)
-                    validate_genotype(genotype, "inserting new CONNECTION created invalid genotype")
+                    # validate_genotype(genotype, "inserting new CONNECTION created invalid genotype")
 
                 else:
                     self.mutator.add_neuron_mutation(genotype)
-                    validate_genotype(genotype, "inserting new NEURON created invalid genotype")
+                    # validate_genotype(genotype, "inserting new NEURON created invalid genotype")
 
 
         # apply removal mutation:
         if random.random() < self.structural_removal_proba:
             if random.random() < 0.5:
                 self.mutator.remove_connection_mutation(genotype)
-                validate_genotype(genotype, "removing a CONNECTION created invalid genotype")
+                # validate_genotype(genotype, "removing a CONNECTION created invalid genotype")
             else:
                 self.mutator.remove_neuron_mutation(genotype)
-                validate_genotype(genotype, "removing a NEURON created invalid genotype")
+                # validate_genotype(genotype, "removing a NEURON created invalid genotype")
 
 
 
@@ -148,19 +148,19 @@ class NEAT(object):
     def produce_child(self, parent1, parent2):
         # apply crossover:
         child_genotype = crossover(parent1, parent2)
-        validate_genotype(child_genotype, "crossover created invalid genotype")
+        # validate_genotype(child_genotype, "crossover created invalid genotype")
 
         # apply mutations:
         self.mutator.mutate_connection_params(
             genotype=child_genotype,
             probability=self.connection_param_mut_proba)
-        validate_genotype(child_genotype, "weight mutation created invalid genotype")
+        # validate_genotype(child_genotype, "weight mutation created invalid genotype")
 
         self.mutator.mutate_neuron_params(
             genotype=child_genotype,
             probability=self.neuron_param_mut_proba)
 
-        validate_genotype(child_genotype, "neuron parameters mutation created invalid genotype")
+        # validate_genotype(child_genotype, "neuron parameters mutation created invalid genotype")
 
         # apply structural mutations:
         self.apply_structural_mutation(child_genotype)

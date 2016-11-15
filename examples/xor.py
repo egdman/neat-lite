@@ -24,7 +24,7 @@ elite_size = 1,                     # size of the elite club
 tournament_size = 4,                # size of the selection subsample (must be in the range [2, pop_size])
 neuron_param_mut_proba = 0.5,       # probability to mutate each single neuron in the genome
 connection_param_mut_proba = 0.5,   # probability to mutate each single connection in the genome
-structural_augmentation_proba = 0.5,# probability to augment the topology of a newly created genome 
+structural_augmentation_proba = 0.7,# probability to augment the topology of a newly created genome 
 structural_removal_proba = 0.0,     # probability to diminish the topology of a newly created genome
 speciation_threshold = 0.005        # genomes that are more similar than this value will be considered the same species
 )
@@ -35,12 +35,12 @@ speciation_threshold = 0.005        # genomes that are more similar than this va
 net_spec = NetworkSpec(
     [
         GeneSpec('input',
-            NPS('layer', ['input'])
+            NPS('layer', ['input'], mutable=False)
         ),
         GeneSpec('sigmoid',
             PS('bias', -1., 1., neuron_sigma),
             PS('gain', 0, 1., neuron_sigma),
-            NPS('layer', ['hidden'])
+            NPS('layer', ['hidden'], mutable=False)
         )
     ],
     [
@@ -51,9 +51,7 @@ net_spec = NetworkSpec(
 
 
 ## CREATE MUTATOR ##
-mutator = Mutator(net_spec,
-    allowed_neuron_types = ['sigmoid'],
-    mutable_params = {'sigmoid': ['bias', 'gain'], 'input': []})
+mutator = Mutator(net_spec, allowed_neuron_types = ['sigmoid'])
 
 
 ## CREATE MAIN NEAT OBJECT ##
@@ -131,6 +129,3 @@ for inp in inputs:
 # write final genome as YAML file
 with open('xor_genome.yaml'.format(num_gen), 'w+') as genfile:
             genfile.write(best_gen.to_yaml())
-
-
-
