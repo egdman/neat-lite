@@ -1,0 +1,341 @@
+connections:
+- enabled: true
+  gene_type: connection
+  historical_mark: 28
+  mark_from: 26
+  mark_to: 0
+  params:
+    weight: 13.97003831071186
+- enabled: true
+  gene_type: connection
+  historical_mark: 30
+  mark_from: 2
+  mark_to: 29
+  params:
+    weight: 6.018602163682708
+- enabled: true
+  gene_type: connection
+  historical_mark: 57
+  mark_from: 0
+  mark_to: 56
+  params:
+    weight: -1.281988286275831
+- enabled: true
+  gene_type: connection
+  historical_mark: 58
+  mark_from: 56
+  mark_to: 26
+  params:
+    weight: 13.39664243351019
+- enabled: true
+  gene_type: connection
+  historical_mark: 85
+  mark_from: 29
+  mark_to: 84
+  params:
+    weight: -10.1104069639414
+- enabled: true
+  gene_type: connection
+  historical_mark: 86
+  mark_from: 84
+  mark_to: 13
+  params:
+    weight: 17.664377424416234
+- enabled: true
+  gene_type: connection
+  historical_mark: 191
+  mark_from: 84
+  mark_to: 0
+  params:
+    weight: -28.707506179862456
+- enabled: true
+  gene_type: connection
+  historical_mark: 201
+  mark_from: 1
+  mark_to: 200
+  params:
+    weight: -5.367761375133736
+- enabled: true
+  gene_type: connection
+  historical_mark: 318
+  mark_from: 103
+  mark_to: 317
+  params:
+    weight: -6.59563675650621
+- enabled: true
+  gene_type: connection
+  historical_mark: 319
+  mark_from: 317
+  mark_to: 1
+  params:
+    weight: -3.6536464271934213
+- enabled: true
+  gene_type: connection
+  historical_mark: 359
+  mark_from: 200
+  mark_to: 2
+  params:
+    weight: -5.60586159983657
+- enabled: true
+  gene_type: connection
+  historical_mark: 436
+  mark_from: 227
+  mark_to: 435
+  params:
+    weight: 4.51458650509632
+- enabled: true
+  gene_type: connection
+  historical_mark: 437
+  mark_from: 435
+  mark_to: 103
+  params:
+    weight: -0.9879144947110294
+- enabled: true
+  gene_type: connection
+  historical_mark: 523
+  mark_from: 1
+  mark_to: 1
+  params:
+    weight: -1.5279886305917156
+- enabled: true
+  gene_type: connection
+  historical_mark: 628
+  mark_from: 200
+  mark_to: 627
+  params:
+    weight: -7.331322251293907
+- enabled: true
+  gene_type: connection
+  historical_mark: 629
+  mark_from: 627
+  mark_to: 103
+  params:
+    weight: -2.0240210426986924
+- enabled: true
+  gene_type: connection
+  historical_mark: 867
+  mark_from: 1
+  mark_to: 29
+  params:
+    weight: -8.284205099072159
+- enabled: true
+  gene_type: connection
+  historical_mark: 875
+  mark_from: 26
+  mark_to: 874
+  params:
+    weight: 18.337400209951145
+- enabled: true
+  gene_type: connection
+  historical_mark: 876
+  mark_from: 874
+  mark_to: 2
+  params:
+    weight: -0.6547359609582442
+- enabled: true
+  gene_type: connection
+  historical_mark: 882
+  mark_from: 13
+  mark_to: 881
+  params:
+    weight: -15.41489223427921
+- enabled: true
+  gene_type: connection
+  historical_mark: 916
+  mark_from: 84
+  mark_to: 874
+  params:
+    weight: 5.9173799016996576
+- enabled: true
+  gene_type: connection
+  historical_mark: 925
+  mark_from: 2
+  mark_to: 924
+  params:
+    weight: -4.521372672584331
+- enabled: true
+  gene_type: connection
+  historical_mark: 926
+  mark_from: 924
+  mark_to: 13
+  params:
+    weight: -0.7123156771393486
+- enabled: true
+  gene_type: connection
+  historical_mark: 998
+  mark_from: 2
+  mark_to: 1
+  params:
+    weight: 2.8958446302818293
+- enabled: true
+  gene_type: connection
+  historical_mark: 1024
+  mark_from: 227
+  mark_to: 84
+  params:
+    weight: 4.583935888595782
+- enabled: true
+  gene_type: connection
+  historical_mark: 1071
+  mark_from: 881
+  mark_to: 1070
+  params:
+    weight: 7.14662073189394
+- enabled: true
+  gene_type: connection
+  historical_mark: 1072
+  mark_from: 1070
+  mark_to: 227
+  params:
+    weight: 0.20335873410594718
+- enabled: true
+  gene_type: connection
+  historical_mark: 1096
+  mark_from: 2
+  mark_to: 1070
+  params:
+    weight: 7.579348195689218
+- enabled: true
+  gene_type: connection
+  historical_mark: 1121
+  mark_from: 1070
+  mark_to: 435
+  params:
+    weight: 2.587738613434736
+- enabled: true
+  gene_type: connection
+  historical_mark: 1167
+  mark_from: 881
+  mark_to: 881
+  params:
+    weight: -1.9372102240335172
+- enabled: true
+  gene_type: connection
+  historical_mark: 1203
+  mark_from: 881
+  mark_to: 56
+  params:
+    weight: -0.030219926684218027
+neurons:
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 0
+  params:
+    bias: 1.0
+    gain: 1.0
+    layer: output
+- enabled: true
+  gene_type: input
+  historical_mark: 1
+  params:
+    layer: input
+- enabled: true
+  gene_type: input
+  historical_mark: 2
+  params:
+    layer: input
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 13
+  params:
+    bias: 0.20060597040747874
+    gain: 0.7205807468546317
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 26
+  params:
+    bias: -0.2237883228191646
+    gain: 0.6611682836095906
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 29
+  params:
+    bias: -1.0
+    gain: 0.9595724296637433
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 56
+  params:
+    bias: -1.0
+    gain: 0.42426742301930376
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 84
+  params:
+    bias: -0.898316453584115
+    gain: 1.0
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 103
+  params:
+    bias: -0.2246671747758841
+    gain: 0.5238966634331692
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 200
+  params:
+    bias: 1.0
+    gain: 0.6808337328974493
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 227
+  params:
+    bias: 1.0
+    gain: 0.6861107611429675
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 317
+  params:
+    bias: 0.8911082546938474
+    gain: 0.2592446253332461
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 435
+  params:
+    bias: 1.0
+    gain: 0.9021565458609524
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 627
+  params:
+    bias: -0.16630194015730082
+    gain: 0
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 874
+  params:
+    bias: -0.8828609807755148
+    gain: 0.4935025003127007
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 881
+  params:
+    bias: 1.0
+    gain: 1.0
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 924
+  params:
+    bias: -1.0
+    gain: 0.4074833162474092
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 1070
+  params:
+    bias: -0.16510325274458684
+    gain: 1.0
+    layer: hidden

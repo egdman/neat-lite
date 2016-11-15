@@ -59,12 +59,9 @@ class NN:
         for ng in genome.neuron_genes:
             if ng.gene_type == 'sigmoid':
 
-                # it is important to save these values in separate
-                # variables that lambda can later access
-                gain = ng.gain
-                bias = ng.bias
-
-                node = ComputeNode(act_func = lambda x: sigmoid(x, bias, gain))
+                node = ComputeNode(
+                    act_func = lambda x, bias=ng.bias, gain=ng.gain: sigmoid(x, bias, gain)
+                )
 
                 # output nodes go in both compute list and output list
                 # hidden nodes only go in compute list

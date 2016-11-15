@@ -3,10 +3,7 @@ import sys
 import math
 import random
 
-sys.path.append(path.dirname(path.abspath(__file__)) + '/../')
-
-from neat import (GeneticEncoding, Mutator,
-                NetworkSpec, GeneSpec,
+from neat import (Mutator, NetworkSpec, GeneSpec,
                 NumericParamSpec as PS,
                 NominalParamSpec as NPS,
                 NEAT, neuron)
@@ -27,7 +24,7 @@ elite_size = 1,                     # size of the elite club
 tournament_size = 4,                # size of the selection subsample (must be in the range [2, pop_size])
 neuron_param_mut_proba = 0.5,       # probability to mutate each single neuron in the genome
 connection_param_mut_proba = 0.5,   # probability to mutate each single connection in the genome
-structural_augmentation_proba = 0.8,# probability to augment the topology of a newly created genome 
+structural_augmentation_proba = 0.5,# probability to augment the topology of a newly created genome 
 structural_removal_proba = 0.0,     # probability to diminish the topology of a newly created genome
 speciation_threshold = 0.005        # genomes that are more similar than this value will be considered the same species
 )
@@ -97,7 +94,7 @@ def evaluate(genomes):
 
 
 current_gen = init_gen
-num_generations = 1000
+num_generations = 10000
 
 for num_gen in range(num_generations):
     evaluated_gen = evaluate(current_gen)

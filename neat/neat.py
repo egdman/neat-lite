@@ -95,15 +95,15 @@ class NEAT(object):
         for _ in range(self.pop_size):
             mutated_genome = source_genome.copy()
             
-            # self.mutator.mutate_connection_params(
-            #     genotype=mutated_genome,
-            #     probability=self.connection_param_mut_proba)
+            self.mutator.mutate_connection_params(
+                genotype=mutated_genome,
+                probability=self.connection_param_mut_proba)
 
-            # self.mutator.mutate_neuron_params(
-            #     genotype=mutated_genome,
-            #     probability=self.neuron_param_mut_proba)
+            self.mutator.mutate_neuron_params(
+                genotype=mutated_genome,
+                probability=self.neuron_param_mut_proba)
 
-            # self.apply_structural_mutation(mutated_genome)
+            self.apply_structural_mutation(mutated_genome)
 
             init_pop.append(mutated_genome)
 
