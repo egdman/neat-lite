@@ -126,20 +126,16 @@ class GeneSpec(object):
         self.param_specs = {param_spec.param_name: param_spec for param_spec in param_specs}
 
 
-
     def __getitem__(self, key):
         return self.param_specs[key]
     
-
 
     def __iter__(self):
         return self.param_specs.__iter__()
 
 
-
     def get(self, key, default=None):
         return self.param_specs.get(key, default)
-
 
 
     def param_names(self):
@@ -147,7 +143,7 @@ class GeneSpec(object):
 
 
     def mutable_param_names(self):
-        return list(pname in self.param_specs.keys() if pname.mutable)
+        return list(pname for pname, pspec in self.param_specs.items() if pspec.mutable)
 
 
     def get_random_parameters(self):

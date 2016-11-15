@@ -110,7 +110,8 @@ class Mutator:
 
         if len(gene_params) > 0:
 
-            param_name = weighted_random(gene_params)
+            # param_name = weighted_random(gene_params)
+            param_name = random.choice(gene_params)
             param_spec = gene_spec[param_name]
 
             if isinstance(param_spec, NumericParamSpec):
