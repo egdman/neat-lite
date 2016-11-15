@@ -1,0 +1,100 @@
+connections: []
+neurons:
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 0
+  params:
+    bias: -0.2994924615680372
+    gain: 0.9155838674756126
+    layer: output
+- enabled: true
+  gene_type: input
+  historical_mark: 1
+  params:
+    layer: input
+- enabled: true
+  gene_type: input
+  historical_mark: 2
+  params:
+    layer: input
+
+connections: []
+neurons:
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 0
+  params:
+    bias: -0.2994924615680372
+    gain: 0.9155838674756126
+    layer: output
+- enabled: true
+  gene_type: input
+  historical_mark: 1
+  params:
+    layer: input
+- enabled: true
+  gene_type: input
+  historical_mark: 2
+  params:
+    layer: input
+
+connections: []
+neurons:
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 0
+  params:
+    bias: -0.2994924615680372
+    gain: 0.9155838674756126
+    layer: output
+- enabled: true
+  gene_type: input
+  historical_mark: 1
+  params:
+    layer: input
+- enabled: true
+  gene_type: input
+  historical_mark: 2
+  params:
+    layer: input
+
+connections: []
+neurons:
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 0
+  params:
+    bias: -0.2994924615680372
+    gain: 0.9155838674756126
+    layer: output
+- enabled: true
+  gene_type: input
+  historical_mark: 1
+  params:
+    layer: input
+- enabled: true
+  gene_type: input
+  historical_mark: 2
+  params:
+    layer: input
+
+connections: []
+neurons:
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 0
+  params:
+    bias: -0.2994924615680372
+    gain: 0.9155838674756126
+    layer: output
+- enabled: true
+  gene_type: input
+  historical_mark: 1
+  params:
+    layer: input
+- enabled: true
+  gene_type: input
+  historical_mark: 2
+  params:
+    layer: input
+

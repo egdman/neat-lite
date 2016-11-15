@@ -1,6 +1,29 @@
 import random
 from operator import itemgetter
 
+from .genes import GeneticEncoding
+from .operators import crossover
+
+
+class Conf(object): pass
+
+
+def neuron(neuron_type, **params):
+    n = Conf()
+    n.type = neuron_type
+    n.params = params
+    return n
+
+
+def connection(connection_type, src, dst, **params):
+    c = Conf()
+    c.type = connection_type
+    c.src = src
+    c.dst = dst
+    c.params = params
+    return c
+
+
 
 def validate_genotype(genotype, error_msg):
     if not genotype.check_validity():
@@ -35,6 +58,56 @@ class NEAT(object):
             else:
                 raise TypeError("NEAT instance: please provide value for {}".format(setting_name))
 
+
+
+    def get_init_genome(self, **kwargs):
+
+        connections = kwargs.pop('connections', [])
+        neurons = kwargs
+
+        neuron_map = {} # {id: hist_mark}
+        genome = GeneticEncoding()
+        for neuron_id, neuron_info in neurons.items():
+            hmark = self.mutator.add_neuron(
+                genome,
+                neuron_info.type,
+                **neuron_info.params
+            )
+            neuron_map[neuron_id] = hmark
+            self.mutator.protect_gene(hmark)
+
+        for conn_info in connections:
+            hmark = self.mutator.add_connection(
+                genome,
+                conn_info.type,
+                mark_from = neuron_map[conn_info.src],
+                mark_to = neuron_map[conn_info.dst],
+                **conn_info.params
+            )
+            self.mutator.protect_gene(hmark)
+        return genome
+
+
+
+
+    def produce_init_generation(self, source_genome):
+        init_pop = []
+        for _ in range(self.pop_size):
+            mutated_genome = source_genome.copy()
+            
+            # self.mutator.mutate_connection_params(
+            #     genotype=mutated_genome,
+            #     probability=self.connection_param_mut_proba)
+
+            # self.mutator.mutate_neuron_params(
+            #     genotype=mutated_genome,
+            #     probability=self.neuron_param_mut_proba)
+
+            # self.apply_structural_mutation(mutated_genome)
+
+            init_pop.append(mutated_genome)
+
+        return init_pop
 
 
 
@@ -133,7 +206,7 @@ class NEAT(object):
         gen_fit_shared = sorted(gen_fit_shared, key=itemgetter(1), reverse=True)
 
         # create children:
-        for _ in range(pop_size - elite_size):
+        for _ in range(self.pop_size - self.elite_size):
             # we select genomes using their shared fitnesses:
             selected = self.select_for_tournament(gen_fit_shared)
 

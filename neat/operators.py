@@ -156,7 +156,7 @@ class Mutator:
         new_connection_type = weighted_random(self.allowed_connection_types)
         new_connection_params = self.net_spec[new_connection_type].get_random_parameters()
 
-        self._add_connection(
+        self.add_connection(
             genotype,
             new_connection_type,
             mark_from,
@@ -205,14 +205,14 @@ class Mutator:
         new_neuron_params = self.net_spec[new_neuron_type].get_random_parameters()
 
         # insert new neuron
-        mark_middle = self._add_neuron(genotype, new_neuron_type, **new_neuron_params)
+        mark_middle = self.add_neuron(genotype, new_neuron_type, **new_neuron_params)
 
 
         # initialize new connection type and params
         new_connection_type = weighted_random(self.allowed_connection_types)
         new_connection_params = self.net_spec[new_connection_type].get_random_parameters()
 
-        self._add_connection(
+        self.add_connection(
             genotype,
             old_connection_type,
             mark_from,
@@ -220,7 +220,7 @@ class Mutator:
             **old_connection_params)
 
 
-        self._add_connection(
+        self.add_connection(
             genotype,
             new_connection_type,
             mark_middle,
@@ -261,7 +261,7 @@ class Mutator:
 
 
 
-    def _add_neuron(self, genotype, neuron_type, **neuron_params):
+    def add_neuron(self, genotype, neuron_type, **neuron_params):
         # initialize params
         init_params = self.net_spec[neuron_type].get_random_parameters()
 
@@ -280,7 +280,7 @@ class Mutator:
 
 
 
-    def _add_connection(self, genotype, connection_type, mark_from, mark_to, **connection_params):
+    def add_connection(self, genotype, connection_type, mark_from, mark_to, **connection_params):
         # initialize params
         init_params = self.net_spec[connection_type].get_random_parameters()
 

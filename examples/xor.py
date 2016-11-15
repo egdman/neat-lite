@@ -9,7 +9,7 @@ from neat import (GeneticEncoding, Mutator,
                 NetworkSpec, GeneSpec,
                 NumericParamSpec as PS,
                 NominalParamSpec as NPS,
-                NEAT)
+                NEAT, neuron)
 
 from itertools import izip
 from operator import itemgetter
@@ -63,31 +63,31 @@ mutator = Mutator(net_spec,
 neat_obj = NEAT(mutator = mutator, **conf)
 
 
-## CREATE INITIAL GENOTYPE ##
-init_ge = GeneticEncoding()
-
-# add input neurons and protect them from deletion
-mutator.protect_gene(mutator._add_neuron(init_ge, neuron_type='input', layer='input'))
-mutator.protect_gene(mutator._add_neuron(init_ge, neuron_type='input', layer='input'))
-
-# add output neuron and protect it from deletion
-mutator.protect_gene(mutator._add_neuron(init_ge, neuron_type='sigmoid', layer='output'))
+# CREATE INITIAL GENOTYPE ##
+init_genome = neat_obj.get_init_genome(
+        in1=neuron('input', layer='input'),
+        in2=neuron('input', layer='input'),
+        out1=neuron('sigmoid', layer='output'),
+    )
 
 
-## CREATE INITIAL POPULATION ##
-init_pop = []
-for _ in range(pop_size):
-    mutated_ge = init_ge.copy()
-    
-    mutator.mutate_connection_params(
-        genotype=mutated_ge,
-        probability=param_mut_proba)
+# init_genome = GeneticEncoding()
+# # add input neurons and protect them from deletion
+# mutator.protect_gene(mutator.add_neuron(init_genome, neuron_type='input', layer='input'))
+# mutator.protect_gene(mutator.add_neuron(init_genome, neuron_type='input', layer='input'))
+# # add output neuron and protect it from deletion
+# mutator.protect_gene(mutator.add_neuron(init_genome, neuron_type='sigmoid', layer='output'))
 
-    mutator.mutate_neuron_params(
-        genotype=mutated_ge,
-        probability=param_mut_proba)
 
-    init_pop.append(mutated_ge)
+
+## CREATE INITIAL GENERATION ##
+init_gen = neat_obj.produce_init_generation(init_genome)
+
+
+with open('init_genome.yaml', 'w+') as outfile:
+    for geno in init_gen:
+        outfile.write(geno.to_yaml())
+        outfile.write('\n')
 
 
 ## RUN EVOLUTION ##
@@ -110,12 +110,12 @@ def evaluate(genomes):
 
 
 
-current_gen = init_pop
+current_gen = init_gen
 num_generations = 1000
 
 for num_gen in range(num_generations):
     evaluated_gen = evaluate(current_gen)
-    current_gen = produce_new_generation(evaluated_gen)
+    current_gen = neat_obj.produce_new_generation(evaluated_gen)
 
     if num_gen % 10 == 0: 
         best_gen, best_fit = sorted(evaluated_gen, key = itemgetter(1))[-1]
