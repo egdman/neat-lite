@@ -8,15 +8,17 @@ from .operators import crossover
 class Conf(object): pass
 
 
-def neuron(neuron_type, **params):
+def neuron(neuron_type, protected, **params):
     n = Conf()
+    n.protected = protected
     n.type = neuron_type
     n.params = params
     return n
 
 
-def connection(connection_type, src, dst, **params):
+def connection(connection_type, protected, src, dst, **params):
     c = Conf()
+    c.protected = protected
     c.type = connection_type
     c.src = src
     c.dst = dst
@@ -74,7 +76,7 @@ class NEAT(object):
                 **neuron_info.params
             )
             neuron_map[neuron_id] = hmark
-            self.mutator.protect_gene(hmark)
+            if neuron_info.protected: self.mutator.protect_gene(hmark)
 
         for conn_info in connections:
             hmark = self.mutator.add_connection(
@@ -84,7 +86,7 @@ class NEAT(object):
                 mark_to = neuron_map[conn_info.dst],
                 **conn_info.params
             )
-            self.mutator.protect_gene(hmark)
+            if conn_info.protected: self.mutator.protect_gene(hmark)
         return genome
 
 

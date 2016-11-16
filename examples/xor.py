@@ -59,10 +59,11 @@ neat_obj = NEAT(mutator = mutator, **conf)
 
 
 ## CREATE INITIAL GENOTYPE ##
+# we specify initial input and output neurons and protect them from removal
 init_genome = neat_obj.get_init_genome(
-        in1=neuron('input', layer='input'),
-        in2=neuron('input', layer='input'),
-        out1=neuron('sigmoid', layer='output'),
+        in1=neuron('input', True, layer='input'),
+        in2=neuron('input', True, layer='input'),
+        out1=neuron('sigmoid', True, layer='output'),
     )
 
 
@@ -90,7 +91,7 @@ def evaluate(genomes):
     return zip(genomes, fitnesses)
 
 
-
+print("\n//// AUGMENT PHASE ////")
 current_gen = init_gen
 num_generations = 10000
 
@@ -115,6 +116,29 @@ for num_gen in range(num_generations):
         #         genfile.write(best_gen.to_yaml())
 
     if abs(best_fit) < 0.00001: break
+
+
+# Removal phase
+print("\n//// REMOVAL PHASE ////")
+num_generations = 1000
+conf.update({'structural_removal_proba': 0.7})
+neat_obj = NEAT(mutator = mutator, **conf)
+
+for num_gen in range(num_generations):
+    evaluated_gen = evaluate(current_gen)
+    current_gen = neat_obj.produce_new_generation(evaluated_gen)
+
+    best_gen, best_fit = sorted(evaluated_gen, key = itemgetter(1))[-1]
+
+    if num_gen % 10 == 0: 
+        
+        print("{}, size = {}N, {}C, fitness = {}"
+            .format(
+                num_gen,
+                len(best_gen.neuron_genes),
+                len(best_gen.connection_genes),
+                best_fit))
+
 
 
 

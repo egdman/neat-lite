@@ -171,6 +171,19 @@ class Mutator:
 
 
 
+    def _unprotected_connection_ids(self, genotype):
+        return list(cg_i for cg_i, cg in enumerate(genotype.connection_genes) \
+            if cg.historical_mark not in self.protected_gene_marks)
+
+
+
+    def _unprotected_neuron_ids(self, genotype):
+        return list(ng_i for ng_i, ng in enumerate(genotype.neuron_genes) \
+            if ng.historical_mark not in self.protected_gene_marks)
+
+
+
+
     def add_neuron_mutation(self, genotype):
 
         """
@@ -185,7 +198,15 @@ class Mutator:
         :type genotype: GeneticEncoding
         """
 
-        connection_to_split_id = random.choice(range(len(genotype.connection_genes)))
+
+        # TODO: Implement protection of connections and adjacent neurons
+        # for now there is only neuron protection
+
+        # unprotected_conn_ids = self._unprotected_connection_ids(genotype)
+        unprotected_conn_ids = range(len(genotype.connection_genes))
+        if len(unprotected_conn_ids) == 0: return
+
+        connection_to_split_id = random.choice(unprotected_conn_ids)
         connection_to_split = genotype.connection_genes[connection_to_split_id]
 
 
@@ -235,16 +256,19 @@ class Mutator:
 
 
     def remove_connection_mutation(self, genotype):
-        if len(genotype.connection_genes) == 0: return
-        gene_id = random.choice(range(len(genotype.connection_genes)))
+        # unprotected_conn_ids = self._unprotected_connection_ids(genotype)
+        unprotected_conn_ids = range(len(genotype.connection_genes))
+        if len(unprotected_conn_ids) == 0: return
+        gene_id = random.choice(unprotected_conn_ids)
         genotype.remove_connection_gene(gene_id)
 
 
 
     def remove_neuron_mutation(self, genotype):
-        if len(genotype.neuron_genes) == 0: return
+        unprotected_neuron_ids = self._unprotected_neuron_ids(genotype)
+        if len(unprotected_neuron_ids) == 0: return
 
-        gene_id = random.choice(range(len(genotype.neuron_genes)))
+        gene_id = random.choice(unprotected_neuron_ids)
 
         neuron_gene = genotype.neuron_genes[gene_id]
         neuron_mark = neuron_gene.historical_mark
@@ -305,8 +329,11 @@ class Mutator:
 
 
 
-    # protect gene with the specified historical_mark from being deleted 
+    
     def protect_gene(self, historical_mark):
+        '''
+        protect gene with the given historical_mark from being deleted 
+        '''
         self.protected_gene_marks.append(historical_mark)
 
 
