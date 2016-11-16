@@ -42,6 +42,11 @@ class Gene(object):
             self.params[key] = value
 
 
+    def __contains__(self, key):
+        if key in self.__dict__ or key in self.params: return True
+        return False
+
+
     def get_type(self):
         return self.gene_type
 

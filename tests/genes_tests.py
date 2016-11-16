@@ -92,6 +92,8 @@ class TestGenes(unittest.TestCase):
             msg="ng['bias'] <- 0.95 assignment did not work"
             )
 
+
+        # check that new attribute assignment with dot notation works
         ng.new_param = 'foo'
         self.assertEquals(
             'foo',
@@ -100,6 +102,7 @@ class TestGenes(unittest.TestCase):
             )
 
 
+        # check that new attribute assignment with [] notation works
         ng['newer_param'] = 'bar'
         self.assertEquals(
             'bar',
@@ -107,11 +110,26 @@ class TestGenes(unittest.TestCase):
             msg="ng['newer_param'] <- 'bar' : addition of a new parameter did not work"
             )
 
-
+        # check that __getattr__ throws correct exception for missing attributes
         with self.assertRaises(AttributeError):
             ng.does_not_exist
 
 
+        # check that 'in' operator works correctly (it uses __contains__() method)
+        self.assertEquals(
+            False,
+            'does_not_exist' in ng,
+            msg="\"'does_not_exist' in ng\" should return False"
+            )
+
+        self.assertEquals(
+            True,
+            'new_param' in ng,
+            msg="\"'new_param' in ng\" should return True"
+            )
+
+
+       # check that 'hasattr' works correctly
         self.assertEquals(
             False,
             hasattr(ng, 'surprise'),
