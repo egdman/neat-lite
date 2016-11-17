@@ -5,6 +5,10 @@ from .genes import GeneticEncoding
 from .operators import crossover
 
 
+class InvalidConfigError(RuntimeError): pass
+
+
+
 class Conf(object): pass
 
 
@@ -50,6 +54,7 @@ class NEAT(object):
 
     def __init__(self, mutator, **config):
         self.mutator = mutator
+
         for setting_name, default_value in NEAT.settings.items():
             provided_value = config.get(setting_name, None)
 
@@ -58,7 +63,15 @@ class NEAT(object):
             elif default_value is not None:
                 setattr(self, setting_name, default_value)
             else:
-                raise TypeError("NEAT instance: please provide value for {}".format(setting_name))
+                raise InvalidConfigError("NEAT instance: please provide value for {}".format(setting_name))
+
+        # check validity of settings:
+        if self.tournament_size > self.pop_size or self.tournament_size < 2:
+            raise InvalidConfigError("NEAT instance: tournament_size must lie within [2, pop_size]")
+
+        if self.elite_size > self.pop_size:
+            raise InvalidConfigError("NEAT instance: elite_size must not be larger than pop_size")
+
 
 
 
