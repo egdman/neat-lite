@@ -69,15 +69,15 @@ class Gene(object):
 
 class NeuronGene(Gene):
 
-    def __init__(self, neuron_type, historical_mark=0, enabled=True, **params):
-        super(NeuronGene, self).__init__(neuron_type, historical_mark, enabled, **params)
+    def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
+        super(NeuronGene, self).__init__(gene_type, historical_mark, enabled, **params)
 
 
     neuron_type = property(Gene.get_type)
     neuron_params = property(Gene.get_params)
 
     def __str__(self):
-        return "NEAT Neuron gene, mark: {}, type: {}".format(self.historical_mark, self.neuron_type)
+        return "NEAT Neuron gene, mark: {}, type: {}".format(self.historical_mark, self.gene_type)
 
 
 
@@ -85,8 +85,8 @@ class NeuronGene(Gene):
 
 class ConnectionGene(Gene):
 
-    def __init__(self, connection_type, mark_from, mark_to, historical_mark=0, enabled=True, **params):
-        super(ConnectionGene, self).__init__(connection_type, historical_mark, enabled, **params)
+    def __init__(self, gene_type, mark_from, mark_to, historical_mark=0, enabled=True, **params):
+        super(ConnectionGene, self).__init__(gene_type, historical_mark, enabled, **params)
 
         super(Gene, self).__setattr__('mark_from', mark_from)
         super(Gene, self).__setattr__('mark_to', mark_to)
@@ -98,7 +98,7 @@ class ConnectionGene(Gene):
     def __str__(self):
         return "NEAT Connection gene, mark: {}, type: {}, from: {}, to: {}".format(
             self.historical_mark,
-            self.connection_type,
+            self.gene_type,
             self.mark_from,
             self.mark_to
         )
@@ -295,6 +295,25 @@ class GeneticEncoding:
 
     def remove_neuron_gene(self, index):
         del self.neuron_genes[index]
+
+
+
+    def from_yaml(self, y_desc):
+        del self.neuron_genes[:]
+        del self.connection_genes[:]
+
+        y_neurons = y_desc['neurons']
+        y_connections = y_desc['connections']
+
+        for y_neuron in y_neurons:
+            y_neuron.update(y_neuron.pop("params"))
+            self.neuron_genes.append(NeuronGene(**y_neuron))
+
+        for y_connection in y_connections:
+            y_connection.update(y_connection.pop("params"))
+            self.connection_genes.append(ConnectionGene(**y_connection))
+
+        return self
 
 
 

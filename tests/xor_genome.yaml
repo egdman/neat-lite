@@ -1,0 +1,131 @@
+connections:
+- enabled: true
+  gene_type: connection
+  historical_mark: 13
+  mark_from: 11
+  mark_to: 0
+  params:
+    weight: 30.656812378792498
+- enabled: true
+  gene_type: connection
+  historical_mark: 54
+  mark_from: 2
+  mark_to: 53
+  params:
+    weight: 7.3641349475552875
+- enabled: true
+  gene_type: connection
+  historical_mark: 202
+  mark_from: 11
+  mark_to: 53
+  params:
+    weight: -15.25349888223435
+- enabled: true
+  gene_type: connection
+  historical_mark: 354
+  mark_from: 53
+  mark_to: 0
+  params:
+    weight: -70.62257641396673
+- enabled: true
+  gene_type: connection
+  historical_mark: 406
+  mark_from: 1
+  mark_to: 405
+  params:
+    weight: -6.280271036167722
+- enabled: true
+  gene_type: connection
+  historical_mark: 407
+  mark_from: 405
+  mark_to: 11
+  params:
+    weight: 18.550200712405438
+- enabled: true
+  gene_type: connection
+  historical_mark: 2998
+  mark_from: 0
+  mark_to: 0
+  params:
+    weight: 7.964794358079512
+- enabled: true
+  gene_type: connection
+  historical_mark: 7075
+  mark_from: 11
+  mark_to: 1
+  params:
+    weight: 1.409475902102161
+- enabled: true
+  gene_type: connection
+  historical_mark: 7089
+  mark_from: 1
+  mark_to: 11
+  params:
+    weight: -0.1713431278601295
+- enabled: true
+  gene_type: connection
+  historical_mark: 7205
+  mark_from: 7203
+  mark_to: 405
+  params:
+    weight: -3.045440798962661
+- enabled: true
+  gene_type: connection
+  historical_mark: 7279
+  mark_from: 2
+  mark_to: 2
+  params:
+    weight: 0.3070399377103725
+- enabled: true
+  gene_type: connection
+  historical_mark: 7314
+  mark_from: 11
+  mark_to: 405
+  params:
+    weight: 1.66302961605469
+neurons:
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 0
+  params:
+    bias: 1.0
+    gain: 0.9939542495816431
+    layer: output
+- enabled: true
+  gene_type: input
+  historical_mark: 1
+  params:
+    layer: input
+- enabled: true
+  gene_type: input
+  historical_mark: 2
+  params:
+    layer: input
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 11
+  params:
+    bias: 1.0
+    gain: 1.0
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 53
+  params:
+    bias: -1.0
+    gain: 1.0
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 405
+  params:
+    bias: -0.18866714179839705
+    gain: 1.0
+    layer: hidden
+- enabled: true
+  gene_type: sigmoid
+  historical_mark: 7203
+  params:
+    bias: 0.6505861222373348
+    gain: 0.6007416604693097
+    layer: hidden

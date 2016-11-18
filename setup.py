@@ -16,6 +16,7 @@ setup(
 		'Topic :: Scientific/Engineering :: Artificial Intelligence'
 	],
 	license='MIT',
+	packages=['neat'],
 	install_requires=['numpy']
 
 )

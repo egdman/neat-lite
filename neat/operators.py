@@ -297,7 +297,7 @@ class Mutator:
         init_params.update(neuron_params)
 
         new_neuron_gene = NeuronGene(
-                                neuron_type = neuron_type,
+                                gene_type = neuron_type,
                                 historical_mark = self.innovation_number,
                                 enabled = True,
                                 **init_params)
@@ -316,7 +316,7 @@ class Mutator:
         init_params.update(connection_params)
 
         new_conn_gene = ConnectionGene(
-                                  connection_type = connection_type,
+                                  gene_type = connection_type,
                                   mark_from = mark_from,
                                   mark_to = mark_to,
                                   historical_mark = self.innovation_number,
