@@ -298,11 +298,11 @@ class GeneticEncoding:
         y_connections = y_desc['connections']
 
         for y_neuron in y_neurons:
-            y_neuron.update(y_neuron.pop("params"))
+            # y_neuron.update(y_neuron.pop("params"))
             self.neuron_genes.append(NeuronGene(**y_neuron))
 
         for y_connection in y_connections:
-            y_connection.update(y_connection.pop("params"))
+            # y_connection.update(y_connection.pop("params"))
             self.connection_genes.append(ConnectionGene(**y_connection))
 
         return self

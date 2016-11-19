@@ -19,21 +19,22 @@ class TestGenome(unittest.TestCase):
         with open(os.path.join(here, "xor_genome.yaml"), 'r') as in_file:
             genome = GeneticEncoding().from_yaml(yaml.load(in_file.read()))
 
+        # print genome
 
         self.assertEqual(
-            0.650586,
+            -0.09032,
             round(genome.neuron_genes[-1].bias, 6),
             msg="Got wrong attrribute value when converted from YAML"
             )
 
         self.assertEqual(
-            -1.0,
-            round(genome.neuron_genes[-3].bias, 1),
+            0.774753,
+            round(genome.neuron_genes[-3].gain, 6),
             msg="Got wrong attrribute value when converted from YAML"
             )
 
         self.assertEqual(
-            53,
+            535,
             genome.neuron_genes[-3].historical_mark,
             msg="Got wrong attrribute value when converted from YAML"
             )
@@ -46,8 +47,10 @@ class TestGenome(unittest.TestCase):
 
         # nn_outputs = list(xor_net.compute(inp)[0] for inp in inputs)
 
+        # # print nn_outputs
         # def rmse(X, Y):
         #     return math.sqrt( sum( (x - y)**2 for x, y in zip(X, Y) ) )
+
 
         # self.assertEqual(
         #     round(rmse(nn_outputs, true_outputs), 6),
