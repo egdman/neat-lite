@@ -2,79 +2,74 @@ import yaml
 from copy import copy, deepcopy
 
 
+
 def unicode_representer(dumper, data):
     return dumper.represent_scalar(u'tag:yaml.org,2002:str', data)
 
 
+
 class Gene(object):
 
+    _metas = ['gene_type', 'historical_mark', 'enabled']
+
     def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
-        super(Gene, self).__setattr__('gene_type', gene_type)
-        super(Gene, self).__setattr__('historical_mark', historical_mark)
-        super(Gene, self).__setattr__('enabled', enabled)
-        super(Gene, self).__setattr__('params', {})
+        self.gene_type = gene_type
+        self.historical_mark = historical_mark
+        self.enabled = enabled
 
-        self.params = {key: params[key] for key in params}
-
+        for key, value in params.items():
+            setattr(self, key, value)
 
 
     def __getitem__(self, key):
-        return self.params[key]
+        return self.__dict__[key]
 
 
     def __setitem__(self, key, value):
-        self.params[key] = value
-
-
-    # this is called when default lookup finds nothing
-    def __getattr__(self, key):
-        try:
-            return super(Gene, self).__getattribute__('params')[key]
-        except KeyError:
-            raise AttributeError(key)
-
-
-    # this is called always
-    def __setattr__(self, key, value):
-        if key in self.__dict__:
-            super(Gene, self).__setattr__(key, value)
-        else:
-            self.params[key] = value
+        setattr(self, key, value)
 
 
     def __contains__(self, key):
-        if key in self.__dict__ or key in self.params: return True
-        return False
+        return key in self.__dict__
+
+
+    def _prop_names(self):
+        return (name for name in self.__dict__ if name not in self._metas)
+
+
+    def _meta_names(self):
+        return (name for name in self._metas)
+
+
+    def _get_metas(self):
+        return {name: self.__dict__[name] for name in self._meta_names()}
+
+
+    def get_params(self):
+        return {name: self.__dict__[name] for name in self._prop_names()}
+
+
+    def copy_params(self):
+        return {name: deepcopy(self.__dict__[name]) for name in self._prop_names()}
 
 
     def get_type(self):
         return self.gene_type
 
 
-    def get_params(self):
-        return self.params
- 
-
-    def copy_params(self):
-        return deepcopy(self.params)
-
-
     def copy(self):
         return deepcopy(self)
-
-    gene_params = property(get_params)
 
 
 
 
 class NeuronGene(Gene):
 
+    _metas = Gene._metas
+
     def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
         super(NeuronGene, self).__init__(gene_type, historical_mark, enabled, **params)
 
-
-    neuron_type = property(Gene.get_type)
-    neuron_params = property(Gene.get_params)
 
     def __str__(self):
         return "NEAT Neuron gene, mark: {}, type: {}".format(self.historical_mark, self.gene_type)
@@ -85,15 +80,14 @@ class NeuronGene(Gene):
 
 class ConnectionGene(Gene):
 
+    _metas = Gene._metas + ['mark_from', 'mark_to']
+
     def __init__(self, gene_type, mark_from, mark_to, historical_mark=0, enabled=True, **params):
         super(ConnectionGene, self).__init__(gene_type, historical_mark, enabled, **params)
 
-        super(Gene, self).__setattr__('mark_from', mark_from)
-        super(Gene, self).__setattr__('mark_to', mark_to)
+        self.mark_from = mark_from
+        self.mark_to = mark_to
 
-
-    connection_type = property(Gene.get_type)
-    connection_params = property(Gene.get_params)
 
     def __str__(self):
         return "NEAT Connection gene, mark: {}, type: {}, from: {}, to: {}".format(
@@ -102,8 +96,6 @@ class ConnectionGene(Gene):
             self.mark_from,
             self.mark_to
         )
-
-
 
 
 

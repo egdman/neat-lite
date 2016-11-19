@@ -11,12 +11,6 @@ class TestGenes(unittest.TestCase):
 
         self.assertEquals(
             'sigmoid',
-            ng.neuron_type,
-            msg="ng.neuron_type is wrong"
-            )
-
-        self.assertEquals(
-            'sigmoid',
             ng.gene_type,
             msg="ng.gene_type is wrong"
             )
@@ -27,51 +21,40 @@ class TestGenes(unittest.TestCase):
             msg="ng.gain is wrong"
             )
 
+        
         self.assertEquals(
             {'bias': 0.3, 'gain': 0.96},
-            ng.gene_params,
-            msg="ng.gene_params is wrong"
-            )
-
-        self.assertEquals(
-            {'bias': 0.3, 'gain': 0.96},
-            ng.neuron_params,
-            msg="ng.neuron_params is wrong"
-            )
-
-        params = ng.get_params()
-        self.assertEquals(
-            {'bias': 0.3, 'gain': 0.96},
-            params,
+            ng.get_params(),
             msg="ng.get_params() is wrong"
             )
 
-        params['gain'] = 4444.8888
+        # params = ng.get_params()
+        # params['gain'] = 4444.8888
 
-        self.assertEquals(
-            {'bias': 0.3, 'gain': 4444.8888},
-            ng.get_params(),
-            msg="ng's params should have changed after we make changes to their reference" 
-            )
+        # self.assertEquals(
+        #     {'bias': 0.3, 'gain': 4444.8888},
+        #     ng.get_params(),
+        #     msg="ng's params should have changed after we make changes to their reference" 
+        #     )
 
 
         copied_params = ng.copy_params()
         self.assertEquals(
-            {'bias': 0.3, 'gain': 4444.8888},
+            {'bias': 0.3, 'gain': 0.96},
             copied_params,
             msg="ng.copy_params() is wrong"
             )
         copied_params['bias'] = 1111.2222
 
         self.assertEquals(
-            {'bias': 0.3, 'gain': 4444.8888},
+            {'bias': 0.3, 'gain': 0.96},
             ng.get_params(),
             msg="ng's params should not have changed after we make changes to their copy"
             )
 
 
         self.assertEquals(
-            4444.8888,
+            0.96,
             ng['gain'],
             msg="ng['gain'] is wrong"
             )
@@ -152,11 +135,6 @@ class TestGenes(unittest.TestCase):
         
         cg = ConnectionGene('def_con', 888, 999, weight=0.8)
 
-        self.assertEquals(
-            'def_con',
-            cg.connection_type,
-            msg="ng.connection_type is wrong"
-            )
 
         self.assertEquals(
             'def_con',
@@ -209,4 +187,12 @@ class TestGenes(unittest.TestCase):
             True,
             hasattr(cg, 'surprise'),
             msg="hasattr(cg, 'surprise') should be False"
+            )
+
+
+        print cg.get_params()
+        self.assertEquals(
+            {'surprise': 'foo', 'second_param': 62.0, 'weight': 0.8},
+            cg.get_params(),
+            msg="cg.get_params() is wrong"
             )

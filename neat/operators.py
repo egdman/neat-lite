@@ -211,7 +211,7 @@ class Mutator:
 
 
         # get all the info about the old connection
-        old_connection_type = connection_to_split.connection_type
+        old_connection_type = connection_to_split.gene_type
         old_connection_params = connection_to_split.copy_params()
 
         mark_from = connection_to_split.mark_from

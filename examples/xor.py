@@ -121,7 +121,7 @@ for num_gen in range(num_generations):
 # Removal phase
 print("\n//// REMOVAL PHASE ////")
 num_generations = 1000
-conf.update({'structural_removal_proba': 0.7})
+conf.update({'structural_removal_proba': 0.7, 'structural_augmentation_proba': 0.5})
 neat_obj = NEAT(mutator = mutator, **conf)
 
 for num_gen in range(num_generations):
