@@ -56,6 +56,12 @@ class NEAT(object):
         'connection_param_mut_proba': None,
 
         'speciation_threshold': 0.,
+
+        # coefficients for calculating genotype dissimilarity
+        'excess_coef': 1.,
+        'disjoint_coef': 1.,
+        'neuron_diff_coef': 0.,
+        'connection_diff_coef': 0.,
     }
 
     def __init__(self, mutator, **config):
@@ -205,7 +211,15 @@ class NEAT(object):
             species_size = 1
             for other_brain, other_fitness in genomes_fitnesses:
                 if not other_brain == cur_brain:
-                    distance = GeneticEncoding.get_dissimilarity(other_brain, cur_brain)
+
+                    distance = GeneticEncoding.get_dissimilarity(
+                        other_brain, cur_brain,
+                        excess_coef = self.excess_coef,
+                        disjoint_coef = self.disjoint_coef,
+                        neuron_diff_coef = self.neuron_diff_coef,
+                        connection_diff_coef = self.connection_diff_coef
+                    )
+
                     if distance < self.speciation_threshold: species_size += 1
 
             shared_fitness.append((cur_brain, cur_fitness / float(species_size)))

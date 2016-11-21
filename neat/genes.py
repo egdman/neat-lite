@@ -1,6 +1,7 @@
 import yaml
+from numbers import Real
 from copy import copy, deepcopy
-
+from itertools import izip
 
 
 def unicode_representer(dumper, data):
@@ -59,6 +60,17 @@ class Gene(object):
 
     def copy(self):
         return deepcopy(self)
+
+
+    def numeric_difference(self, other):
+        params1 = self.get_params()
+        params2 = other.get_params()
+        diff = 0.
+        for par_name, p1 in params1.items():
+            if not isinstance(p1, Real): continue
+            p2 = params2[par_name]
+            diff += abs(p2 - p1)
+        return diff
 
 
 
@@ -125,26 +137,47 @@ class GeneticEncoding:
     def get_connection_genes(self, mark_from, mark_to):
         return [c_g for c_g in self.connection_genes if c_g.mark_from == mark_from and c_g.mark_to == mark_to]
     
-    
 
-    @staticmethod
-    def get_dissimilarity(genotype1, genotype2, excess_coef=1., disjoint_coef=1., weight_diff_coef=0.):
-        excess_num, disjoint_num = GeneticEncoding.get_excess_disjoint(genotype1, genotype2)
-        num_genes = max(genotype1.num_genes(), genotype2.num_genes())
-        dissimilarity = float(disjoint_coef * disjoint_num + excess_coef * excess_num) / float(num_genes)
 
-        return dissimilarity
+    # @staticmethod
+    # def get_dissimilarity(genotype1, genotype2,
+    #     excess_coef=1.,
+    #     disjoint_coef=1.,
+    #     neuron_diff_coef=0.,
+    #     connection_diff_coef=0.):
+
+    #     excess_num, disjoint_num = GeneticEncoding.get_excess_disjoint(genotype1, genotype2)
+    #     num_genes = max(genotype1.num_genes(), genotype2.num_genes())
+    #     dissimilarity = float(disjoint_coef * disjoint_num + excess_coef * excess_num) / float(num_genes)
+
+    #     neuron_diff = 0.
+    #     if neuron_diff_coef > 0:
+    #         for gene1, gene2 in izip(genotype1.neuron_genes, genotype2.neuron_genes):
+    #             neuron_diff += gene1.numeric_difference(gene2)
+
+    #     connection_diff = 0.
+    #     if connection_diff_coef > 0:
+    #         for gene1, gene2 in izip(genotype1.connection_genes, genotype2.connection_genes):
+    #             connection_diff += gene1.numeric_difference(gene2)
+
+    #     return dissimilarity + neuron_diff_coef*neuron_diff + connection_diff_coef*connection_diff
         
 
         
     @staticmethod
-    def get_excess_disjoint(genotype1, genotype2):
+    def get_dissimilarity(genotype1, genotype2,
+        excess_coef=1.,
+        disjoint_coef=1.,
+        neuron_diff_coef=0.,
+        connection_diff_coef=0.):
+
         genes_sorted1 = sorted(genotype1.neuron_genes + genotype1.connection_genes,
                                key = lambda gene: gene.historical_mark)
 
         genes_sorted2 = sorted(genotype2.neuron_genes + genotype2.connection_genes,
                                key = lambda gene: gene.historical_mark)
 
+        # save ranges of hmarks for both genomes
         min_mark1 = genes_sorted1[0].historical_mark
         max_mark1 = genes_sorted1[-1].historical_mark
 
@@ -155,7 +188,9 @@ class GeneticEncoding:
 
         excess_num = 0
         disjoint_num = 0
+
         
+        # calculate numbers of excess and disjoint genes
         for pair in pairs:
 
             if pair[0] and not pair[1]:
@@ -171,8 +206,39 @@ class GeneticEncoding:
                     disjoint_num += 1
                 else:
                     excess_num += 1
-        
-        return excess_num, disjoint_num
+
+
+        # calculate missing pair difference
+        num_genes = max(genotype1.num_genes(), genotype2.num_genes())
+        miss_pair_diff = (disjoint_coef * disjoint_num + excess_coef * excess_num) / float(num_genes)
+
+
+        # calculate difference of numeric params between genes
+        neuron_diff = 0.
+        connection_diff = 0.
+
+        if neuron_diff_coef > 0 or connection_diff_coef > 0:
+            neuron_diff, connection_diff = GeneticEncoding._calc_numeric_diff(pairs)
+
+        return miss_pair_diff + neuron_diff_coef*neuron_diff + connection_diff_coef*connection_diff
+
+
+
+    @staticmethod
+    def _calc_numeric_diff(gene_pairs):
+        neuron_diff = 0.
+        connection_diff = 0.
+
+        for gene1, gene2 in gene_pairs:
+            if gene1 is None or gene2 is None: continue
+
+            if isinstance(gene1, NeuronGene):
+                neuron_diff += gene1.numeric_difference(gene2)
+
+            elif isinstance(gene1, ConnectionGene):
+                connection_diff += gene1.numeric_difference(gene2)
+        return neuron_diff, connection_diff
+
 
 
     @staticmethod
