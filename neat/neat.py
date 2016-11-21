@@ -9,21 +9,27 @@ class InvalidConfigError(RuntimeError): pass
 
 
 
-class Conf(object): pass
+class GeneInfo(object): pass
 
 
-def neuron(neuron_type, protected, **params):
-    n = Conf()
+def neuron(gene_type, protected, **params):
+    '''
+    Helper function to use with NEAT.get_init_genome
+    '''
+    n = GeneInfo()
     n.protected = protected
-    n.type = neuron_type
+    n.type = gene_type
     n.params = params
     return n
 
 
-def connection(connection_type, protected, src, dst, **params):
-    c = Conf()
+def connection(gene_type, protected, src, dst, **params):
+    '''
+    Helper function to use with NEAT.get_init_genome
+    '''
+    c = GeneInfo()
     c.protected = protected
-    c.type = connection_type
+    c.type = gene_type
     c.src = src
     c.dst = dst
     c.params = params
@@ -99,7 +105,15 @@ class NEAT(object):
                 mark_to = neuron_map[conn_info.dst],
                 **conn_info.params
             )
-            if conn_info.protected: self.mutator.protect_gene(hmark)
+            # if we want to protect this connection we also
+            # want to protect its 2 adjacent neurons
+            # because we cannot remove a neuron without removing
+            # its adjacent connections
+            if conn_info.protected:
+                self.mutator.protect_gene(hmark)
+                self.mutator.protect_gene(neuron_map[conn_info.src])
+                self.mutator.protect_gene(neuron_map[conn_info.dst])
+
         return genome
 
 

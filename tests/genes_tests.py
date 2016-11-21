@@ -190,7 +190,6 @@ class TestGenes(unittest.TestCase):
             )
 
 
-        print cg.get_params()
         self.assertEquals(
             {'surprise': 'foo', 'second_param': 62.0, 'weight': 0.8},
             cg.get_params(),

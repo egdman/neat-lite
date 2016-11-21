@@ -61,9 +61,9 @@ neat_obj = NEAT(mutator = mutator, **conf)
 ## CREATE INITIAL GENOTYPE ##
 # we specify initial input and output neurons and protect them from removal
 init_genome = neat_obj.get_init_genome(
-        in1=neuron('input', True, layer='input'),
-        in2=neuron('input', True, layer='input'),
-        out1=neuron('sigmoid', True, layer='output'),
+        in1=neuron('input', protected=True, layer='input'),
+        in2=neuron('input', protected=True, layer='input'),
+        out1=neuron('sigmoid', protected=True, layer='output'),
     )
 
 

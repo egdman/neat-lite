@@ -10,7 +10,6 @@ class Mutator:
 
     def __init__(self,
         net_spec,
-        
 
         innovation_number = 0, # starting innovation number
 
@@ -20,14 +19,15 @@ class Mutator:
         allowed_connection_types=None, # only connections of these types can be added through mutations
                                        # otherwise, all types in the net_spec can be added
 
-        # mutable_params=None # dictionary {gene_type: [list of param names, optionally with probabilities]}
-        #                     # these are names of params for each type of gene that can be mutated
-
         protected_gene_marks=None # historical marks of genes that the mutator cannot remove
         ):
 
         self.net_spec = net_spec
-        if protected_gene_marks is None: self.protected_gene_marks = []
+
+        if protected_gene_marks is None:
+            self.protected_gene_marks = set()
+        else:
+            self.protected_gene_marks = set(protected_gene_marks)
 
 
         # set types of neurons that are allowed to be added to the net
@@ -61,20 +61,6 @@ class Mutator:
         # self._parse_mutable_params(mutable_params)
         self.innovation_number = innovation_number
 
-
-
-    # def _parse_mutable_params(self, param_dict):
-    #     if param_dict is None:
-    #         self.mutable_params = {}
-    #     else:
-    #         self.mutable_params = param_dict.copy()
-
-    #     for gene_type in self.net_spec:
-    #         if gene_type not in self.mutable_params:
-    #             gene_spec = self.net_spec[gene_type]
-    #             self.mutable_params[gene_type] = zip_with_probabilities(gene_spec.param_names())
-    #         else:
-    #             self.mutable_params[gene_type] = zip_with_probabilities(self.mutable_params[gene_type])
 
 
 
@@ -202,8 +188,8 @@ class Mutator:
         # TODO: Implement protection of connections and adjacent neurons
         # for now there is only neuron protection
 
-        # unprotected_conn_ids = self._unprotected_connection_ids(genotype)
-        unprotected_conn_ids = range(len(genotype.connection_genes))
+        unprotected_conn_ids = self._unprotected_connection_ids(genotype)
+        # unprotected_conn_ids = range(len(genotype.connection_genes))
         if len(unprotected_conn_ids) == 0: return
 
         connection_to_split_id = random.choice(unprotected_conn_ids)
@@ -256,8 +242,8 @@ class Mutator:
 
 
     def remove_connection_mutation(self, genotype):
-        # unprotected_conn_ids = self._unprotected_connection_ids(genotype)
-        unprotected_conn_ids = range(len(genotype.connection_genes))
+        unprotected_conn_ids = self._unprotected_connection_ids(genotype)
+        # unprotected_conn_ids = range(len(genotype.connection_genes))
         if len(unprotected_conn_ids) == 0: return
         gene_id = random.choice(unprotected_conn_ids)
         genotype.remove_connection_gene(gene_id)
@@ -334,7 +320,7 @@ class Mutator:
         '''
         protect gene with the given historical_mark from being deleted 
         '''
-        self.protected_gene_marks.append(historical_mark)
+        self.protected_gene_marks.add(historical_mark)
 
 
 
