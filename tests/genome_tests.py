@@ -9,7 +9,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 nn_impl_path = os.path.join(here, "../examples")
 sys.path.append(nn_impl_path)
-from nn import NN
+from nn_impl import NN
 
 
 class TestGenome(unittest.TestCase):

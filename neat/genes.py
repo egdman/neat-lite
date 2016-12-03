@@ -18,7 +18,7 @@ class Gene(object):
         self.historical_mark = historical_mark
         self.enabled = enabled
 
-        for key, value in params.items():
+        for key, value in params.iteritems():
             setattr(self, key, value)
 
 
@@ -66,7 +66,7 @@ class Gene(object):
         params1 = self.get_params()
         params2 = other.get_params()
         diff = 0.
-        for par_name, p1 in params1.items():
+        for par_name, p1 in params1.iteritems():
             if not isinstance(p1, Real): continue
             p2 = params2[par_name]
             diff += abs(p2 - p1)
@@ -112,13 +112,13 @@ class ConnectionGene(Gene):
 
 
 class GeneticEncoding:
-    
+
     def __init__(self, neuron_genes=None, connection_genes=None):
         self.neuron_genes = neuron_genes if neuron_genes else []
         self.connection_genes = connection_genes if connection_genes else []
-    
 
-    
+
+
     def num_genes(self):
         return len(self.neuron_genes) + len(self.connection_genes)
 
@@ -136,34 +136,9 @@ class GeneticEncoding:
 
     def get_connection_genes(self, mark_from, mark_to):
         return [c_g for c_g in self.connection_genes if c_g.mark_from == mark_from and c_g.mark_to == mark_to]
-    
 
 
-    # @staticmethod
-    # def get_dissimilarity(genotype1, genotype2,
-    #     excess_coef=1.,
-    #     disjoint_coef=1.,
-    #     neuron_diff_coef=0.,
-    #     connection_diff_coef=0.):
 
-    #     excess_num, disjoint_num = GeneticEncoding.get_excess_disjoint(genotype1, genotype2)
-    #     num_genes = max(genotype1.num_genes(), genotype2.num_genes())
-    #     dissimilarity = float(disjoint_coef * disjoint_num + excess_coef * excess_num) / float(num_genes)
-
-    #     neuron_diff = 0.
-    #     if neuron_diff_coef > 0:
-    #         for gene1, gene2 in izip(genotype1.neuron_genes, genotype2.neuron_genes):
-    #             neuron_diff += gene1.numeric_difference(gene2)
-
-    #     connection_diff = 0.
-    #     if connection_diff_coef > 0:
-    #         for gene1, gene2 in izip(genotype1.connection_genes, genotype2.connection_genes):
-    #             connection_diff += gene1.numeric_difference(gene2)
-
-    #     return dissimilarity + neuron_diff_coef*neuron_diff + connection_diff_coef*connection_diff
-        
-
-        
     @staticmethod
     def get_dissimilarity(genotype1, genotype2,
         excess_coef=1.,
@@ -189,7 +164,7 @@ class GeneticEncoding:
         excess_num = 0
         disjoint_num = 0
 
-        
+
         # calculate numbers of excess and disjoint genes
         for pair in pairs:
 
@@ -254,8 +229,8 @@ class GeneticEncoding:
 
         min_mark = min(min_mark1, min_mark2)
         max_mark = max(max_mark1, max_mark2)
-        
-        
+
+
         gene_pairs = []
 
         # search for pairs of genes with equal marks:
@@ -311,7 +286,7 @@ class GeneticEncoding:
                 gene_pairs.append((gene1, gene2))
 
             mark = min(jump1, jump2)
-            
+
         return gene_pairs
 
 

@@ -11,7 +11,7 @@ from neat import (Mutator, NetworkSpec, GeneSpec,
 from itertools import izip
 from operator import itemgetter
 
-from nn import NN
+from nn_impl import NN
 
 
 #### CONFIG #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
@@ -38,14 +38,14 @@ net_spec = NetworkSpec(
             NPS('layer', ['input'], mutable=False)
         ),
         GeneSpec('sigmoid',
-            PS('bias', -1., 1., neuron_sigma),
-            PS('gain', 0, 1., neuron_sigma),
+            PS('bias', -1., 1., neuron_sigma, mutable=True),
+            PS('gain', 0, 1., neuron_sigma, mutable=True),
             NPS('layer', ['hidden'], mutable=False)
         )
     ],
     [
         GeneSpec('connection',
-            PS('weight', mutation_sigma=conn_sigma, mean_value = 0.))
+            PS('weight', mutation_sigma=conn_sigma, mean_value = 0., mutable=True))
     ]
 )
 

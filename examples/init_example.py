@@ -23,35 +23,33 @@ speciation_threshold = 0.005        # genomes that are more similar than this va
 net_spec = NetworkSpec(
     [
         GeneSpec('input',
-            NPS('layer', ['input'])
+            NPS('layer', ['input'], mutable=False)
         ),
         GeneSpec('sigmoid',
-            PS('bias', -1., 1., neuron_sigma),
-            PS('gain', 0, 1., neuron_sigma),
-            NPS('layer', ['hidden'])
+            PS('bias', -1., 1., neuron_sigma, mutable=True),
+            PS('gain', 0, 1., neuron_sigma, mutable=True),
+            NPS('layer', ['hidden'], mutable=False)
         )
     ],
     [
         GeneSpec('default',
-            PS('weight', mutation_sigma=conn_sigma, mean_value = 0.))
+            PS('weight', mutation_sigma=conn_sigma, mean_value = 0., mutable=True))
     ]
 )
 
 
-mut = Mutator(net_spec,
-    allowed_neuron_types = ['sigmoid'],
-    mutable_params = {'sigmoid': ['bias', 'gain'], 'input': []})
+mut = Mutator(net_spec, allowed_neuron_types = ['sigmoid'])
 
 
 neat_obj = NEAT(mutator = mut, **conf)
 
 genome = neat_obj.get_init_genome(
-        in1=neuron('input', layer='input'),
-        in2=neuron('input', layer='input'),
-        out1=neuron('sigmoid', layer='output'),
+        in1=neuron('input', protected=True, layer='input'),
+        in2=neuron('input', protected=True, layer='input'),
+        out1=neuron('sigmoid', protected=True, layer='output'),
         connections=[
-            connection('default', src='in1', dst='out1', weight = 0.33433),
-            connection('default', src='in2', dst='out1', weight = -0.77277)
+            connection('default', protected=False, src='in1', dst='out1', weight = 0.33433),
+            connection('default', protected=False, src='in2', dst='out1', weight = -0.77277)
         ]
     )
 

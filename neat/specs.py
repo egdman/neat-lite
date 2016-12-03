@@ -42,7 +42,7 @@ class NumericParamSpec(object):
     def __init__(self, param_name,
                  min_value=None, max_value=None,
                  mutation_sigma=1., mean_value=0.,
-                 mutable=True,):
+                 mutable=True):
 
         if max_value is not None and min_value is not None and max_value < min_value:
             raise ValueError("max_value value should not be smaller than min_value")
