@@ -1,4 +1,4 @@
-This is a standalone version of the Neural Evolution through Augmenting Topologies (NEAT) [Stanley2002](http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf) learning algorithm that I used for gait learning in modular robots in the [tol-revolve project](https://github.com/egdman/tol-revolve/tree/tol-env). I am generalizing the algorithm and making it into its own python package.
+This is a standalone version of the Neural Evolution through Augmenting Topologies (NEAT) [[Stanley2002]](http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf) learning algorithm that I used for gait learning in modular robots in the [tol-revolve project](https://github.com/egdman/tol-revolve/tree/tol-env). I am generalizing the algorithm and making it into its own python package.
 
 Currently the algorithm uses a simplified fitness sharing process that does not maintain species.
 
