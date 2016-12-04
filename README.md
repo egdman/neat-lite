@@ -4,7 +4,7 @@ Currently the algorithm uses a simplified fitness sharing process that does not 
 
 **Installation**
 
-`pip install -e git+https://github.com/egdman/neat-lite.git@master#egg=neat`
+`pip install -e git+https://github.com/egdman/neat-lite.git@master#egg=neat-lite`
 
 
 The `examples/` directory contains a simple implementation of the neural network and an example of learning a XOR network. The neural network implementation is not really a part of this package, it's only included as an example.
