@@ -19,7 +19,9 @@ class Mutator:
         allowed_connection_types=None, # only connections of these types can be added through mutations
                                        # otherwise, all types in the net_spec can be added
 
-        protected_gene_marks=None # historical marks of genes that the mutator cannot remove
+        protected_gene_marks=None, # historical marks of genes that the mutator cannot remove
+
+        input_types = None # disallow to add connections that lead to these types of neurons
         ):
 
         self.net_spec = net_spec
@@ -40,7 +42,6 @@ class Mutator:
         self.allowed_neuron_types = zip_with_probabilities(self.allowed_neuron_types)
 
 
-
         # set types of connections that are allowed to be added to the net
         if allowed_connection_types is None:
             self.allowed_connection_types = list(self.net_spec.connection_specs.keys())
@@ -50,17 +51,9 @@ class Mutator:
         # make allowed types into a list of tuples (type, probability)
         self.allowed_connection_types = zip_with_probabilities(self.allowed_connection_types)
 
+        self.input_types = input_types if input_types is not None else []
 
-
-        '''
-        Set names of mutable parameters for each gene type in the network spec
-        (including the disallowed ones, as we still should be able to mutate
-        parameters of existing genes of disallowed types, even though we are not
-        allowed to add new genes of those types)
-        '''
-        # self._parse_mutable_params(mutable_params)
         self.innovation_number = innovation_number
-
 
 
 
@@ -111,6 +104,15 @@ class Mutator:
 
 
 
+    def _get_pair_neurons(self, genotype):
+        neuron_from = random.choice(genotype.neuron_genes)
+        neuron_to = random.choice(genotype.neuron_genes)
+        mark_from = neuron_from.historical_mark
+        mark_to = neuron_to.historical_mark
+        destination_valid = neuron_to.gene_type not in self.input_types
+        return mark_from, mark_to, destination_valid
+
+
 
     def add_connection_mutation(self, genotype, max_attempts=100):
 
@@ -125,20 +127,14 @@ class Mutator:
         :type max_attempts: int
         """
 
-        neuron_from = random.choice(genotype.neuron_genes)
-        neuron_to = random.choice(genotype.neuron_genes)
-        mark_from = neuron_from.historical_mark
-        mark_to = neuron_to.historical_mark
+        mark_from, mark_to, dst_valid = self._get_pair_neurons(genotype)
 
-        num_attempts = 1
+        num_attempts = 0
 
 
-        while len(genotype.get_connection_genes(mark_from, mark_to)) > 0:
-            neuron_from = random.choice(genotype.neuron_genes)
-            neuron_to = random.choice(genotype.neuron_genes)
-            mark_from = neuron_from.historical_mark
-            mark_to = neuron_to.historical_mark
+        while len(genotype.get_connection_genes(mark_from, mark_to)) > 0 or not dst_valid:
 
+            mark_from, mark_to, dst_valid = self._get_pair_neurons(genotype)
             num_attempts += 1
             if num_attempts >= max_attempts: return False
 

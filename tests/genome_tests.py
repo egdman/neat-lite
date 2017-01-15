@@ -19,7 +19,7 @@ class TestGenome(unittest.TestCase):
         with open(os.path.join(here, "xor_genome.yaml"), 'r') as in_file:
             genome = GeneticEncoding().from_yaml(yaml.load(in_file.read()))
 
-        # print genome
+        # print(genome)
 
         self.assertEqual(
             -0.09032,
