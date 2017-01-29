@@ -128,10 +128,13 @@ class Mutator:
         :type max_attempts: int
         """
 
+        # if there is no allowed connection types to add, cancel mutation
+        if len(self.allowed_connection_types) == 0: return False
+
+
         mark_from, mark_to, dst_valid = self._get_pair_neurons(genotype)
 
         num_attempts = 0
-
 
         while len(genotype.get_connection_genes(mark_from, mark_to)) > 0 or not dst_valid:
 
@@ -139,9 +142,7 @@ class Mutator:
             num_attempts += 1
             if num_attempts >= max_attempts: return False
 
-        # if there is no allowed connection types to add, cancel mutation
-        if len(self.allowed_connection_types) == 0: return False
-        
+
         new_connection_type = weighted_random(self.allowed_connection_types)
 
         new_connection_params = self.net_spec[new_connection_type].get_random_parameters()

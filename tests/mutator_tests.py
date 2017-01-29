@@ -1,5 +1,5 @@
 import unittest
-from neat import GeneticEncoding, Mutator, NetworkSpec
+from neat import GeneticEncoding, Mutator, NetworkSpec, GeneSpec
 import os
 import sys
 import yaml
@@ -20,9 +20,33 @@ class TestMutator(unittest.TestCase):
 
     def test_loopback_protection(self):
         
-        genome = self.loopback_test_genome
-        print(genome)
+        genome = self.loopback_test_genome.copy()
+
+        net_spec = NetworkSpec(
+            [],
+            [GeneSpec('default_connection')]
+        )
 
         mutator = Mutator(
-            net_spec=NetworkSpec([], []),
+            net_spec=net_spec            
         )
+
+
+        con_added = False
+        con_added = mutator.add_connection_mutation(genome)
+        print("---------------- ----------------")
+        print(genome)
+        self.assertTrue(con_added, msg="Connection should have been added")
+
+        genome = self.loopback_test_genome.copy()
+
+        mutator = Mutator(
+            net_spec=net_spec,
+            input_types=['input_type_1, input_type_2']
+        )
+
+        con_added = False
+        con_added = mutator.add_connection_mutation(genome)
+        print("---------------- ----------------")
+        print(genome)
+        self.assertFalse(con_added, msg="Connection should have not been added")
