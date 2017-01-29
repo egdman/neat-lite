@@ -32,6 +32,8 @@ def zip_with_probabilities(items):
 
 # TODO: write own implementation to remove dependency from numpy
 def weighted_random(items_with_probas):
+	if len(items_with_probas) == 0: raise ValueError("items_with_probas must not be empty")
+
 	items, probas = zip(*items_with_probas)
 
 	# NOTE: tolist() call is necessary because numpy.random.choice returns

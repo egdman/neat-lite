@@ -31,7 +31,7 @@ class Mutator:
         else:
             self.protected_gene_marks = set(protected_gene_marks)
 
-
+        # TODO check that all allowed neuron types are in the net spec
         # set types of neurons that are allowed to be added to the net
         if allowed_neuron_types is None:
             self.allowed_neuron_types = list(self.net_spec.neuron_specs.keys())
@@ -42,6 +42,7 @@ class Mutator:
         self.allowed_neuron_types = zip_with_probabilities(self.allowed_neuron_types)
 
 
+        # TODO check that all allowed connection types are in the net spec
         # set types of connections that are allowed to be added to the net
         if allowed_connection_types is None:
             self.allowed_connection_types = list(self.net_spec.connection_specs.keys())
@@ -138,8 +139,11 @@ class Mutator:
             num_attempts += 1
             if num_attempts >= max_attempts: return False
 
-
+        # if there is no allowed connection types to add, cancel mutation
+        if len(self.allowed_connection_types) == 0: return False
+        
         new_connection_type = weighted_random(self.allowed_connection_types)
+
         new_connection_params = self.net_spec[new_connection_type].get_random_parameters()
 
         self.add_connection(
@@ -181,8 +185,30 @@ class Mutator:
         """
 
 
-        # TODO: Implement protection of connections and adjacent neurons
-        # for now there is only neuron protection
+        ######## INIT NEW NEURON TYPE AND PARAMS #############################################
+        # if there is no allowed neuron types to add, cancel mutation
+        if len(self.allowed_neuron_types) == 0: return
+        
+        # select new neuron type from allowed types with weights
+        new_neuron_type = weighted_random(self.allowed_neuron_types)
+
+        # initialize parameters of the new neuron at random
+        new_neuron_params = self.net_spec[new_neuron_type].get_random_parameters()
+
+
+
+        ######## INIT NEW CONNECTION TYPE AND PARAMS #########################################
+        # if there is no allowed connection types to add, cancel mutation
+        if len(self.allowed_connection_types) == 0: return
+
+        # select new connection type from allowed types with weights
+        new_connection_type = weighted_random(self.allowed_connection_types)
+
+        # initialize parameters of the new connection at random
+        new_connection_params = self.net_spec[new_connection_type].get_random_parameters()
+
+
+
 
         unprotected_conn_ids = self._unprotected_connection_ids(genotype)
         # unprotected_conn_ids = range(len(genotype.connection_genes))
@@ -203,21 +229,9 @@ class Mutator:
         # delete the old connection from the genotype
         genotype.remove_connection_gene(connection_to_split_id)
 
-        # neuron_from = genotype.find_gene_by_mark(mark_from)
-        # neuron_to = genotype.find_gene_by_mark(mark_to)
-
-
-        # select new neuron type from allowed types with weights
-        new_neuron_type = weighted_random(self.allowed_neuron_types)
-        new_neuron_params = self.net_spec[new_neuron_type].get_random_parameters()
-
         # insert new neuron
         mark_middle = self.add_neuron(genotype, new_neuron_type, **new_neuron_params)
 
-
-        # initialize new connection type and params
-        new_connection_type = weighted_random(self.allowed_connection_types)
-        new_connection_params = self.net_spec[new_connection_type].get_random_parameters()
 
         self.add_connection(
             genotype,

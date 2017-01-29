@@ -38,9 +38,22 @@ class TestUtils(unittest.TestCase):
 			zp([('a', .25), ('b', .25), ('c', .5)]),
 			msg="zip_with_probabilities([('a', .25), ('b', .25), ('c', .5)]) : Failed")
 
+		self.assertEquals(
+			[],
+			zp([]),
+			msg="zip_with_probabilities([]) : Failed")
+
+
 
 	def test_weighted_random(self):
 		print("Testing weighted_random() (this one takes a long time, it's OK)")
+
+		# assert that ValueError is raised when trying to choose from empty list
+		self.assertRaises(
+			ValueError,
+			weighted_random,
+			[]
+			)		
 
 		types = [('a', 0.1), ('b', 0.1), ('c', 0.1), ('d', 0.1), ('e', 0.6)]
 

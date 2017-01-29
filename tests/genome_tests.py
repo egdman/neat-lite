@@ -13,12 +13,18 @@ from nn_impl import NN
 
 
 class TestGenome(unittest.TestCase):
-    def test_neuron_gene(self):
+
+    @classmethod
+    def setUpClass(cls):
         print("Testing GeneticEncoding")
-
         with open(os.path.join(here, "xor_genome.yaml"), 'r') as in_file:
-            genome = GeneticEncoding().from_yaml(yaml.load(in_file.read()))
+            cls.genome = GeneticEncoding().from_yaml(yaml.load(in_file.read()))
 
+
+
+    def test_neuron_gene(self):
+        
+        genome = self.genome
         # print(genome)
 
         self.assertEqual(
@@ -36,23 +42,27 @@ class TestGenome(unittest.TestCase):
         self.assertEqual(
             535,
             genome.neuron_genes[-3].historical_mark,
-            msg="Got wrong attrribute value when converted from YAML"
+            msg="Got wrong attribute value when converted from YAML"
             )
 
 
-        # xor_net = NN().from_genome(genome)
 
-        # inputs = ((0., 0.), (0., 1.), (1., 0.), (1., 1.))
-        # true_outputs = (0., 1., 1., 0.)
+    def test_xor_genome_solves_problem(self):
 
-        # nn_outputs = list(xor_net.compute(inp)[0] for inp in inputs)
+        genome = self.genome
+        xor_net = NN().from_genome(genome)
 
-        # # print nn_outputs
-        # def rmse(X, Y):
-        #     return math.sqrt( sum( (x - y)**2 for x, y in zip(X, Y) ) )
+        inputs = ((0., 0.), (0., 1.), (1., 0.), (1., 1.))
+        true_outputs = (0., 1., 1., 0.)
+
+        nn_outputs = list(xor_net.compute(inp)[0] for inp in inputs)
+
+        # print nn_outputs
+        def rmse(X, Y):
+            return math.sqrt( sum( (x - y)**2 for x, y in zip(X, Y) ) )
 
 
-        # self.assertEqual(
-        #     round(rmse(nn_outputs, true_outputs), 6),
-        #     0.,
-        #     msg="Test network gives wrong results")
+        self.assertEqual(
+            round(rmse(nn_outputs, true_outputs), 6),
+            0.,
+            msg="Test network gives wrong results")
