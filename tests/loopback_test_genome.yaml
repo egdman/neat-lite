@@ -13,6 +13,13 @@ connections:
   mark_to: 0
   weight: -1.0
 
+- enabled: true
+  gene_type: connection
+  historical_mark: 5
+  mark_from: 0
+  mark_to: 0
+  weight: -1.0
+
 neurons:
 - bias: 1.0
   enabled: true

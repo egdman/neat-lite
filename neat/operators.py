@@ -21,7 +21,8 @@ class Mutator:
 
         protected_gene_marks=None, # historical marks of genes that the mutator cannot remove
 
-        input_types = None # disallow to add connections that lead to these types of neurons
+        pure_input_types = None, # list of input-only neuron types (can't attach loopback inputs)
+        pure_output_types = None # list of output-only neuron types (can't attach loopback outputs)
         ):
 
         self.net_spec = net_spec
@@ -52,7 +53,8 @@ class Mutator:
         # make allowed types into a list of tuples (type, probability)
         self.allowed_connection_types = zip_with_probabilities(self.allowed_connection_types)
 
-        self.input_types = input_types if input_types is not None else []
+        self.pure_input_types = pure_input_types if pure_input_types is not None else []
+        self.pure_output_types = pure_output_types if pure_output_types is not None else []
 
         self.innovation_number = innovation_number
 
@@ -110,7 +112,7 @@ class Mutator:
         neuron_to = random.choice(genotype.neuron_genes)
         mark_from = neuron_from.historical_mark
         mark_to = neuron_to.historical_mark
-        destination_valid = neuron_to.gene_type not in self.input_types
+        destination_valid = neuron_to.gene_type not in self.pure_input_types
         return mark_from, mark_to, destination_valid
 
 

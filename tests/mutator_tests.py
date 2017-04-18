@@ -24,7 +24,7 @@ class TestMutator(unittest.TestCase):
 
         net_spec = NetworkSpec(
             [],
-            [GeneSpec('default_connection')]
+            [GeneSpec('new_connection')]
         )
 
         mutator = Mutator(
@@ -34,19 +34,19 @@ class TestMutator(unittest.TestCase):
 
         con_added = False
         con_added = mutator.add_connection_mutation(genome)
-        print("---------------- ----------------")
-        print(genome)
+        # print("---------------- ----------------")
+        # print(genome)
         self.assertTrue(con_added, msg="Connection should have been added")
 
         genome = self.loopback_test_genome.copy()
 
         mutator = Mutator(
             net_spec=net_spec,
-            input_types=['input_type_1, input_type_2']
+            pure_input_types=('input_type_1, input_type_2')
         )
 
         con_added = False
         con_added = mutator.add_connection_mutation(genome)
-        print("---------------- ----------------")
-        print(genome)
+        # print("---------------- ----------------")
+        # print(genome)
         self.assertFalse(con_added, msg="Connection should have not been added")
