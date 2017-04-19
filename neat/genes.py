@@ -11,11 +11,12 @@ def unicode_representer(dumper, data):
 
 class Gene(object):
 
-    _metas = ['gene_type', 'historical_mark', 'enabled']
+    _metas = ['gene_type', 'historical_mark', 'protected', 'enabled']
 
-    def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
+    def __init__(self, gene_type, historical_mark=0, protected=False, enabled=True, **params):
         self.gene_type = gene_type
         self.historical_mark = historical_mark
+        self.protected = protected
         self.enabled = enabled
 
         for key, value in params.iteritems():
@@ -79,12 +80,16 @@ class NeuronGene(Gene):
 
     _metas = Gene._metas
 
-    def __init__(self, gene_type, historical_mark=0, enabled=True, **params):
-        super(NeuronGene, self).__init__(gene_type, historical_mark, enabled, **params)
+    def __init__(self, gene_type, historical_mark=0, protected=False, enabled=True, **params):
+        super(NeuronGene, self).__init__(gene_type, historical_mark, protected, enabled, **params)
 
 
     def __str__(self):
-        return "NEAT Neuron gene, mark: {}, type: {}".format(self.historical_mark, self.gene_type)
+        return "NEAT Neuron gene, mark: {}, type: {}, {}".format(
+            self.historical_mark,
+            self.gene_type,
+            'p' if self.protected else 'up'
+        )
 
 
 
@@ -94,19 +99,20 @@ class ConnectionGene(Gene):
 
     _metas = Gene._metas + ['mark_from', 'mark_to']
 
-    def __init__(self, gene_type, mark_from, mark_to, historical_mark=0, enabled=True, **params):
-        super(ConnectionGene, self).__init__(gene_type, historical_mark, enabled, **params)
+    def __init__(self, gene_type, mark_from, mark_to, historical_mark=0, protected=False, enabled=True, **params):
+        super(ConnectionGene, self).__init__(gene_type, historical_mark, protected, enabled, **params)
 
         self.mark_from = mark_from
         self.mark_to = mark_to
 
 
     def __str__(self):
-        return "NEAT Connection gene, mark: {}, type: {}, from: {}, to: {}".format(
+        return "NEAT Connection gene, mark: {}, type: {}, from: {}, to: {}, {}".format(
             self.historical_mark,
             self.gene_type,
             self.mark_from,
-            self.mark_to
+            self.mark_to,
+           'p' if self.protected else ''
         )
 
 

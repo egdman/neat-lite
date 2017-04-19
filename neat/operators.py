@@ -112,8 +112,9 @@ class Mutator:
         neuron_to = random.choice(genotype.neuron_genes)
         mark_from = neuron_from.historical_mark
         mark_to = neuron_to.historical_mark
+        source_valid = neuron_from.gene_type not in self.pure_output_types
         destination_valid = neuron_to.gene_type not in self.pure_input_types
-        return mark_from, mark_to, destination_valid
+        return mark_from, mark_to, source_valid, destination_valid
 
 
 
@@ -134,13 +135,14 @@ class Mutator:
         if len(self.allowed_connection_types) == 0: return False
 
 
-        mark_from, mark_to, dst_valid = self._get_pair_neurons(genotype)
+        mark_from, mark_to, src_valid, dst_valid = self._get_pair_neurons(genotype)
 
         num_attempts = 0
 
-        while len(genotype.get_connection_genes(mark_from, mark_to)) > 0 or not dst_valid:
+        while len(genotype.get_connection_genes(mark_from, mark_to)) > 0 or \
+        not (src_valid and dst_valid):
 
-            mark_from, mark_to, dst_valid = self._get_pair_neurons(genotype)
+            mark_from, mark_to, src_valid, dst_valid = self._get_pair_neurons(genotype)
             num_attempts += 1
             if num_attempts >= max_attempts: return False
 
