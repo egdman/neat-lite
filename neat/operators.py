@@ -300,7 +300,6 @@ class Mutator:
         new_neuron_gene = NeuronGene(
                                 gene_type = neuron_type,
                                 historical_mark = self.innovation_number,
-                                enabled = True,
                                 **init_params)
 
         self.innovation_number += 1
@@ -321,7 +320,6 @@ class Mutator:
                                   mark_from = mark_from,
                                   mark_to = mark_to,
                                   historical_mark = self.innovation_number,
-                                  enabled = True,
                                   **init_params)
 
         self.innovation_number += 1

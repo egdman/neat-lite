@@ -11,13 +11,12 @@ def unicode_representer(dumper, data):
 
 class Gene(object):
 
-    _metas = ['gene_type', 'historical_mark', 'protected', 'enabled']
+    _metas = ['gene_type', 'historical_mark', 'protected']
 
-    def __init__(self, gene_type, historical_mark=0, protected=False, enabled=True, **params):
+    def __init__(self, gene_type, historical_mark=0, protected=False, **params):
         self.gene_type = gene_type
         self.historical_mark = historical_mark
         self.protected = protected
-        self.enabled = enabled
 
         for key, value in params.iteritems():
             setattr(self, key, value)
@@ -80,8 +79,8 @@ class NeuronGene(Gene):
 
     _metas = Gene._metas
 
-    def __init__(self, gene_type, historical_mark=0, protected=False, enabled=True, **params):
-        super(NeuronGene, self).__init__(gene_type, historical_mark, protected, enabled, **params)
+    def __init__(self, gene_type, historical_mark=0, protected=False, **params):
+        super(NeuronGene, self).__init__(gene_type, historical_mark, protected, **params)
 
 
     def __str__(self):
@@ -99,8 +98,8 @@ class ConnectionGene(Gene):
 
     _metas = Gene._metas + ['mark_from', 'mark_to']
 
-    def __init__(self, gene_type, mark_from, mark_to, historical_mark=0, protected=False, enabled=True, **params):
-        super(ConnectionGene, self).__init__(gene_type, historical_mark, protected, enabled, **params)
+    def __init__(self, gene_type, mark_from, mark_to, historical_mark=0, protected=False, **params):
+        super(ConnectionGene, self).__init__(gene_type, historical_mark, protected, **params)
 
         self.mark_from = mark_from
         self.mark_to = mark_to
