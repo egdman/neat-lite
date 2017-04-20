@@ -12,7 +12,7 @@ class TestGenes(unittest.TestCase):
         self.assertEquals(
             'sigmoid',
             ng.gene_type,
-            msg="ng.gene_type is wrong"
+            msg="ng.gene_type is wrong: {}".format(ng.gene_type)
             )
 
         self.assertEquals(
@@ -25,7 +25,7 @@ class TestGenes(unittest.TestCase):
         self.assertEquals(
             {'bias': 0.3, 'gain': 0.96},
             ng.get_params(),
-            msg="ng.get_params() is wrong"
+            msg="ng.get_params() is wrong: {}".format(ng.get_params())
             )
 
         # params = ng.get_params()
@@ -139,7 +139,7 @@ class TestGenes(unittest.TestCase):
         self.assertEquals(
             'def_con',
             cg.gene_type,
-            msg="ng.gene_type is wrong"
+            msg="ng.gene_type is wrong: {}".format(cg.gene_type)
             )
 
 
@@ -193,7 +193,7 @@ class TestGenes(unittest.TestCase):
         self.assertEquals(
             {'surprise': 'foo', 'second_param': 62.0, 'weight': 0.8},
             cg.get_params(),
-            msg="cg.get_params() is wrong"
+            msg="cg.get_params() is wrong: {}".format(cg.get_params())
             )
 
 

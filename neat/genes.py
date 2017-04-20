@@ -11,7 +11,7 @@ def unicode_representer(dumper, data):
 
 class Gene(object):
 
-    _metas = ['gene_type', 'historical_mark', 'protected']
+    _metas = ('gene_type', 'historical_mark', 'protected')
 
     def __init__(self, gene_type, historical_mark=0, protected=False, **params):
         self.gene_type = gene_type
@@ -36,14 +36,6 @@ class Gene(object):
 
     def _prop_names(self):
         return (name for name in self.__dict__ if name not in self._metas)
-
-
-    def _meta_names(self):
-        return (name for name in self._metas)
-
-
-    def _get_metas(self):
-        return {name: self.__dict__[name] for name in self._meta_names()}
 
 
     def get_params(self):
@@ -96,7 +88,7 @@ class NeuronGene(Gene):
 
 class ConnectionGene(Gene):
 
-    _metas = Gene._metas + ['mark_from', 'mark_to']
+    _metas = Gene._metas + ('mark_from', 'mark_to')
 
     def __init__(self, gene_type, mark_from, mark_to, historical_mark=0, protected=False, **params):
         super(ConnectionGene, self).__init__(gene_type, historical_mark, protected, **params)
