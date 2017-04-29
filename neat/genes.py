@@ -348,14 +348,10 @@ class GeneticEncoding:
 
 
     def to_yaml(self):
-
         neuron_genes = list(n_g.__dict__ for n_g in self.neuron_genes)
         conn_genes = list(c_g.__dict__ for c_g in self.connection_genes)
-
         yaml.add_representer(unicode, unicode_representer)
-        yaml_repr = {}
-        yaml_repr['neurons'] = neuron_genes
-        yaml_repr['connections'] = conn_genes
+        yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
         return yaml.dump(yaml_repr, default_flow_style=False)
 
 

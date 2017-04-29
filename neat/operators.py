@@ -19,18 +19,12 @@ class Mutator:
         allowed_connection_types=None, # only connections of these types can be added through mutations
                                        # otherwise, all types in the net_spec can be added
 
-        protected_gene_marks=None, # historical marks of genes that the mutator cannot remove
-
         pure_input_types = None, # list of input-only neuron types (can't attach loopback inputs)
         pure_output_types = None # list of output-only neuron types (can't attach loopback outputs)
         ):
 
         self.net_spec = net_spec
 
-        if protected_gene_marks is None:
-            self.protected_gene_marks = set()
-        else:
-            self.protected_gene_marks = set(protected_gene_marks)
 
         # TODO check that all allowed neuron types are in the net spec
         # set types of neurons that are allowed to be added to the net
@@ -164,13 +158,13 @@ class Mutator:
 
     def _unprotected_connection_ids(self, genotype):
         return list(cg_i for cg_i, cg in enumerate(genotype.connection_genes) \
-            if cg.historical_mark not in self.protected_gene_marks)
+            if not cg.protected)
 
 
 
     def _unprotected_neuron_ids(self, genotype):
         return list(ng_i for ng_i, ng in enumerate(genotype.neuron_genes) \
-            if ng.historical_mark not in self.protected_gene_marks)
+            if not ng.protected)
 
 
 
@@ -290,7 +284,7 @@ class Mutator:
 
 
 
-    def add_neuron(self, genotype, neuron_type, **neuron_params):
+    def add_neuron(self, genotype, neuron_type, protected=False, **neuron_params):
         # initialize params
         init_params = self.net_spec[neuron_type].get_random_parameters()
 
@@ -300,6 +294,7 @@ class Mutator:
         new_neuron_gene = NeuronGene(
                                 gene_type = neuron_type,
                                 historical_mark = self.innovation_number,
+                                protected = protected,
                                 **init_params)
 
         self.innovation_number += 1
@@ -308,7 +303,7 @@ class Mutator:
 
 
 
-    def add_connection(self, genotype, connection_type, mark_from, mark_to, **connection_params):
+    def add_connection(self, genotype, connection_type, mark_from, mark_to, protected=False, **connection_params):
         # initialize params
         init_params = self.net_spec[connection_type].get_random_parameters()
 
@@ -320,21 +315,12 @@ class Mutator:
                                   mark_from = mark_from,
                                   mark_to = mark_to,
                                   historical_mark = self.innovation_number,
+                                  protected = protected,
                                   **init_params)
 
         self.innovation_number += 1
         genotype.add_connection_gene(new_conn_gene)
         return new_conn_gene.historical_mark
-
-
-
-    
-    def protect_gene(self, historical_mark):
-        '''
-        protect gene with the given historical_mark from being deleted 
-        '''
-        self.protected_gene_marks.add(historical_mark)
-
 
 
 

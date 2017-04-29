@@ -91,24 +91,15 @@ class NEAT(object):
 
         connections = kwargs.pop('connections', [])
         neurons = kwargs
-
-        neuron_map = {} # {id: hist_mark}
         genome = GeneticEncoding()
-        for neuron_id, neuron_info in neurons.items():
-            hmark = self.mutator.add_neuron(
-                genome,
-                neuron_info.type,
-                **neuron_info.params
-            )
-            neuron_map[neuron_id] = hmark
-            if neuron_info.protected: self.mutator.protect_gene(hmark)
-
+        
         for conn_info in connections:
-            hmark = self.mutator.add_connection(
+            self.mutator.add_connection(
                 genome,
                 conn_info.type,
                 mark_from = neuron_map[conn_info.src],
                 mark_to = neuron_map[conn_info.dst],
+                protected=conn_info.protected,
                 **conn_info.params
             )
             # if we want to protect this connection we also
@@ -116,9 +107,16 @@ class NEAT(object):
             # because we cannot remove a neuron without removing
             # its adjacent connections
             if conn_info.protected:
-                self.mutator.protect_gene(hmark)
-                self.mutator.protect_gene(neuron_map[conn_info.src])
-                self.mutator.protect_gene(neuron_map[conn_info.dst])
+                neurons[conn_info.src].protected = True
+                neurons[conn_info.dst].protected = True
+
+        for neuron_id, neuron_info in neurons.items():
+            self.mutator.add_neuron(
+                genome,
+                neuron_info.type,
+                protected=neuron_info.protected,
+                **neuron_info.params
+            )
 
         return genome
 
