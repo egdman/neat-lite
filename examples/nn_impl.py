@@ -1,5 +1,5 @@
 import math
-from itertools import izip
+from itertools import izip, chain
 from copy import copy
 
 
@@ -8,11 +8,25 @@ def sigmoid(x, bias, gain):
     return 1. / ( 1. + math.exp( -gain * (x - bias) ) )
 
 
-
-class ComputeNode:
-    def __init__(self, act_func):
+class Node(object):
+    def __init__(self):
         self.value = 0
         self._new_value = 0
+
+    def reset(self, value):
+        self.value = value
+        self._new_value = value
+
+    def flip(self):
+        self.value = self._new_value
+
+
+class InputNode(Node): pass
+
+
+class ComputeNode(Node):
+    def __init__(self, act_func):
+        super(ComputeNode, self).__init__()
         self.inputs = []
         self.act_func = act_func
 
@@ -25,22 +39,6 @@ class ComputeNode:
             in_value += inp.value * weight
 
         self._new_value = self.act_func(in_value)
-
-    def flip(self):
-        self.value = self._new_value
-
-
-
-class InputNode:
-    def set(self, input_value):
-        self.value = input_value
-
-    def add_input(self, *params):
-        pass
-
-    def flip(self):
-        pass
-
 
 
 class NN:
@@ -83,9 +81,13 @@ class NN:
 
 
     def compute(self, inputs):
+        # reset node values
+        for node in chain(self.in_nodes, self.comp_nodes, self.out_nodes):
+            node.reset(0)
+
         # set inputs
         for in_node, in_value in izip(self.in_nodes, inputs):
-            in_node.set(in_value)
+            in_node.reset(in_value)
 
         # compute
         for _ in range(2):
