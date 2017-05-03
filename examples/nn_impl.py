@@ -12,6 +12,7 @@ class Node(object):
     def __init__(self):
         self.value = 0
         self._new_value = 0
+        self.inputs = []
 
     def reset(self, value):
         self.value = value
@@ -20,6 +21,9 @@ class Node(object):
     def flip(self):
         self.value = self._new_value
 
+    def add_input(self, input_node, weight):
+        self.inputs.append((input_node, weight))
+
 
 class InputNode(Node): pass
 
@@ -27,11 +31,7 @@ class InputNode(Node): pass
 class ComputeNode(Node):
     def __init__(self, act_func):
         super(ComputeNode, self).__init__()
-        self.inputs = []
         self.act_func = act_func
-
-    def add_input(self, input_node, weight):
-        self.inputs.append((input_node, weight))
 
     def compute(self):
         in_value = 0
@@ -80,11 +80,13 @@ class NN:
         return self
 
 
-    def compute(self, inputs):
+    def reset(self):
         # reset node values
         for node in chain(self.in_nodes, self.comp_nodes, self.out_nodes):
             node.reset(0)
 
+
+    def compute(self, inputs):
         # set inputs
         for in_node, in_value in izip(self.in_nodes, inputs):
             in_node.reset(in_value)

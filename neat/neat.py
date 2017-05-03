@@ -86,13 +86,32 @@ class NEAT(object):
 
 
 
-
     def get_init_genome(self, **kwargs):
-
         connections = kwargs.pop('connections', [])
         neurons = kwargs
         genome = GeneticEncoding()
-        
+
+        # if we want to protect a connection we also
+        # want to protect its 2 adjacent neurons
+        # because we cannot remove a neuron without removing
+        # its adjacent connections
+        for conn_info in connections:
+            if conn_info.protected:
+                neurons[conn_info.src].protected = True
+                neurons[conn_info.dst].protected = True
+
+        # add neuron genes to genome using mutator
+        neuron_map = {}
+        for neuron_id, neuron_info in neurons.items():
+            hmark = self.mutator.add_neuron(
+                genome,
+                neuron_info.type,
+                protected=neuron_info.protected,
+                **neuron_info.params
+            )
+            neuron_map[neuron_id] = hmark
+
+        # add connection genes to genome using mutator
         for conn_info in connections:
             self.mutator.add_connection(
                 genome,
@@ -101,21 +120,6 @@ class NEAT(object):
                 mark_to = neuron_map[conn_info.dst],
                 protected=conn_info.protected,
                 **conn_info.params
-            )
-            # if we want to protect this connection we also
-            # want to protect its 2 adjacent neurons
-            # because we cannot remove a neuron without removing
-            # its adjacent connections
-            if conn_info.protected:
-                neurons[conn_info.src].protected = True
-                neurons[conn_info.dst].protected = True
-
-        for neuron_id, neuron_info in neurons.items():
-            self.mutator.add_neuron(
-                genome,
-                neuron_info.type,
-                protected=neuron_info.protected,
-                **neuron_info.params
             )
 
         return genome

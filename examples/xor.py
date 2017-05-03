@@ -2,11 +2,12 @@ from os import path
 import sys
 import math
 import random
+import yaml
 
-from neat import (Mutator, NetworkSpec, GeneSpec,
+from neat import (Mutator, NetworkSpec, GeneSpec, GeneticEncoding,
                 NumericParamSpec as PS,
                 NominalParamSpec as NPS,
-                NEAT, neuron)
+                NEAT, neuron, connection)
 
 from itertools import izip
 from operator import itemgetter
@@ -16,17 +17,18 @@ from nn_impl import NN
 
 #### CONFIG #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 neuron_sigma = 0.25                 # mutation sigma for neuron params
-conn_sigma = 1.0                    # mutation sigma for connection params
+conn_sigma = 10.                    # mutation sigma for connection params
 
+popul = 10
 conf = dict(
-pop_size = 5,                       # population size
+pop_size = popul,                   # population size
 elite_size = 1,                     # size of the elite club
-tournament_size = 4,                # size of the selection subsample (must be in the range [2, pop_size])
+tournament_size = int(.75 * popul), # size of the selection subsample (must be in the range [2, pop_size])
 neuron_param_mut_proba = 0.5,       # probability to mutate each single neuron in the genome
 connection_param_mut_proba = 0.5,   # probability to mutate each single connection in the genome
-structural_augmentation_proba = 0.7,# probability to augment the topology of a newly created genome 
-structural_removal_proba = 0.0,     # probability to diminish the topology of a newly created genome
-speciation_threshold = 0.005        # genomes that are more similar than this value will be considered the same species
+structural_augmentation_proba = 0,  # probability to augment the topology of a newly created genome 
+structural_removal_proba = 0,       # probability to diminish the topology of a newly created genome
+speciation_threshold = 0.2          # genomes that are more similar than this value will be considered the same species
 )
 #### ###### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 
@@ -64,6 +66,10 @@ init_genome = neat_obj.get_init_genome(
         in1=neuron('input', protected=True, layer='input'),
         in2=neuron('input', protected=True, layer='input'),
         out1=neuron('sigmoid', protected=True, layer='output'),
+        connections=[
+        # connection('connection', protected=True, src='in1', dst='out1'),
+        # connection('connection', protected=True, src='in2', dst='out1')
+        ]
     )
 
 
@@ -71,7 +77,7 @@ init_genome = neat_obj.get_init_genome(
 init_gen = neat_obj.produce_init_generation(init_genome)
 
 
-## RUN EVOLUTION ##
+## INPUTS AND CORRECT OUTPUTS ##
 inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 true_outputs = (0, 1, 1, 0)
 
@@ -84,72 +90,90 @@ def evaluate(genomes):
     fitnesses = []
     for genome in genomes:
         nn = NN().from_genome(genome)
+        nn_outputs = []
+        for inp in inputs:
+            nn.reset()
+            nn_outputs.append(nn.compute(inp)[0])
 
-        nn_outputs = list(nn.compute(inp)[0] for inp in inputs)
         fitnesses.append(-rmse(true_outputs, nn_outputs))
-
     return zip(genomes, fitnesses)
 
+def complexity(genomes):
+    return (sum((len(ge.neuron_genes)) for ge in genomes),
+    sum((len(ge.connection_genes)) for ge in genomes))
 
-print("\n//// AUGMENT PHASE ////")
+def get_stats(genomes, best_gen, best_fitness):
+    n_neurons, n_conns = complexity(genomes)
+    return ("gen {}, best genome has: {}N, {}C, complexity: {}N, {}C, best fitness = {}"
+        .format(gen_num,
+            len(best_gen.neuron_genes), len(best_gen.connection_genes),
+            n_neurons, n_conns, best_fitness))
+
+def run_gen(current_gen):
+    evaluated_gen = evaluate(current_gen)
+    next_gen = neat_obj.produce_new_generation(evaluated_gen)
+    best_genome, best_fitness = sorted(evaluated_gen, key = itemgetter(1))[-1]
+    return next_gen, best_genome, best_fitness
+
+
+num_epochs = 1000000000
+gens_per_epoch = 100
+aug_proba = .9
+sim_proba = .9
+
+gen_num = 0
 current_gen = init_gen
-num_generations = 10000
 
-for num_gen in range(num_generations):
-    evaluated_gen = evaluate(current_gen)
-    current_gen = neat_obj.produce_new_generation(evaluated_gen)
+## RUN ALTERNATING AUGMENTATION AND SIMPLIFICATION STAGES ##
+for epoch in xrange(num_epochs):
+    try:
+        print("Epoch #{}".format(epoch))
 
-    best_gen, best_fit = sorted(evaluated_gen, key = itemgetter(1))[-1]
+        print("//// AUGMENT PHASE ////")
+        conf.update({
+            'structural_removal_proba': 0,
+            'structural_augmentation_proba': aug_proba})
+        neat_obj = NEAT(mutator = mutator, **conf)
 
-    if num_gen % 10 == 0: 
-        
-        print("{}, size = {}N, {}C, fitness = {}"
-            .format(
-                num_gen,
-                len(best_gen.neuron_genes),
-                len(best_gen.connection_genes),
-                best_fit))
-
-        # # write genome as YAML file
-        # if num_gen % 50 == 0:
-        #     with open('genomes/gen_{}.yaml'.format(num_gen), 'w+') as genfile:
-        #         genfile.write(best_gen.to_yaml())
-
-    if abs(best_fit) < 0.00001: break
+        for _ in range(gens_per_epoch):
+            current_gen, best_genome, best_fitness = run_gen(current_gen)
+            gen_num += 1
+            if gen_num % 1 == 0:
+                print(get_stats(current_gen, best_genome, best_fitness))
 
 
-# Removal phase
-print("\n//// REMOVAL PHASE ////")
-num_generations = 1000
-conf.update({'structural_removal_proba': 0.7, 'structural_augmentation_proba': 0.5})
-neat_obj = NEAT(mutator = mutator, **conf)
+        print("//// REMOVAL PHASE ////")
+        conf.update({
+            'structural_removal_proba': sim_proba,
+            'structural_augmentation_proba': 0})
+        neat_obj = NEAT(mutator = mutator, **conf)
 
-for num_gen in range(num_generations):
-    evaluated_gen = evaluate(current_gen)
-    current_gen = neat_obj.produce_new_generation(evaluated_gen)
+        for _ in range(int(gens_per_epoch*1.5)):
+            current_gen, best_genome, best_fitness = run_gen(current_gen)
+            gen_num += 1
+            if gen_num % 1 == 0:
+                print(get_stats(current_gen, best_genome, best_fitness))
 
-    best_gen, best_fit = sorted(evaluated_gen, key = itemgetter(1))[-1]
+        if abs(best_fitness) < 1e-6:
+            break
 
-    if num_gen % 10 == 0: 
-        
-        print("{}, size = {}N, {}C, fitness = {}"
-            .format(
-                num_gen,
-                len(best_gen.neuron_genes),
-                len(best_gen.connection_genes),
-                best_fit))
-
-
-
+    except KeyboardInterrupt:
+        break
 
 print("Final test:")
 
-final_nn = NN().from_genome(best_gen)
+# with open("xor_genome_reference.yaml", 'r') as gf:
+#     best_genome = GeneticEncoding().from_yaml(yaml.load(gf.read()))
 
-for inp in inputs:
+final_nn = NN().from_genome(best_genome)
+
+test_inputs = list(inputs) # * 10
+# random.shuffle(test_inputs)
+for inp in test_inputs:
+    final_nn.reset()
     print("{} -> {}".format(inp, final_nn.compute(inp)[0]))
 
 
 # write final genome as YAML file
-with open('xor_genome.yaml'.format(num_gen), 'w+') as genfile:
-            genfile.write(best_gen.to_yaml())
+with open('xor_genome.yaml', 'w+') as genfile:
+            genfile.write(best_genome.to_yaml())
