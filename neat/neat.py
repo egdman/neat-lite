@@ -179,9 +179,6 @@ class NEAT(object):
 
 
 
-
-
-
     def produce_child(self, parent1, parent2):
         # apply crossover:
         child_genotype = crossover(parent1, parent2)
@@ -196,7 +193,6 @@ class NEAT(object):
         self.mutator.mutate_neuron_params(
             genotype=child_genotype,
             probability=self.neuron_param_mut_proba)
-
         # validate_genotype(child_genotype, "neuron parameters mutation created invalid genotype")
 
         # apply structural mutations:
@@ -242,13 +238,8 @@ class NEAT(object):
 
     def produce_new_generation(self, genome_fitness_list):
         gen_fit = genome_fitness_list
-
         new_genomes = []
-
         gen_fit_shared = self.share_fitness(gen_fit)
-
-        gen_fit = sorted(gen_fit, key=itemgetter(1), reverse=True)
-        gen_fit_shared = sorted(gen_fit_shared, key=itemgetter(1), reverse=True)
 
         # create children:
         for _ in range(self.pop_size - self.elite_size):
@@ -261,6 +252,7 @@ class NEAT(object):
 
 
         # bringing the best parents into next generation:
+        gen_fit = sorted(gen_fit, key=itemgetter(1), reverse=True)
         for i in range(self.elite_size):
             new_genomes.append(gen_fit[i][0])
 

@@ -159,8 +159,8 @@ class GeneSpec(object):
 class NetworkSpec(object):
 
     def __init__(self, neuron_specs, connection_specs):
-        self.neuron_specs       = {nspec.type_name: nspec for nspec in neuron_specs}
-        self.connection_specs   = {cspec.type_name: cspec for cspec in connection_specs}
+        self.neuron_specs     = {nspec.type_name: nspec for nspec in neuron_specs}
+        self.connection_specs = {cspec.type_name: cspec for cspec in connection_specs}
 
 
     def gene_types(self):

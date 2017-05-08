@@ -51,9 +51,16 @@ net_spec = NetworkSpec(
     ]
 )
 
+## INPUTS AND CORRECT OUTPUTS FOR THE NETWORK ##
+inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
+true_outputs = (0, 1, 1, 0)
+
 
 ## CREATE MUTATOR ##
-mutator = Mutator(net_spec, allowed_neuron_types = ['sigmoid'])
+mutator = Mutator(net_spec,
+    allowed_neuron_types = ('sigmoid',),
+    pure_input_types = ('input',)
+)
 
 
 ## CREATE MAIN NEAT OBJECT ##
@@ -77,11 +84,6 @@ init_genome = neat_obj.get_init_genome(
 init_gen = neat_obj.produce_init_generation(init_genome)
 
 
-## INPUTS AND CORRECT OUTPUTS ##
-inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
-true_outputs = (0, 1, 1, 0)
-
-
 def rmse(X, Y):
     return math.sqrt( sum( (x - y)**2 for x, y in izip(X, Y) ) )
 
@@ -92,7 +94,7 @@ def evaluate(genomes):
         nn = NN().from_genome(genome)
         nn_outputs = []
         for inp in inputs:
-            nn.reset()
+            nn.reset() # reset network otherwise it will remember previous state
             nn_outputs.append(nn.compute(inp)[0])
 
         fitnesses.append(-rmse(true_outputs, nn_outputs))
@@ -109,7 +111,7 @@ def get_stats(genomes, best_gen, best_fitness):
             len(best_gen.neuron_genes), len(best_gen.connection_genes),
             n_neurons, n_conns, best_fitness))
 
-def run_gen(current_gen):
+def next_gen(current_gen):
     evaluated_gen = evaluate(current_gen)
     next_gen = neat_obj.produce_new_generation(evaluated_gen)
     best_genome, best_fitness = sorted(evaluated_gen, key = itemgetter(1))[-1]
@@ -136,7 +138,7 @@ for epoch in xrange(num_epochs):
         neat_obj = NEAT(mutator = mutator, **conf)
 
         for _ in range(gens_per_epoch):
-            current_gen, best_genome, best_fitness = run_gen(current_gen)
+            current_gen, best_genome, best_fitness = next_gen(current_gen)
             gen_num += 1
             if gen_num % 1 == 0:
                 print(get_stats(current_gen, best_genome, best_fitness))
@@ -149,7 +151,7 @@ for epoch in xrange(num_epochs):
         neat_obj = NEAT(mutator = mutator, **conf)
 
         for _ in range(int(gens_per_epoch*1.5)):
-            current_gen, best_genome, best_fitness = run_gen(current_gen)
+            current_gen, best_genome, best_fitness = next_gen(current_gen)
             gen_num += 1
             if gen_num % 1 == 0:
                 print(get_stats(current_gen, best_genome, best_fitness))
@@ -167,8 +169,8 @@ print("Final test:")
 
 final_nn = NN().from_genome(best_genome)
 
-test_inputs = list(inputs) # * 10
-# random.shuffle(test_inputs)
+test_inputs = list(inputs) * 4
+random.shuffle(test_inputs)
 for inp in test_inputs:
     final_nn.reset()
     print("{} -> {}".format(inp, final_nn.compute(inp)[0]))
@@ -176,4 +178,4 @@ for inp in test_inputs:
 
 # write final genome as YAML file
 with open('xor_genome.yaml', 'w+') as genfile:
-            genfile.write(best_genome.to_yaml())
+    genfile.write(best_genome.to_yaml())

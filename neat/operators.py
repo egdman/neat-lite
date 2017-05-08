@@ -1,4 +1,5 @@
 import random
+from itertools import chain
 
 from .genes import NeuronGene, ConnectionGene, GeneticEncoding
 from .specs import NumericParamSpec, NominalParamSpec
@@ -269,8 +270,9 @@ class Mutator:
         neuron_mark = neuron_gene.historical_mark
 
         # find indices of attached connection genes:
-        bad_connections = [g_id for g_id, gene in enumerate(genotype.connection_genes) if
-                           gene.mark_from == neuron_mark or gene.mark_to == neuron_mark]
+        bad_connections = list(g_id for g_id, gene \
+            in enumerate(genotype.connection_genes)\
+            if gene.mark_from == neuron_mark or gene.mark_to == neuron_mark)
 
 
         # remove attached connection genes
@@ -336,11 +338,15 @@ def crossover(genotype_more_fit, genotype_less_fit):
 
 
     # sort genes by historical marks:
-    genes_better = sorted(genotype_more_fit.neuron_genes + genotype_more_fit.connection_genes,
-                    key = lambda gene: gene.historical_mark)
+    genes_better = sorted(chain(
+        genotype_more_fit.neuron_genes,
+        genotype_more_fit.connection_genes),
+        key = lambda gene: gene.historical_mark)
 
-    genes_worse = sorted(genotype_less_fit.neuron_genes + genotype_less_fit.connection_genes,
-                    key = lambda gene: gene.historical_mark)
+    genes_worse = sorted(chain(
+        genotype_less_fit.neuron_genes,
+        genotype_less_fit.connection_genes),
+        key = lambda gene: gene.historical_mark)
 
     gene_pairs = GeneticEncoding.get_pairs(genes_better, genes_worse)
 

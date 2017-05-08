@@ -1,7 +1,7 @@
 import yaml
 from numbers import Real
 from copy import copy, deepcopy
-from itertools import izip
+from itertools import izip, chain
 
 
 def unicode_representer(dumper, data):
@@ -121,18 +121,9 @@ class GeneticEncoding:
 
 
 
-    def num_neuron_genes(self):
-        return len(self.neuron_genes)
-
-
-
-    def num_connection_genes(self):
-        return len(self.connection_genes)
-
-
-
     def get_connection_genes(self, mark_from, mark_to):
-        return [c_g for c_g in self.connection_genes if c_g.mark_from == mark_from and c_g.mark_to == mark_to]
+        return list(c_g for c_g in self.connection_genes \
+            if c_g.mark_from == mark_from and c_g.mark_to == mark_to)
 
 
 
@@ -301,7 +292,7 @@ class GeneticEncoding:
 
 
     def find_gene_by_mark(self, mark):
-        for gene in self.neuron_genes + self.connection_genes:
+        for gene in chain(self.neuron_genes, self.connection_genes):
             if gene.historical_mark == mark:
                 return gene
         return None

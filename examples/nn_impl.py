@@ -1,5 +1,6 @@
 import math
 from itertools import izip, chain
+from functools import partial
 from copy import copy
 
 
@@ -58,7 +59,7 @@ class NN:
             if ng.gene_type == 'sigmoid':
 
                 node = ComputeNode(
-                    act_func = lambda x, bias=ng.bias, gain=ng.gain: sigmoid(x, bias, gain)
+                    act_func = partial(sigmoid, bias = ng.bias, gain = ng.gain)
                 )
 
                 # output nodes go in both compute list and output list
