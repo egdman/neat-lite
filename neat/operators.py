@@ -6,6 +6,7 @@ from .specs import NumericParamSpec, NominalParamSpec
 from .utils import zip_with_probabilities, weighted_random
 
 
+class all_types_in_spec: pass
 
 class Mutator:
 
@@ -14,14 +15,11 @@ class Mutator:
 
         innovation_number = 0, # starting innovation number
 
-        allowed_neuron_types=None, # only neurons of these types can be added through mutations
-                                   # otherwise, all types in the net_spec can be added
+        allowed_neuron_types=all_types_in_spec,     # only neurons of these types can be added through mutations
+        allowed_connection_types=all_types_in_spec, # only connections of these types can be added through mutations
 
-        allowed_connection_types=None, # only connections of these types can be added through mutations
-                                       # otherwise, all types in the net_spec can be added
-
-        pure_input_types = None, # list of input-only neuron types (can't attach loopback inputs)
-        pure_output_types = None # list of output-only neuron types (can't attach loopback outputs)
+        pure_input_types = tuple(), # list of input-only neuron types (can't attach loopback inputs)
+        pure_output_types = tuple() # list of output-only neuron types (can't attach loopback outputs)
         ):
 
         self.net_spec = net_spec
@@ -29,7 +27,7 @@ class Mutator:
 
         # TODO check that all allowed neuron types are in the net spec
         # set types of neurons that are allowed to be added to the net
-        if allowed_neuron_types is None:
+        if allowed_neuron_types is all_types_in_spec:
             self.allowed_neuron_types = list(self.net_spec.neuron_specs.keys())
         else:
             self.allowed_neuron_types = allowed_neuron_types
@@ -40,7 +38,7 @@ class Mutator:
 
         # TODO check that all allowed connection types are in the net spec
         # set types of connections that are allowed to be added to the net
-        if allowed_connection_types is None:
+        if allowed_connection_types is all_types_in_spec:
             self.allowed_connection_types = list(self.net_spec.connection_specs.keys())
         else:
             self.allowed_connection_types = allowed_connection_types
@@ -48,8 +46,8 @@ class Mutator:
         # make allowed types into a list of tuples (type, probability)
         self.allowed_connection_types = zip_with_probabilities(self.allowed_connection_types)
 
-        self.pure_input_types = pure_input_types if pure_input_types is not None else []
-        self.pure_output_types = pure_output_types if pure_output_types is not None else []
+        self.pure_input_types = pure_input_types
+        self.pure_output_types = pure_output_types
 
         self.innovation_number = innovation_number
 
