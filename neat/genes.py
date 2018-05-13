@@ -1,7 +1,7 @@
 import yaml
 from numbers import Real
 from copy import copy, deepcopy
-from itertools import izip, chain
+from itertools import chain
 
 
 def unicode_representer(dumper, data):

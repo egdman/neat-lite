@@ -9,7 +9,11 @@ from neat import (Mutator, NetworkSpec, GeneSpec, GeneticEncoding,
                 NominalParamSpec as NPS,
                 NEAT, neuron, connection)
 
-from itertools import izip
+try:
+    from itertools import izip as zip
+except ImportError:
+    pass
+
 from operator import itemgetter
 
 from nn_impl import NN
@@ -85,7 +89,7 @@ init_gen = neat_obj.produce_init_generation(init_genome)
 
 
 def rmse(X, Y):
-    return math.sqrt( sum( (x - y)**2 for x, y in izip(X, Y) ) )
+    return math.sqrt( sum( (x - y)**2 for x, y in zip(X, Y) ) )
 
 
 def evaluate(genomes):

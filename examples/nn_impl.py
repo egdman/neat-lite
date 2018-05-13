@@ -1,7 +1,12 @@
 import math
-from itertools import izip, chain
+from itertools import chain
 from functools import partial
 from copy import copy
+
+try:
+    from itertools import izip as zip
+except ImportError:
+    pass
 
 
 def sigmoid(x, bias, gain):
@@ -89,7 +94,7 @@ class NN:
 
     def compute(self, inputs):
         # set inputs
-        for in_node, in_value in izip(self.in_nodes, inputs):
+        for in_node, in_value in zip(self.in_nodes, inputs):
             in_node.reset(in_value)
 
         # compute
