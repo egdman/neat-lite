@@ -18,7 +18,7 @@ class Gene(object):
         self.historical_mark = historical_mark
         self.protected = protected
 
-        for key, value in params.iteritems():
+        for key, value in params.items():
             setattr(self, key, value)
 
 
@@ -58,7 +58,7 @@ class Gene(object):
         params1 = self.get_params()
         params2 = other.get_params()
         diff = 0.
-        for par_name, p1 in params1.iteritems():
+        for par_name, p1 in params1.items():
             if not isinstance(p1, Real): continue
             p2 = params2[par_name]
             diff += abs(p2 - p1)
