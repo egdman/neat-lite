@@ -1,7 +1,12 @@
 import yaml
 from numbers import Real
 from copy import copy, deepcopy
-from itertools import chain
+from itertools import chain, repeat
+
+try:
+    from itertools import izip as zip
+except ImportError:
+    pass
 
 
 def unicode_representer(dumper, data):
@@ -135,24 +140,20 @@ class GeneticEncoding:
         neuron_diff_coef=0.,
         connection_diff_coef=0.):
 
-        genes_sorted1 = sorted(
-            genotype1.neuron_genes + genotype1.connection_genes, key = hm)
-
-        genes_sorted2 = sorted(
-            genotype2.neuron_genes + genotype2.connection_genes, key = hm)
+        genes1 = genotype1.neuron_genes + genotype1.connection_genes
+        genes2 = genotype2.neuron_genes + genotype2.connection_genes
 
         # save ranges of hmarks for both genomes
-        min_mark1 = hm(genes_sorted1[0])
-        max_mark1 = hm(genes_sorted1[-1])
+        min_mark1 = hm(min(genes1, key = hm))
+        max_mark1 = hm(max(genes1, key = hm))
 
-        min_mark2 = hm(genes_sorted2[0])
-        max_mark2 = hm(genes_sorted2[-1])
-        
-        pairs = GeneticEncoding.get_pairs(genes_sorted1, genes_sorted2)
+        min_mark2 = hm(min(genes2, key = hm))
+        max_mark2 = hm(max(genes2, key = hm))
+
+        pairs = list(GeneticEncoding.get_pairs(genes1, genes2))
 
         excess_num = 0
         disjoint_num = 0
-
 
         # calculate numbers of excess and disjoint genes
         for gene0, gene1 in pairs:
@@ -205,40 +206,32 @@ class GeneticEncoding:
 
 
     @staticmethod
-    def get_pairs(genes_sorted1, genes_sorted2):
-        def findAllLeft(leftGenes, rightGenes):
-            pairs = []
-            rightGenes = iter(rightGenes)
-            rightGene = next(rightGenes, None)
+    def get_pairs(genes1, genes2):
+        class Left: pass
+        class Right: pass
 
-            for leftGene in leftGenes:
-                while rightGene and hm(leftGene) > hm(rightGene):
-                    rightGene = next(rightGenes, None)
-                if rightGene and hm(leftGene) == hm(rightGene):
-                    pairs.append((leftGene, rightGene))
-                    rightGene = next(rightGenes, None)
+        genes = list(chain(
+            zip(genes1, repeat(Left, len(genes1))),
+            zip(genes2, repeat(Right, len(genes2)))
+        ))
+        genes = sorted(genes, key = lambda pair: hm(pair[0]))
+
+        def genePairs(allGenes):
+            allGenes = iter(allGenes)
+
+            gene, parent = next(allGenes, (None, None))
+            while gene:
+                nextGene, nextParent = next(allGenes, (None, None))
+
+                if nextGene and hm(gene) == hm(nextGene):
+                    yield (gene, nextGene) if parent == Left else (nextGene, gene)
+                    gene, parent = next(allGenes, (None, None))
+
                 else:
-                    pairs.append((leftGene, None))
-            return pairs
+                    yield (gene, None) if parent == Left else (None, gene)
+                    gene, parent = nextGene, nextParent
 
-
-        def findUnpairedRight(leftGenes, rightGenes):
-            unpaired = []
-            leftGenes = iter(leftGenes)
-            leftGene = next(leftGenes, None)
-
-            for rightGene in rightGenes:
-                while leftGene and hm(leftGene) < hm(rightGene):
-                    leftGene = next(leftGenes, None)
-                if leftGene is None or hm(leftGene) != hm(rightGene):
-                    unpaired.append((None, rightGene))
-            return unpaired
-
-
-        pairs = findAllLeft(genes_sorted1, genes_sorted2)
-        pairs.extend(findUnpairedRight(genes_sorted1, genes_sorted2))
-        return pairs
-
+        return genePairs(genes)
 
 
     def add_neuron_gene(self, neuron_gene):
