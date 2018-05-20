@@ -7,7 +7,8 @@ from itertools import izip, chain
 def unicode_representer(dumper, data):
     return dumper.represent_scalar(u'tag:yaml.org,2002:str', data)
 
-
+def hm(gene):
+    return gene.historical_mark
 
 class Gene(object):
 
@@ -134,18 +135,18 @@ class GeneticEncoding:
         neuron_diff_coef=0.,
         connection_diff_coef=0.):
 
-        genes_sorted1 = sorted(genotype1.neuron_genes + genotype1.connection_genes,
-                               key = lambda gene: gene.historical_mark)
+        genes_sorted1 = sorted(
+            genotype1.neuron_genes + genotype1.connection_genes, key = hm)
 
-        genes_sorted2 = sorted(genotype2.neuron_genes + genotype2.connection_genes,
-                               key = lambda gene: gene.historical_mark)
+        genes_sorted2 = sorted(
+            genotype2.neuron_genes + genotype2.connection_genes, key = hm)
 
         # save ranges of hmarks for both genomes
-        min_mark1 = genes_sorted1[0].historical_mark
-        max_mark1 = genes_sorted1[-1].historical_mark
+        min_mark1 = hm(genes_sorted1[0])
+        max_mark1 = hm(genes_sorted1[-1])
 
-        min_mark2 = genes_sorted2[0].historical_mark
-        max_mark2 = genes_sorted2[-1].historical_mark
+        min_mark2 = hm(genes_sorted2[0])
+        max_mark2 = hm(genes_sorted2[-1])
         
         pairs = GeneticEncoding.get_pairs(genes_sorted1, genes_sorted2)
 
@@ -154,18 +155,18 @@ class GeneticEncoding:
 
 
         # calculate numbers of excess and disjoint genes
-        for pair in pairs:
+        for gene0, gene1 in pairs:
 
-            if pair[0] and not pair[1]:
-                mark = pair[0].historical_mark
-                if mark > (min_mark2 - 1) and mark < (max_mark2 + 1):
+            if gene0 and not gene1:
+                mark = gene0.historical_mark
+                if (min_mark2 - 1) < mark and mark < (max_mark2 + 1):
                     disjoint_num += 1
                 else:
                     excess_num += 1
                     
-            elif pair[1] and not pair[0]:
-                mark = pair[1].historical_mark
-                if mark > (min_mark1 - 1) and mark < (max_mark1 + 1):
+            elif gene1 and not gene0:
+                mark = gene1.historical_mark
+                if (min_mark1 - 1) < mark and mark < (max_mark1 + 1):
                     disjoint_num += 1
                 else:
                     excess_num += 1
@@ -203,99 +204,40 @@ class GeneticEncoding:
         return neuron_diff, connection_diff
 
 
-
     @staticmethod
     def get_pairs(genes_sorted1, genes_sorted2):
-        num_genes1 = len(genes_sorted1)
-        num_genes2 = len(genes_sorted2)
+        def findAllLeft(leftGenes, rightGenes):
+            pairs = []
+            rightGenes = iter(rightGenes)
+            rightGene = next(rightGenes, None)
 
-        min_mark1 = genes_sorted1[0].historical_mark
-        max_mark1 = genes_sorted1[-1].historical_mark
-
-        min_mark2 = genes_sorted2[0].historical_mark
-        max_mark2 = genes_sorted2[-1].historical_mark
-
-        min_mark = min(min_mark1, min_mark2)
-        max_mark = max(max_mark1, max_mark2)
-
-
-        gene_pairs = []
-
-        # search for pairs of genes with equal marks:
-        start_from1 = 0
-        start_from2 = 0
-
-        mark = min_mark
-        while mark < max_mark + 1:
-
-            # jump1 and jump2 are here to skip long sequences of empty historical marks
-
-            gene1 = None
-            jump1 = mark + 1
-            for i in range(start_from1, num_genes1):
-                if genes_sorted1[i].historical_mark == mark:
-                    gene1 = genes_sorted1[i]
-                    start_from1 = i
-                    break
-
-                # if there is a gap, jump over it:
-                elif genes_sorted1[i].historical_mark > mark:
-                    jump1 = genes_sorted1[i].historical_mark
-                    start_from1 = i
-                    break
-
-                # if the end of the gene sequence is reached:
-                elif i == num_genes1 - 1:
-                    jump1 = max_mark + 1
-                    start_from1 = i
-
-            gene2 = None
-            jump2 = mark + 1
-            for i in range(start_from2, num_genes2):
-                if genes_sorted2[i].historical_mark == mark:
-                    gene2 = genes_sorted2[i]
-                    start_from2 = i
-                    break
-
-                # if there is a gap, jump over it:
-                elif genes_sorted2[i].historical_mark > mark:
-                    jump2 = genes_sorted2[i].historical_mark
-                    start_from2 = i
-                    break
-
-                # if the end of the gene sequence is reached:
-                elif i == num_genes2 - 1:
-                    jump2 = max_mark + 1
-                    start_from2 = i
+            for leftGene in leftGenes:
+                while rightGene and hm(leftGene) > hm(rightGene):
+                    rightGene = next(rightGenes, None)
+                if rightGene and hm(leftGene) == hm(rightGene):
+                    pairs.append((leftGene, rightGene))
+                    rightGene = next(rightGenes, None)
+                else:
+                    pairs.append((leftGene, None))
+            return pairs
 
 
-            # do not add a pair if both genes are None:
-            if gene1 or gene2:
-                gene_pairs.append((gene1, gene2))
+        def findUnpairedRight(leftGenes, rightGenes):
+            unpaired = []
+            leftGenes = iter(leftGenes)
+            leftGene = next(leftGenes, None)
 
-            mark = min(jump1, jump2)
-
-        return gene_pairs
-
-
-
-    def get_sorted_genes(self):
-        return sorted(self.neuron_genes + self.connection_genes,
-            key = lambda gene: gene.historical_mark)
+            for rightGene in rightGenes:
+                while leftGene and hm(leftGene) < hm(rightGene):
+                    leftGene = next(leftGenes, None)
+                if leftGene is None or hm(leftGene) != hm(rightGene):
+                    unpaired.append((None, rightGene))
+            return unpaired
 
 
-
-    def min_max_hist_mark(self):
-        genes_sorted = self.get_sorted_genes()
-        return genes_sorted[0].historical_mark, genes_sorted[-1].historical_mark
-
-
-
-    def find_gene_by_mark(self, mark):
-        for gene in chain(self.neuron_genes, self.connection_genes):
-            if gene.historical_mark == mark:
-                return gene
-        return None
+        pairs = findAllLeft(genes_sorted1, genes_sorted2)
+        pairs.extend(findUnpairedRight(genes_sorted1, genes_sorted2))
+        return pairs
 
 
 
