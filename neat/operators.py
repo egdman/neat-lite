@@ -350,18 +350,18 @@ def crossover(genotype_more_fit, genotype_less_fit):
 
     child_genes = []
 
-    for pair in gene_pairs:
+    for gene0, gene1 in gene_pairs:
 
         # if gene is paired, inherit one of the pair with 50/50 chance:
-        if pair[0] is not None and pair[1] is not None:
+        if gene0 is not None and gene1 is not None:
             if random.random() < 0.5:
-                child_genes.append(pair[0])
+                child_genes.append(gene0)
             else:
-                child_genes.append(pair[1])
+                child_genes.append(gene1)
 
         # inherit unpaired gene from the more fit parent:
-        elif pair[0] is not None:
-            child_genes.append(pair[0])
+        elif gene0 is not None:
+            child_genes.append(gene0)
 
     child_genotype = GeneticEncoding()
     for gene in child_genes:
