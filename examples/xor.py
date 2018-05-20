@@ -117,7 +117,7 @@ def get_stats(genomes, best_gen, best_fitness):
 
 def next_gen(current_gen):
     evaluated_gen = evaluate(current_gen)
-    next_gen = neat_obj.produce_new_generation(evaluated_gen)
+    next_gen = list(neat_obj.produce_new_generation(evaluated_gen))
     best_genome, best_fitness = sorted(evaluated_gen, key = itemgetter(1))[-1]
     return next_gen, best_genome, best_fitness
 

@@ -49,7 +49,7 @@ class Gene(object):
 
 
     def copy_params(self):
-        return {name: deepcopy(self.__dict__[name]) for name in self._prop_names()}
+        return deepcopy(self.get_params())
 
 
     def get_type(self):

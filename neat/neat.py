@@ -1,4 +1,5 @@
 import random
+import heapq
 from operator import itemgetter
 
 from .genes import GeneticEncoding
@@ -203,57 +204,38 @@ class NEAT(object):
 
 
     def share_fitness(self, genomes_fitnesses):
-        shared_fitness = []
 
-        for cur_brain, cur_fitness in genomes_fitnesses:
-            species_size = 1
-            for other_brain, other_fitness in genomes_fitnesses:
-                if not other_brain == cur_brain:
+        def species_size(genome, fitness):
+            size = 1
+            for other_genome, other_fitness in genomes_fitnesses:
+                if not other_genome == genome:
 
                     distance = GeneticEncoding.get_dissimilarity(
-                        other_brain, cur_brain,
+                        other_genome, genome,
                         excess_coef = self.excess_coef,
                         disjoint_coef = self.disjoint_coef,
                         neuron_diff_coef = self.neuron_diff_coef,
                         connection_diff_coef = self.connection_diff_coef
                     )
+                    if distance < self.speciation_threshold: size += 1
+            return size
 
-                    if distance < self.speciation_threshold: species_size += 1
-
-            shared_fitness.append((cur_brain, cur_fitness / float(species_size)))
-            
-        return shared_fitness
-
-
-
-    def select_for_tournament(self, candidates):
-        selected = sorted(
-            random.sample(candidates, self.tournament_size),
-            key = itemgetter(1),
-            reverse=True)
-
-        return list(genome for (genome, fitness) in selected)
+        return list((g, f / species_size(g, f)) for g, f in genomes_fitnesses)
 
 
 
     def produce_new_generation(self, genome_fitness_list):
-        gen_fit = genome_fitness_list
-        new_genomes = []
-        gen_fit_shared = self.share_fitness(gen_fit)
+        gen_fit_shared = self.share_fitness(genome_fitness_list)
 
         # create children:
         for _ in range(self.pop_size - self.elite_size):
             # we select genomes using their shared fitnesses:
-            selected = self.select_for_tournament(gen_fit_shared)
+            subset = random.sample(gen_fit_shared, self.tournament_size)
+            parent1, parent2 = heapq.nlargest(2, subset, key = itemgetter(1))
 
-            # select 2 best parents from the tournament and make a child:
-            child_genome = self.produce_child(selected[0], selected[1])
-            new_genomes.append(child_genome)
-
+            yield self.produce_child(parent1[0], parent2[0])
 
         # bringing the best parents into next generation:
-        gen_fit = sorted(gen_fit, key=itemgetter(1), reverse=True)
-        for i in range(self.elite_size):
-            new_genomes.append(gen_fit[i][0])
-
-        return new_genomes
+        best_parents = heapq.nlargest(self.elite_size, genome_fitness_list, key = itemgetter(1))
+        for genome, _ in best_parents:
+            yield genome
