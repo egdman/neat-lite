@@ -1,4 +1,3 @@
-import yaml
 from numbers import Real
 from copy import copy, deepcopy
 from itertools import chain
@@ -261,34 +260,6 @@ class GeneticEncoding:
 
 
 
-    def from_yaml(self, y_desc):
-        del self.neuron_genes[:]
-        del self.connection_genes[:]
-
-        y_neurons = y_desc['neurons']
-        y_connections = y_desc['connections']
-
-        for y_neuron in y_neurons:
-            # y_neuron.update(y_neuron.pop("params"))
-            self.neuron_genes.append(NeuronGene(**y_neuron))
-
-        for y_connection in y_connections:
-            # y_connection.update(y_connection.pop("params"))
-            self.connection_genes.append(ConnectionGene(**y_connection))
-
-        return self
-
-
-
-    def to_yaml(self):
-        neuron_genes = list(n_g.__dict__ for n_g in self.neuron_genes)
-        conn_genes = list(c_g.__dict__ for c_g in self.connection_genes)
-        yaml.add_representer(unicode, unicode_representer)
-        yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
-        return yaml.dump(yaml_repr, default_flow_style=False)
-
-
-
     def copy(self):
         copy_gen = GeneticEncoding()
 
@@ -328,3 +299,40 @@ class GeneticEncoding:
         st += 'connections:\n'
         for cg in self.connection_genes: st += str(cg.__dict__) + '\n'
         return st
+
+
+    try:
+        import yaml
+
+        def from_yaml(self, y_desc):
+            del self.neuron_genes[:]
+            del self.connection_genes[:]
+
+            y_neurons = y_desc['neurons']
+            y_connections = y_desc['connections']
+
+            for y_neuron in y_neurons:
+                # y_neuron.update(y_neuron.pop("params"))
+                self.neuron_genes.append(NeuronGene(**y_neuron))
+
+            for y_connection in y_connections:
+                # y_connection.update(y_connection.pop("params"))
+                self.connection_genes.append(ConnectionGene(**y_connection))
+
+            return self
+
+
+
+        def to_yaml(self):
+            neuron_genes = list(n_g.__dict__ for n_g in self.neuron_genes)
+            conn_genes = list(c_g.__dict__ for c_g in self.connection_genes)
+            yaml.add_representer(unicode, unicode_representer)
+            yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
+            return yaml.dump(yaml_repr, default_flow_style=False)
+
+    except ImportError:
+        def from_yaml(self, y_desc):
+            raise NotImplementedError("PyYaml not installed")
+
+        def to_yaml(self):
+            raise NotImplementedError("PyYaml not installed")

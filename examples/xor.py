@@ -2,19 +2,26 @@ from os import path
 import sys
 import math
 import random
-import yaml
-
-from neat import (Mutator, NetworkSpec, GeneSpec, GeneticEncoding,
-                NumericParamSpec as PS,
-                NominalParamSpec as NPS,
-                NEAT, neuron, connection)
+from operator import itemgetter
 
 try:
     from itertools import izip as zip
 except ImportError:
     pass
 
-from operator import itemgetter
+try:
+    AnyError = StandardError
+except NameError:
+    AnyError = Exception
+
+
+here_dir = path.dirname(path.abspath(__file__))
+sys.path.append(path.join(here_dir, '..'))
+
+from neat import (Mutator, NetworkSpec, GeneSpec, GeneticEncoding,
+                NumericParamSpec as PS,
+                NominalParamSpec as NPS,
+                NEAT, neuron, connection)
 
 from nn_impl import NN
 
@@ -131,7 +138,7 @@ gen_num = 0
 current_gen = init_gen
 
 ## RUN ALTERNATING AUGMENTATION AND SIMPLIFICATION STAGES ##
-for epoch in xrange(num_epochs):
+for epoch in range(num_epochs):
     try:
         print("Epoch #{}".format(epoch))
 
@@ -181,5 +188,9 @@ for inp in test_inputs:
 
 
 # write final genome as YAML file
-with open('xor_genome.yaml', 'w+') as genfile:
-    genfile.write(best_genome.to_yaml())
+try:
+    with open('xor_genome.yaml', 'w+') as genfile:
+        genfile.write(best_genome.to_yaml())
+
+except AnyError:
+    pass
