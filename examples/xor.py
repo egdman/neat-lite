@@ -102,7 +102,7 @@ def evaluate(genomes):
             nn_outputs.append(nn.compute(inp)[0])
 
         fitnesses.append(-rmse(true_outputs, nn_outputs))
-    return zip(genomes, fitnesses)
+    return list(zip(genomes, fitnesses))
 
 def complexity(genomes):
     return (sum((len(ge.neuron_genes)) for ge in genomes),
