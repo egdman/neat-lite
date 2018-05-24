@@ -14,6 +14,11 @@ try:
 except NameError:
     AnyError = Exception
 
+try:
+    range = xrange
+except NameError:
+    pass
+
 
 here_dir = path.dirname(path.abspath(__file__))
 sys.path.append(path.join(here_dir, '..'))
