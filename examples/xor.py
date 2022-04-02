@@ -24,8 +24,7 @@ here_dir = path.dirname(path.abspath(__file__))
 sys.path.append(path.join(here_dir, '..'))
 
 from neat import (Mutator, NetworkSpec, GeneSpec, GeneticEncoding,
-                NumericParamSpec as PS,
-                NominalParamSpec as NPS,
+                ParamSpec as PS, gen_uniform, gen_gauss, mut_gauss,
                 NEAT, neuron, connection)
 
 from nn_impl import NN
@@ -53,17 +52,18 @@ speciation_threshold = 0.2          # genomes that are more similar than this va
 net_spec = NetworkSpec(
     [
         GeneSpec('input',
-            NPS('layer', ['input'], mutable=False)
+            PS('layer', None, None, lambda *a: 'input'),
         ),
         GeneSpec('sigmoid',
-            PS('bias', -1., 1., neuron_sigma, mutable=True),
-            PS('gain', 0, 1., neuron_sigma, mutable=True),
-            NPS('layer', ['hidden'], mutable=False)
+            PS('bias', -1., 1., gen_uniform(), mut_gauss(neuron_sigma)),
+            PS('gain', 0, 1., gen_uniform(), mut_gauss(neuron_sigma)),
+            PS('layer', None, None, lambda *a: 'hidden'),
         )
     ],
     [
         GeneSpec('connection',
-            PS('weight', mutation_sigma=conn_sigma, mean_value = 0., mutable=True))
+            PS('weight', None, None, gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
+        )
     ]
 )
 

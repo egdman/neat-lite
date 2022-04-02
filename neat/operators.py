@@ -2,7 +2,6 @@ import random
 from itertools import chain
 
 from .genes import NeuronGene, ConnectionGene, GeneticEncoding
-from .specs import NumericParamSpec, NominalParamSpec
 from .utils import zip_with_probabilities, weighted_random
 
 
@@ -89,14 +88,10 @@ class Mutator:
             param_name = random.choice(gene_params)
             param_spec = gene_spec[param_name]
 
-            if isinstance(param_spec, NumericParamSpec):
-                current_value = gene[param_name]
+            current_value = gene[param_name]
 
-                new_value = param_spec.mutate_value(current_value)
-                gene[param_name] = new_value
-
-            elif isinstance(param_spec, NominalParamSpec):
-                gene[param_name] = param_spec.get_random_value()
+            new_value = param_spec.mutate_value(current_value)
+            gene[param_name] = new_value
 
 
 
