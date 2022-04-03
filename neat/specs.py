@@ -77,10 +77,6 @@ class GeneSpec(object):
         return list(self.param_specs.keys())
 
 
-    def mutable_param_names(self):
-        return list(pname for pname, pspec in self.param_specs.items() if pspec.mutator is not None)
-
-
     def get_random_parameters(self):
         '''
         Return a dictionary where keys are parameter names and values are random parameter values.

@@ -51,48 +51,28 @@ class Mutator:
         self.innovation_number = innovation_number
 
 
-
     def mutate_neuron_params(self, genotype, probability):
+        if probability == 0:
+            return
         for neuron_gene in genotype.neuron_genes:
-            if random.random() < probability:
-                self.mutate_gene_params(neuron_gene)
-
-
+            self._mutate_gene_params(neuron_gene, probability)
 
 
     def mutate_connection_params(self, genotype, probability):
+        if probability == 0:
+            return
         for connection_gene in genotype.connection_genes:
-            if random.random() < probability:
-                self.mutate_gene_params(connection_gene)
+            self._mutate_gene_params(connection_gene, probability)
 
 
-
-
-    def mutate_gene_params(self, gene):
-
-        """
-        Only one parameter of the gene is chosen to be mutated.
-        The parameter to be mutated is chosen from the set of parameters
-        with associated probabilities.
-
-        :type gene: Gene
-        """
-
-        # gene_params = self.mutable_params[gene.gene_type]
+    def _mutate_gene_params(self, gene, probability):
         gene_spec = self.net_spec[gene.gene_type]
-        gene_params = gene_spec.mutable_param_names()
 
-        if len(gene_params) > 0:
-
-            # param_name = weighted_random(gene_params)
-            param_name = random.choice(gene_params)
-            param_spec = gene_spec[param_name]
-
-            current_value = gene[param_name]
-
-            new_value = param_spec.mutate_value(current_value)
-            gene[param_name] = new_value
-
+        for param_name, param_spec in gene_spec.param_specs.items():
+            if random.random() < probability:
+                current_value = gene[param_name]
+                new_value = param_spec.mutate_value(current_value)
+                gene[param_name] = new_value
 
 
     def _get_pair_neurons(self, genotype):
