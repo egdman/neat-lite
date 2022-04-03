@@ -49,39 +49,51 @@ speciation_threshold = 0.2          # genomes that are more similar than this va
 
 
 ## CREATE MUTATION SPEC ##
-net_spec = NetworkSpec(
-    [
-        GeneSpec('input',
-            PS('layer', None, None, lambda *a: 'input'),
-        ),
-        GeneSpec('sigmoid',
-            PS('bias', -1., 1., gen_uniform(), mut_gauss(neuron_sigma)),
-            PS('gain', 0, 1., gen_uniform(), mut_gauss(neuron_sigma)),
-            PS('layer', None, None, lambda *a: 'hidden'),
-        )
-    ],
-    [
-        GeneSpec('connection',
-            PS('weight', None, None, gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
-        )
-    ]
-)
+# net_spec = NetworkSpec(
+#     [
+#         # GeneSpec('input',
+#         #     PS('layer', lambda *a: 'input'),
+#         # ),
+#         # GeneSpec('sigmoid',
+#         #     PS('bias', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(-1., 1.),
+#         #     PS('gain', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(0., 1.),
+#         #     PS('layer', lambda *a: 'hidden'),
+#         # )
+#     ],
+#     [
+#         GeneSpec('connection',
+#             PS('weight', gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
+#         )
+#     ]
+# )
 
 ## INPUTS AND CORRECT OUTPUTS FOR THE NETWORK ##
 inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
-true_outputs = (0, 1, 1, 0)
+true_outputs = (0, .75, .75, 0)
 
 
 ## CREATE MUTATOR ##
-mutator = Mutator(net_spec,
-    allowed_neuron_types = ('sigmoid',),
-    pure_input_types = ('input',)
-)
+mutator = Mutator(pure_input_types=('input',))
 
 
 ## CREATE MAIN NEAT OBJECT ##
-neat_obj = NEAT(mutator = mutator, **conf)
+# neat_obj = NEAT(mutator = mutator, **conf)
 
+neat_obj = NEAT(mutator=mutator,
+    neuron_factory=default_gene_factory(
+        # GeneSpec('input',
+        #     PS('layer', lambda *a: 'input'),
+        # ),
+        GeneSpec('sigmoid',
+            PS('bias', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(-1., 1.),
+            PS('gain', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(0., 1.),
+            PS('layer', lambda *a: 'hidden'),
+        )),
+    connection_factory=default_gene_factory(
+        GeneSpec('connection',
+            PS('weight', gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
+        )),
+    **conf)
 
 ## CREATE INITIAL GENOTYPE ##
 # we specify initial input and output neurons and protect them from removal

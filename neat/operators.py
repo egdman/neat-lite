@@ -10,40 +10,10 @@ class all_types_in_spec: pass
 class Mutator:
 
     def __init__(self,
-        net_spec,
-
         innovation_number = 0, # starting innovation number
-
-        allowed_neuron_types=all_types_in_spec,     # only neurons of these types can be added through mutations
-        allowed_connection_types=all_types_in_spec, # only connections of these types can be added through mutations
-
         pure_input_types = tuple(), # list of input-only neuron types (can't attach loopback inputs)
         pure_output_types = tuple() # list of output-only neuron types (can't attach loopback outputs)
         ):
-
-        self.net_spec = net_spec
-
-
-        # TODO check that all allowed neuron types are in the net spec
-        # set types of neurons that are allowed to be added to the net
-        if allowed_neuron_types is all_types_in_spec:
-            self.allowed_neuron_types = list(self.net_spec.neuron_specs.keys())
-        else:
-            self.allowed_neuron_types = allowed_neuron_types
-
-        # make allowed types into a list of tuples (type, probability)
-        self.allowed_neuron_types = zip_with_probabilities(self.allowed_neuron_types)
-
-
-        # TODO check that all allowed connection types are in the net spec
-        # set types of connections that are allowed to be added to the net
-        if allowed_connection_types is all_types_in_spec:
-            self.allowed_connection_types = list(self.net_spec.connection_specs.keys())
-        else:
-            self.allowed_connection_types = allowed_connection_types
-
-        # make allowed types into a list of tuples (type, probability)
-        self.allowed_connection_types = zip_with_probabilities(self.allowed_connection_types)
 
         self.pure_input_types = pure_input_types
         self.pure_output_types = pure_output_types
@@ -51,42 +21,7 @@ class Mutator:
         self.innovation_number = innovation_number
 
 
-    def mutate_neuron_params(self, genotype, probability):
-        if probability == 0:
-            return
-        for neuron_gene in genotype.neuron_genes:
-            self._mutate_gene_params(neuron_gene, probability)
-
-
-    def mutate_connection_params(self, genotype, probability):
-        if probability == 0:
-            return
-        for connection_gene in genotype.connection_genes:
-            self._mutate_gene_params(connection_gene, probability)
-
-
-    def _mutate_gene_params(self, gene, probability):
-        gene_spec = self.net_spec[gene.gene_type]
-
-        for param_name, param_spec in gene_spec.param_specs.items():
-            if random.random() < probability:
-                current_value = gene[param_name]
-                new_value = param_spec.mutate_value(current_value)
-                gene[param_name] = new_value
-
-
-    def _get_pair_neurons(self, genotype):
-        neuron_from = random.choice(genotype.neuron_genes)
-        neuron_to = random.choice(genotype.neuron_genes)
-        mark_from = neuron_from.historical_mark
-        mark_to = neuron_to.historical_mark
-        source_valid = neuron_from.gene_type not in self.pure_output_types
-        destination_valid = neuron_to.gene_type not in self.pure_input_types
-        return mark_from, mark_to, source_valid, destination_valid
-
-
-
-    def add_connection_mutation(self, genotype, max_attempts=100):
+    def add_random_connection(self, genotype, connection_factory, max_attempts=100):
 
         """
         Pick two neurons A and B at random. Make sure that connection AB does not exist.
@@ -94,31 +29,28 @@ class Mutator:
         of allowed types and whose parameters are initialized according to spec for that type.
 
         Otherwise pick two neurons again and repeat until suitable pair is found or we run out of attempts.
-
-        :type genotype: GeneticEncoding
-        :type max_attempts: int
         """
 
-        # if there is no allowed connection types to add, cancel mutation
-        if len(self.allowed_connection_types) == 0: return False
+        # TODO: rewrite this function better, get rid of attempts
 
+        def _get_pair_neurons():
+            neuron_from = random.choice(genotype.neuron_genes)
+            neuron_to = random.choice(genotype.neuron_genes)
+            mark_from = neuron_from.historical_mark
+            mark_to = neuron_to.historical_mark
+            are_valid = neuron_from.gene_type not in self.pure_output_types and \
+                        neuron_to.gene_type not in self.pure_input_types
+            return mark_from, mark_to, are_valid
 
-        mark_from, mark_to, src_valid, dst_valid = self._get_pair_neurons(genotype)
-
+        mark_from, mark_to, are_valid = _get_pair_neurons()
         num_attempts = 0
 
-        while len(genotype.get_connection_genes(mark_from, mark_to)) > 0 or \
-        not (src_valid and dst_valid):
-
-            mark_from, mark_to, src_valid, dst_valid = self._get_pair_neurons(genotype)
+        while len(genotype.get_connection_genes(mark_from, mark_to)) > 0 or not are_valid:
+            mark_from, mark_to, are_valid = _get_pair_neurons()
             num_attempts += 1
             if num_attempts >= max_attempts: return False
 
-
-        new_connection_type = weighted_random(self.allowed_connection_types)
-
-        new_connection_params = self.net_spec[new_connection_type].get_random_parameters()
-
+        new_connection_type, new_connection_params = connection_factory()
         self.add_connection(
             genotype,
             new_connection_type,
@@ -143,7 +75,7 @@ class Mutator:
 
 
 
-    def add_neuron_mutation(self, genotype):
+    def add_random_neuron(self, genotype, neuron_factory, connection_factory):
 
         """
         Pick a connection at random from neuron A to neuron B.
@@ -156,32 +88,6 @@ class Mutator:
 
         :type genotype: GeneticEncoding
         """
-
-
-        ######## INIT NEW NEURON TYPE AND PARAMS #############################################
-        # if there is no allowed neuron types to add, cancel mutation
-        if len(self.allowed_neuron_types) == 0: return
-        
-        # select new neuron type from allowed types with weights
-        new_neuron_type = weighted_random(self.allowed_neuron_types)
-
-        # initialize parameters of the new neuron at random
-        new_neuron_params = self.net_spec[new_neuron_type].get_random_parameters()
-
-
-
-        ######## INIT NEW CONNECTION TYPE AND PARAMS #########################################
-        # if there is no allowed connection types to add, cancel mutation
-        if len(self.allowed_connection_types) == 0: return
-
-        # select new connection type from allowed types with weights
-        new_connection_type = weighted_random(self.allowed_connection_types)
-
-        # initialize parameters of the new connection at random
-        new_connection_params = self.net_spec[new_connection_type].get_random_parameters()
-
-
-
 
         unprotected_conn_ids = self._unprotected_connection_ids(genotype)
         # unprotected_conn_ids = range(len(genotype.connection_genes))
@@ -203,8 +109,8 @@ class Mutator:
         genotype.remove_connection_gene(connection_to_split_id)
 
         # insert new neuron
+        new_neuron_type, new_neuron_params = neuron_factory()
         mark_middle = self.add_neuron(genotype, new_neuron_type, **new_neuron_params)
-
 
         self.add_connection(
             genotype,
@@ -213,7 +119,7 @@ class Mutator:
             mark_middle,
             **old_connection_params)
 
-
+        new_connection_type, new_connection_params = connection_factory()
         self.add_connection(
             genotype,
             new_connection_type,
@@ -224,7 +130,7 @@ class Mutator:
 
 
 
-    def remove_connection_mutation(self, genotype):
+    def remove_random_connection(self, genotype):
         unprotected_conn_ids = self._unprotected_connection_ids(genotype)
         # unprotected_conn_ids = range(len(genotype.connection_genes))
         if len(unprotected_conn_ids) == 0: return
@@ -233,7 +139,7 @@ class Mutator:
 
 
 
-    def remove_neuron_mutation(self, genotype):
+    def remove_random_neuron(self, genotype):
         unprotected_neuron_ids = self._unprotected_neuron_ids(genotype)
         if len(unprotected_neuron_ids) == 0: return
 
@@ -260,17 +166,11 @@ class Mutator:
 
 
     def add_neuron(self, genotype, neuron_type, protected=False, **neuron_params):
-        # initialize params
-        init_params = self.net_spec[neuron_type].get_random_parameters()
-
-        # overwrite params that are provided in arguments
-        init_params.update(neuron_params)
-
         new_neuron_gene = NeuronGene(
                                 gene_type = neuron_type,
                                 historical_mark = self.innovation_number,
                                 protected = protected,
-                                **init_params)
+                                **neuron_params)
 
         self.innovation_number += 1
         genotype.add_neuron_gene(new_neuron_gene)
@@ -279,19 +179,13 @@ class Mutator:
 
 
     def add_connection(self, genotype, connection_type, mark_from, mark_to, protected=False, **connection_params):
-        # initialize params
-        init_params = self.net_spec[connection_type].get_random_parameters()
-
-        # overwrite params that are provided in arguments
-        init_params.update(connection_params)
-
         new_conn_gene = ConnectionGene(
                                   gene_type = connection_type,
                                   mark_from = mark_from,
                                   mark_to = mark_to,
                                   historical_mark = self.innovation_number,
                                   protected = protected,
-                                  **init_params)
+                                  **connection_params)
 
         self.innovation_number += 1
         genotype.add_connection_gene(new_conn_gene)

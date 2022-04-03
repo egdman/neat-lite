@@ -23,17 +23,17 @@ speciation_threshold = 0.005        # genomes that are more similar than this va
 net_spec = NetworkSpec(
     [
         GeneSpec('input',
-            PS('layer', None, None, lambda *a: 'input'),
+            PS('layer', lambda *a: 'input'),
         ),
         GeneSpec('sigmoid',
-            PS('bias', -1., 1., gen_uniform(), mut_gauss(neuron_sigma)),
-            PS('gain', 0, 1., gen_uniform(), mut_gauss(neuron_sigma)),
-            PS('layer', None, None, lambda *a: 'hidden'),
+            PS('bias', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(-1., 1.),
+            PS('gain', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(0., 1.),
+            PS('layer', lambda *a: 'hidden'),
         ),
     ],
     [
         GeneSpec('default',
-            PS('weight', None, None, gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
+            PS('weight', gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
         ),
     ]
 )

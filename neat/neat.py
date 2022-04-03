@@ -43,47 +43,88 @@ def validate_genotype(genotype, error_msg):
         raise RuntimeError(error_msg + '\n' + str(genotype))
 
 
+_defaults = {
+    'selection_subsample_size': None,
+
+    'structural_augmentation_proba': None,
+    'structural_removal_proba': 0.,
+
+    'neuron_param_mut_proba': None,
+    'connection_param_mut_proba': None,
+
+    'speciation_threshold': 0.,
+
+    # coefficients for calculating genotype dissimilarity
+    'excess_coef': 1.,
+    'disjoint_coef': 1.,
+    'neuron_diff_coef': 0.,
+    'connection_diff_coef': 0.,
+}
+
+
+def default_gene_factory(*gene_specs):
+    def _generate():
+        # select gene type at random
+        gene_spec = random.choice(gene_specs)
+        return gene_spec.type_name, gene_spec.get_random_parameters()
+    return _generate
+
 
 class NEAT(object):
-    settings = {
-        'pop_size': None,
-        'tournament_size': None,
-        'elite_size': 0,
+    def __init__(self,
+        mutator,
+        neuron_factory=None,
+        connection_factory=None,
+        selection_step=None,
+        crossover_step=None,
+        parameters_mutation_step=None,
+        topology_augmentation_step=None,
+        topology_reduction_step=None,
+        custom_reproduction_pipeline=None,
+        **config):
 
-        'structural_augmentation_proba': None,
-        'structural_removal_proba': 0.,
-
-        'neuron_param_mut_proba': None,
-        'connection_param_mut_proba': None,
-
-        'speciation_threshold': 0.,
-
-        # coefficients for calculating genotype dissimilarity
-        'excess_coef': 1.,
-        'disjoint_coef': 1.,
-        'neuron_diff_coef': 0.,
-        'connection_diff_coef': 0.,
-    }
-
-    def __init__(self, mutator, **config):
         self.mutator = mutator
 
-        for setting_name, default_value in NEAT.settings.items():
-            provided_value = config.get(setting_name, None)
+        self.neuron_factory = neuron_factory
+        self.connection_factory = connection_factory
 
-            if provided_value is not None:
-                setattr(self, setting_name, provided_value)
-            elif default_value is not None:
-                setattr(self, setting_name, default_value)
-            else:
-                raise InvalidConfigError("NEAT instance: please provide value for {}".format(setting_name))
+        self.selection_step = selection_step
+        self.crossover_step = crossover_step
+        self.parameters_mutation_step = parameters_mutation_step
+        self.topology_augmentation_step = topology_augmentation_step
+        self.topology_reduction_step = topology_reduction_step
 
-        # check validity of settings:
-        if self.tournament_size > self.pop_size or self.tournament_size < 2:
-            raise InvalidConfigError("NEAT instance: tournament_size must lie within [2, pop_size]")
+        # use default order of operations for reproduction pipeline
+        if custom_reproduction_pipeline is None:
+            for setting_name, default_value in _defaults.items():
+                provided_value = config.get(setting_name, None)
 
-        if self.elite_size > self.pop_size:
-            raise InvalidConfigError("NEAT instance: elite_size must not be larger than pop_size")
+                if provided_value is not None:
+                    setattr(self, setting_name, provided_value)
+                elif default_value is not None:
+                    setattr(self, setting_name, default_value)
+                else:
+                    raise InvalidConfigError("NEAT: please provide value for {}".format(setting_name))
+
+            # check validity of settings:
+            if self.selection_subsample_size < 2:
+                raise InvalidConfigError("NEAT: selection_subsample_size must be greater than 1")
+
+
+            if self.selection_step is None:
+                self.selection_step = two_best_in_subsample(self.selection_subsample_size)
+            if self.crossover_step is None:
+                self.crossover_step = crossover_two_genomes()
+            if self.parameters_mutation_step is None:
+                self.parameters_mutation_step = parameters_mutation(self.network_spec, self.neuron_param_mut_proba, self.connection_param_mut_proba)
+            if self.topology_augmentation_step is None:
+                self.topology_augmentation_step = topology_augmentation(self.mutator, self.topology_augmentation_proba, neuron_factory, connection_factory)
+            if self.topology_reduction_step is None:
+                self.topology_reduction_step = topology_reduction(self.mutator, self.topology_reduction_proba)
+
+        # use the provided custom reproduction pipeline
+        else:
+            self.custom_reproduction_pipeline = custom_reproduction_pipeline
 
 
 
@@ -148,61 +189,6 @@ class NEAT(object):
         return init_pop
 
 
-
-    def apply_structural_mutation(self, genotype):
-        # apply augmentation mutation:
-        if random.random() < self.structural_augmentation_proba:
-
-            # if no connections, add connection
-            if len(genotype.connection_genes) == 0:
-                self.mutator.add_connection_mutation(genotype)
-                # validate_genotype(genotype, "inserting new CONNECTION created invalid genotype")
-
-            # otherwise add connection or neuron with equal probability
-            else:
-                if random.random() < 0.5:
-                    self.mutator.add_connection_mutation(genotype)
-                    # validate_genotype(genotype, "inserting new CONNECTION created invalid genotype")
-
-                else:
-                    self.mutator.add_neuron_mutation(genotype)
-                    # validate_genotype(genotype, "inserting new NEURON created invalid genotype")
-
-
-        # apply removal mutation:
-        if random.random() < self.structural_removal_proba:
-            if random.random() < 0.5:
-                self.mutator.remove_connection_mutation(genotype)
-                # validate_genotype(genotype, "removing a CONNECTION created invalid genotype")
-            else:
-                self.mutator.remove_neuron_mutation(genotype)
-                # validate_genotype(genotype, "removing a NEURON created invalid genotype")
-
-
-
-    def produce_child(self, parent1, parent2):
-        # apply crossover:
-        child_genotype = crossover(parent1, parent2)
-        # validate_genotype(child_genotype, "crossover created invalid genotype")
-
-        # apply mutations:
-        self.mutator.mutate_connection_params(
-            genotype=child_genotype,
-            probability=self.connection_param_mut_proba)
-        # validate_genotype(child_genotype, "weight mutation created invalid genotype")
-
-        self.mutator.mutate_neuron_params(
-            genotype=child_genotype,
-            probability=self.neuron_param_mut_proba)
-        # validate_genotype(child_genotype, "neuron parameters mutation created invalid genotype")
-
-        # apply structural mutations:
-        self.apply_structural_mutation(child_genotype)
-
-        return child_genotype
-
-
-
     def share_fitness(self, genomes_fitnesses):
 
         def species_size(genome, fitness):
@@ -224,18 +210,102 @@ class NEAT(object):
 
 
 
-    def produce_new_generation(self, genome_fitness_list):
-        gen_fit_shared = self.share_fitness(genome_fitness_list)
+    # def produce_new_generation(self, genome_fitness_list):
+    #     gen_fit_shared = self.share_fitness(genome_fitness_list)
 
-        # create children:
-        for _ in range(self.pop_size - self.elite_size):
-            # we select genomes using their shared fitnesses:
-            subset = random.sample(gen_fit_shared, self.tournament_size)
-            parent1, parent2 = heapq.nlargest(2, subset, key = itemgetter(1))
+    #     # create children:
+    #     for _ in range(self.pop_size - self.elite_size):
+    #         # we select genomes using their shared fitnesses:
+    #         subset = random.sample(gen_fit_shared, self.tournament_size)
+    #         parent1, parent2 = heapq.nlargest(2, subset, key = itemgetter(1))
 
-            yield self.produce_child(parent1[0], parent2[0])
+    #         yield self.produce_child(parent1[0], parent2[0])
 
-        # bringing the best parents into next generation:
-        best_parents = heapq.nlargest(self.elite_size, genome_fitness_list, key = itemgetter(1))
-        for genome, _ in best_parents:
-            yield genome
+    #     # bringing the best parents into next generation:
+    #     best_parents = heapq.nlargest(self.elite_size, genome_fitness_list, key = itemgetter(1))
+    #     for genome, _ in best_parents:
+    #         yield genome
+
+
+    def produce_new_genome(self, genome_and_fitness_list):
+        if self.custom_reproduction_pipeline is None:
+            pipeline = (
+                self.selection_step,
+                self.crossover_step,
+                self.parameters_mutation_step,
+                self.topology_augmentation_step,
+                self.topology_reduction_step,
+            )
+        else:
+            pipeline = self.custom_reproduction_pipeline
+
+        value = genome_and_fitness_list
+        for step in pipeline:
+            value = step(value)
+        return value
+
+
+def two_best_in_subsample(subsample_size):
+    def _impl(genome_and_fitness_list):
+        subsample = random.sample(genome_and_fitness_list, subsample_size)
+        parent1, parent2 = heapq.nlargest(2, subset, key=itemgetter(1))
+        return parent1[0], parent2[0]
+    return _impl
+
+
+def parameters_mutation(network_spec, neuron_param_mut_proba, connection_param_mut_proba):
+    def _mutate_gene_params(gene, probability):
+        gene_spec = network_spec[gene.gene_type]
+
+        for param_name, param_spec in gene_spec.param_specs.items():
+            if random.random() < probability:
+                current_value = gene[param_name]
+                new_value = param_spec.mutate_value(current_value)
+                gene[param_name] = new_value
+
+    def _impl(genome):
+        if neuron_param_mut_proba > 0:
+            for neuron_gene in genome.neuron_genes:
+                _mutate_gene_params(neuron_gene, neuron_param_mut_proba)
+
+        if connection_param_mut_proba > 0:
+            for connection_gene in genome.connection_genes:
+                _mutate_gene_params(connection_gene, connection_param_mut_proba)
+
+        return genome
+    return _impl
+
+
+def topology_augmentation(mutator, probability, neuron_factory, connection_factory):
+    def _impl(genome):
+        if random.random() < probability:
+            # if no connections, add a connection
+            if len(genome.connection_genes) == 0:
+                mutator.add_random_connection(genome, connection_factory)
+
+            # otherwise add connection or neuron with equal probability
+            elif random.random() < 0.5:
+                mutator.add_random_connection(genome, connection_factory)
+            else:
+                mutator.add_random_neuron(genome, neuron_factory, connection_factory)
+        return genome
+
+    return _impl
+
+
+def topology_reduction(mutator, probability):
+    def _impl(genome):
+        if random.random() < probability:
+            if random.random() < 0.5:
+                mutator.remove_random_connection(genome)
+            else:
+                mutator.remove_random_neuron(genome)
+        return genome
+    return _impl
+
+
+def crossover_two_genomes():
+    def _impl(genomes):
+        genome1, genome2 = genomes
+        return crossover(genome1, genome2)
+    return _impl

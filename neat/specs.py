@@ -18,6 +18,12 @@ def gen_uniform():
     return _sample
 
 
+def gen_random_choice(values):
+    def _pick(*_):
+        return random.choice(values)
+    return _pick
+
+
 def gen_gauss(mean, sigma):
     def _sample(min_value, max_value):
         return clamp(min_value, random.gauss(mean, sigma), max_value)
@@ -25,27 +31,35 @@ def gen_gauss(mean, sigma):
 
 
 def mut_gauss(sigma):
-    def _sample(current_value, min_value, max_value):
+    def _sample(min_value, current_value, max_value):
         return clamp(min_value, random.gauss(current_value, sigma), max_value)
     return _sample
 
 
 class ParamSpec:
-    def __init__(self, name: str, min_value, max_value, value_generator, value_mutator=None):
+    def __init__(self, name: str, value_generator, value_mutator=None):
         self.name = name
-        self.min_value = min_value
-        self.max_value = max_value
+        self.min_value = None
+        self.max_value = None
         self.generator = value_generator
         self.mutator = value_mutator
+
+
+    def with_bounds(self, min_value, max_value):
+        self.min_value = min_value
+        self.max_value = max_value
+        return self
+
 
     def get_random_value(self):
         return self.generator(self.min_value, self.max_value)
 
+
     def mutate_value(self, current_value):
-        if self.mutator:
-            return self.mutator(current_value, self.min_value, self.max_value)
-        else:
+        if self.mutator is None:
             return current_value
+        else:
+            return self.mutator(self.min_value, current_value, self.max_value)
 
 
 class GeneSpec(object):
