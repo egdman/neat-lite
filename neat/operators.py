@@ -5,23 +5,51 @@ from .genes import NeuronGene, ConnectionGene, GeneticEncoding
 from .utils import zip_with_probabilities, weighted_random
 
 
-class all_types_in_spec: pass
+class GeneInfo(object): pass
+
+
+def neuron(gene_type, protected, **params):
+    '''
+    Helper function to use with Mutator.produce_genome
+    '''
+    n = GeneInfo()
+    n.protected = protected
+    n.type = gene_type
+    n.params = params
+    return n
+
+
+def connection(gene_type, protected, src, dst, **params):
+    '''
+    Helper function to use with Mutator.produce_genome
+    '''
+    c = GeneInfo()
+    c.protected = protected
+    c.type = gene_type
+    c.src = src
+    c.dst = dst
+    c.params = params
+    return c
+
 
 class Mutator:
 
     def __init__(self,
+        neuron_factory,
+        connection_factory,
         innovation_number = 0, # starting innovation number
         pure_input_types = tuple(), # list of input-only neuron types (can't attach loopback inputs)
         pure_output_types = tuple() # list of output-only neuron types (can't attach loopback outputs)
         ):
 
+        self.neuron_factory = neuron_factory
+        self.connection_factory = connection_factory
         self.pure_input_types = pure_input_types
         self.pure_output_types = pure_output_types
-
         self.innovation_number = innovation_number
 
 
-    def add_random_connection(self, genotype, connection_factory, max_attempts=100):
+    def add_random_connection(self, genotype, max_attempts=100):
 
         """
         Pick two neurons A and B at random. Make sure that connection AB does not exist.
@@ -50,7 +78,7 @@ class Mutator:
             num_attempts += 1
             if num_attempts >= max_attempts: return False
 
-        new_connection_type, new_connection_params = connection_factory()
+        new_connection_type, new_connection_params = self.connection_factory()
         self.add_connection(
             genotype,
             new_connection_type,
@@ -75,7 +103,7 @@ class Mutator:
 
 
 
-    def add_random_neuron(self, genotype, neuron_factory, connection_factory):
+    def add_random_neuron(self, genotype):
 
         """
         Pick a connection at random from neuron A to neuron B.
@@ -109,7 +137,7 @@ class Mutator:
         genotype.remove_connection_gene(connection_to_split_id)
 
         # insert new neuron
-        new_neuron_type, new_neuron_params = neuron_factory()
+        new_neuron_type, new_neuron_params = self.neuron_factory()
         mark_middle = self.add_neuron(genotype, new_neuron_type, **new_neuron_params)
 
         self.add_connection(
@@ -119,7 +147,7 @@ class Mutator:
             mark_middle,
             **old_connection_params)
 
-        new_connection_type, new_connection_params = connection_factory()
+        new_connection_type, new_connection_params = self.connection_factory()
         self.add_connection(
             genotype,
             new_connection_type,
@@ -191,6 +219,44 @@ class Mutator:
         genotype.add_connection_gene(new_conn_gene)
         return new_conn_gene.historical_mark
 
+
+    def produce_genome(self, **genes):
+        connections = genes.pop('connections', [])
+        neurons = genes
+        genome = GeneticEncoding()
+
+        # if we want to protect a connection we also
+        # want to protect its 2 adjacent neurons
+        # because we cannot remove a neuron without removing
+        # its adjacent connections
+        for conn_info in connections:
+            if conn_info.protected:
+                neurons[conn_info.src].protected = True
+                neurons[conn_info.dst].protected = True
+
+        # add neuron genes to genome using mutator
+        neuron_map = {}
+        for neuron_id, neuron_info in neurons.items():
+            hmark = self.add_neuron(
+                genome,
+                neuron_info.type,
+                protected=neuron_info.protected,
+                **neuron_info.params
+            )
+            neuron_map[neuron_id] = hmark
+
+        # add connection genes to genome using mutator
+        for conn_info in connections:
+            self.add_connection(
+                genome,
+                conn_info.type,
+                mark_from = neuron_map[conn_info.src],
+                mark_to = neuron_map[conn_info.dst],
+                protected=conn_info.protected,
+                **conn_info.params
+            )
+
+        return genome
 
 
 def crossover(genotype_more_fit, genotype_less_fit):

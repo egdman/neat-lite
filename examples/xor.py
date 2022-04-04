@@ -23,9 +23,9 @@ except NameError:
 here_dir = path.dirname(path.abspath(__file__))
 sys.path.append(path.join(here_dir, '..'))
 
-from neat import (Mutator, NetworkSpec, GeneSpec, GeneticEncoding,
+from neat import (Mutator, GeneSpec, GeneticEncoding,
                 ParamSpec as PS, gen_uniform, gen_gauss, mut_gauss,
-                NEAT, neuron, connection)
+                NEAT, neuron, connection, default_gene_factory)
 
 from nn_impl import NN
 
@@ -35,82 +35,64 @@ neuron_sigma = 0.25                 # mutation sigma for neuron params
 conn_sigma = 10.                    # mutation sigma for connection params
 
 popul = 10
+elite_num = 1 # best performing genomes in a generation will be copied without change to the next generation
+
 conf = dict(
-pop_size = popul,                   # population size
-elite_size = 1,                     # size of the elite club
-tournament_size = int(.75 * popul), # size of the selection subsample (must be in the range [2, pop_size])
+selection_subsample_size = int(.75 * popul), # size of the selection subsample (must be in the range [2, pop_size])
 neuron_param_mut_proba = 0.5,       # probability to mutate each single neuron in the genome
 connection_param_mut_proba = 0.5,   # probability to mutate each single connection in the genome
-structural_augmentation_proba = 0,  # probability to augment the topology of a newly created genome 
-structural_removal_proba = 0,       # probability to diminish the topology of a newly created genome
+topology_augmentation_proba = 0,  # probability to augment the topology of a newly created genome 
+topology_reduction_proba = 0,       # probability to diminish the topology of a newly created genome
 speciation_threshold = 0.2          # genomes that are more similar than this value will be considered the same species
 )
 #### ###### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 
 
 ## CREATE MUTATION SPEC ##
-# net_spec = NetworkSpec(
-#     [
-#         # GeneSpec('input',
-#         #     PS('layer', lambda *a: 'input'),
-#         # ),
-#         # GeneSpec('sigmoid',
-#         #     PS('bias', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(-1., 1.),
-#         #     PS('gain', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(0., 1.),
-#         #     PS('layer', lambda *a: 'hidden'),
-#         # )
-#     ],
-#     [
-#         GeneSpec('connection',
-#             PS('weight', gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
-#         )
-#     ]
-# )
+
+input_neuron_spec = GeneSpec(
+    'input',
+    PS('layer', lambda *a: 'input'),
+)
+sigmoid_neuron_spec = GeneSpec(
+    'sigmoid',
+    PS('layer', lambda *a: 'hidden'),
+    PS('bias', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(-1., 1.),
+    PS('gain', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(0., 1.),
+)
+connection_spec = GeneSpec(
+    'connection',
+    PS('weight', gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
+)
+
+## CREATE MUTATOR ##
+mutator = Mutator(
+    neuron_factory=default_gene_factory(sigmoid_neuron_spec),
+    connection_factory=default_gene_factory(connection_spec),
+    pure_input_types=('input',),
+)
+
+## CREATE MAIN NEAT OBJECT ##
+neat_obj = NEAT(
+    topology_mutator=mutator,
+    neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
+    connection_specs=(connection_spec,),
+    **conf)
+
+
+def produce_new_generation(neat, genome_fitness_list):
+    for _ in range(len(genome_fitness_list) - elite_num):
+        yield neat.produce_new_genome(genome_fitness_list)
+
+    # bringing the best parents into next generation:
+    best_parents = heapq.nlargest(elite_num, genome_fitness_list, key=itemgetter(1))
+    for genome, _ in best_parents:
+        yield genome
+
 
 ## INPUTS AND CORRECT OUTPUTS FOR THE NETWORK ##
 inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 true_outputs = (0, .75, .75, 0)
-
-
-## CREATE MUTATOR ##
-mutator = Mutator(pure_input_types=('input',))
-
-
-## CREATE MAIN NEAT OBJECT ##
-# neat_obj = NEAT(mutator = mutator, **conf)
-
-neat_obj = NEAT(mutator=mutator,
-    neuron_factory=default_gene_factory(
-        # GeneSpec('input',
-        #     PS('layer', lambda *a: 'input'),
-        # ),
-        GeneSpec('sigmoid',
-            PS('bias', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(-1., 1.),
-            PS('gain', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(0., 1.),
-            PS('layer', lambda *a: 'hidden'),
-        )),
-    connection_factory=default_gene_factory(
-        GeneSpec('connection',
-            PS('weight', gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
-        )),
-    **conf)
-
-## CREATE INITIAL GENOTYPE ##
-# we specify initial input and output neurons and protect them from removal
-init_genome = neat_obj.get_init_genome(
-        in1=neuron('input', protected=True, layer='input'),
-        in2=neuron('input', protected=True, layer='input'),
-        out1=neuron('sigmoid', protected=True, layer='output'),
-        connections=[
-        # connection('connection', protected=True, src='in1', dst='out1'),
-        # connection('connection', protected=True, src='in2', dst='out1')
-        ]
-    )
-
-
-## CREATE INITIAL GENERATION ##
-init_gen = neat_obj.produce_init_generation(init_genome)
-
 
 def rmse(X, Y):
     return math.sqrt( sum( (x - y)**2 for x, y in zip(X, Y) ) )
@@ -141,7 +123,7 @@ def get_stats(genomes, best_gen, best_fitness):
 
 def next_gen(current_gen):
     evaluated_gen = evaluate(current_gen)
-    next_gen = list(neat_obj.produce_new_generation(evaluated_gen))
+    next_gen = list(produce_new_generation(neat_obj, evaluated_gen))
     best_genome, best_fitness = sorted(evaluated_gen, key = itemgetter(1))[-1]
     return next_gen, best_genome, best_fitness
 
@@ -152,7 +134,26 @@ aug_proba = .9
 sim_proba = .9
 
 gen_num = 0
-current_gen = init_gen
+
+
+## CREATE INITIAL GENOTYPE ##
+# we specify initial input and output neurons and protect them from removal
+init_genome = mutator.produce_genome(
+    in1=neuron('input', protected=True, layer='input'),
+    in2=neuron('input', protected=True, layer='input'),
+    out1=neuron('sigmoid', protected=True, layer='output'),
+    connections=(
+        # connection('connection', protected=True, src='in1', dst='out1'),
+        # connection('connection', protected=True, src='in2', dst='out1')
+    )
+)
+
+## CREATE INITIAL GENERATION ##
+def copy_with_mutation(neat, source_genome):
+    return neat.topology_augmentation_step(neat.parameters_mutation_step(source_genome.copy()))
+
+current_gen = list(copy_with_mutation(neat_obj, init_genome) for _ in range(popul))
+
 
 ## RUN ALTERNATING AUGMENTATION AND SIMPLIFICATION STAGES ##
 for epoch in range(num_epochs):

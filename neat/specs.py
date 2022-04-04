@@ -97,28 +97,3 @@ class GeneSpec(object):
         '''
         return {param_name: self.param_specs[param_name].get_random_value() \
                 for param_name in self.param_specs}
-
-
-
-
-class NetworkSpec(object):
-
-    def __init__(self, neuron_specs, connection_specs):
-        self.neuron_specs     = {nspec.type_name: nspec for nspec in neuron_specs}
-        self.connection_specs = {cspec.type_name: cspec for cspec in connection_specs}
-
-
-    def gene_types(self):
-        return self.neuron_specs.keys() + self.connection_specs.keys()
-
-
-    def __getitem__(self, key):
-        nspec = self.neuron_specs.get(key, None)
-        cspec = self.connection_specs.get(key, None)
-        if nspec is None and cspec is None: raise KeyError(key)
-
-        return nspec or cspec
-
-
-    def __iter__(self):
-        return chain(self.neuron_specs.__iter__(), self.connection_specs.__iter__())
