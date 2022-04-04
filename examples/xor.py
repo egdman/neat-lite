@@ -2,6 +2,7 @@ from os import path
 import sys
 import math
 import random
+import heapq
 from operator import itemgetter
 
 try:
@@ -138,10 +139,13 @@ gen_num = 0
 
 ## CREATE INITIAL GENOTYPE ##
 # we specify initial input and output neurons and protect them from removal
+sigmoid_params = sigmoid_neuron_spec.get_random_parameters()
+sigmoid_params['layer'] = 'output'
+
 init_genome = mutator.produce_genome(
     in1=neuron('input', non_removable=True, layer='input'),
     in2=neuron('input', non_removable=True, layer='input'),
-    out1=neuron('sigmoid', non_removable=True, layer='output'),
+    out1=neuron('sigmoid', non_removable=True, **sigmoid_params),
     connections=(
         # connection('connection', src='in1', dst='out1'),
         # connection('connection', src='in2', dst='out1')
@@ -162,9 +166,13 @@ for epoch in range(num_epochs):
 
         print("//// AUGMENT PHASE ////")
         conf.update({
-            'structural_removal_proba': 0,
-            'structural_augmentation_proba': aug_proba})
-        neat_obj = NEAT(mutator = mutator, **conf)
+            'topology_reduction_proba': 0,
+            'topology_augmentation_proba': aug_proba})
+        neat_obj = NEAT(
+            topology_mutator=mutator,
+            neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
+            connection_specs=(connection_spec,),
+            **conf)
 
         for _ in range(gens_per_epoch):
             current_gen, best_genome, best_fitness = next_gen(current_gen)
@@ -175,9 +183,13 @@ for epoch in range(num_epochs):
 
         print("//// REMOVAL PHASE ////")
         conf.update({
-            'structural_removal_proba': sim_proba,
-            'structural_augmentation_proba': 0})
-        neat_obj = NEAT(mutator = mutator, **conf)
+            'topology_reduction_proba': sim_proba,
+            'topology_augmentation_proba': 0})
+        neat_obj = NEAT(
+            topology_mutator=mutator,
+            neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
+            connection_specs=(connection_spec,),
+            **conf)
 
         for _ in range(int(gens_per_epoch*1.5)):
             current_gen, best_genome, best_fitness = next_gen(current_gen)

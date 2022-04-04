@@ -22,7 +22,7 @@ def default_gene_factory(*gene_specs):
 def two_best_in_sample(sample_size):
     def _select(genome_and_fitness_list):
         sample = random.sample(genome_and_fitness_list, sample_size)
-        parent1, parent2 = heapq.nlargest(2, subset, key=itemgetter(1))
+        parent1, parent2 = heapq.nlargest(2, sample, key=itemgetter(1))
         return parent1[0], parent2[0]
     return _select
 
@@ -128,9 +128,10 @@ class NEAT(object):
         self.parameters_mutation_step = parameters_mutation_step
         self.topology_augmentation_step = topology_augmentation_step
         self.topology_reduction_step = topology_reduction_step
+        self.custom_reproduction_pipeline = custom_reproduction_pipeline
 
-        # use default order of operations for reproduction pipeline
-        if custom_reproduction_pipeline is None:
+        # use default order of operations for reproduction pipeline if no override provided
+        if self.custom_reproduction_pipeline is None:
             for setting_name, default_value in _defaults.items():
                 provided_value = config.get(setting_name, None)
 
@@ -156,10 +157,6 @@ class NEAT(object):
                 self.topology_augmentation_step = topology_augmentation(topology_mutator, self.topology_augmentation_proba)
             if self.topology_reduction_step is None:
                 self.topology_reduction_step = topology_reduction(topology_mutator, self.topology_reduction_proba)
-
-        # use the provided custom reproduction pipeline
-        else:
-            self.custom_reproduction_pipeline = custom_reproduction_pipeline
 
 
     def share_fitness(self, genomes_fitnesses):
