@@ -38,11 +38,11 @@ popul = 10
 elite_num = 1 # best performing genomes in a generation will be copied without change to the next generation
 
 conf = dict(
-selection_subsample_size = int(.75 * popul), # size of the selection subsample (must be in the range [2, pop_size])
+selection_sample_size = int(.75 * popul), # size of the selection sample (must be in the range [2, pop_size])
 neuron_param_mut_proba = 0.5,       # probability to mutate each single neuron in the genome
 connection_param_mut_proba = 0.5,   # probability to mutate each single connection in the genome
-topology_augmentation_proba = 0,  # probability to augment the topology of a newly created genome 
-topology_reduction_proba = 0,       # probability to diminish the topology of a newly created genome
+topology_augmentation_proba = 0,    # probability to augment the topology of a newly created genome 
+topology_reduction_proba = 0,       # probability to reduce the topology of a newly created genome
 speciation_threshold = 0.2          # genomes that are more similar than this value will be considered the same species
 )
 #### ###### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
@@ -139,12 +139,12 @@ gen_num = 0
 ## CREATE INITIAL GENOTYPE ##
 # we specify initial input and output neurons and protect them from removal
 init_genome = mutator.produce_genome(
-    in1=neuron('input', protected=True, layer='input'),
-    in2=neuron('input', protected=True, layer='input'),
-    out1=neuron('sigmoid', protected=True, layer='output'),
+    in1=neuron('input', non_removable=True, layer='input'),
+    in2=neuron('input', non_removable=True, layer='input'),
+    out1=neuron('sigmoid', non_removable=True, layer='output'),
     connections=(
-        # connection('connection', protected=True, src='in1', dst='out1'),
-        # connection('connection', protected=True, src='in2', dst='out1')
+        # connection('connection', src='in1', dst='out1'),
+        # connection('connection', src='in2', dst='out1')
     )
 )
 

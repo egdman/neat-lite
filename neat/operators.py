@@ -8,23 +8,23 @@ from .utils import zip_with_probabilities, weighted_random
 class GeneInfo(object): pass
 
 
-def neuron(gene_type, protected, **params):
+def neuron(gene_type, non_removable=False, **params):
     '''
     Helper function to use with Mutator.produce_genome
     '''
     n = GeneInfo()
-    n.protected = protected
+    n.non_removable = non_removable
     n.type = gene_type
     n.params = params
     return n
 
 
-def connection(gene_type, protected, src, dst, **params):
+def connection(gene_type, src, dst, non_removable=False, **params):
     '''
     Helper function to use with Mutator.produce_genome
     '''
     c = GeneInfo()
-    c.protected = protected
+    c.non_removable = non_removable
     c.type = gene_type
     c.src = src
     c.dst = dst
@@ -92,13 +92,13 @@ class Mutator:
 
     def _unprotected_connection_ids(self, genotype):
         return list(cg_i for cg_i, cg in enumerate(genotype.connection_genes) \
-            if not cg.protected)
+            if not cg.non_removable)
 
 
 
     def _unprotected_neuron_ids(self, genotype):
         return list(ng_i for ng_i, ng in enumerate(genotype.neuron_genes) \
-            if not ng.protected)
+            if not ng.non_removable)
 
 
 
@@ -193,11 +193,11 @@ class Mutator:
 
 
 
-    def add_neuron(self, genotype, neuron_type, protected=False, **neuron_params):
+    def add_neuron(self, genotype, neuron_type, non_removable=False, **neuron_params):
         new_neuron_gene = NeuronGene(
                                 gene_type = neuron_type,
                                 historical_mark = self.innovation_number,
-                                protected = protected,
+                                non_removable = non_removable,
                                 **neuron_params)
 
         self.innovation_number += 1
@@ -206,13 +206,13 @@ class Mutator:
 
 
 
-    def add_connection(self, genotype, connection_type, mark_from, mark_to, protected=False, **connection_params):
+    def add_connection(self, genotype, connection_type, mark_from, mark_to, non_removable=False, **connection_params):
         new_conn_gene = ConnectionGene(
                                   gene_type = connection_type,
                                   mark_from = mark_from,
                                   mark_to = mark_to,
                                   historical_mark = self.innovation_number,
-                                  protected = protected,
+                                  non_removable = non_removable,
                                   **connection_params)
 
         self.innovation_number += 1
@@ -221,18 +221,18 @@ class Mutator:
 
 
     def produce_genome(self, **genes):
-        connections = genes.pop('connections', [])
+        connections = genes.pop('connections', ())
         neurons = genes
         genome = GeneticEncoding()
 
-        # if we want to protect a connection we also
+        # if we want to protect a connection from removal we also
         # want to protect its 2 adjacent neurons
         # because we cannot remove a neuron without removing
         # its adjacent connections
         for conn_info in connections:
-            if conn_info.protected:
-                neurons[conn_info.src].protected = True
-                neurons[conn_info.dst].protected = True
+            if conn_info.non_removable:
+                neurons[conn_info.src].non_removable = True
+                neurons[conn_info.dst].non_removable = True
 
         # add neuron genes to genome using mutator
         neuron_map = {}
@@ -240,7 +240,7 @@ class Mutator:
             hmark = self.add_neuron(
                 genome,
                 neuron_info.type,
-                protected=neuron_info.protected,
+                non_removable=neuron_info.non_removable,
                 **neuron_info.params
             )
             neuron_map[neuron_id] = hmark
@@ -252,7 +252,7 @@ class Mutator:
                 conn_info.type,
                 mark_from = neuron_map[conn_info.src],
                 mark_to = neuron_map[conn_info.dst],
-                protected=conn_info.protected,
+                non_removable=conn_info.non_removable,
                 **conn_info.params
             )
 

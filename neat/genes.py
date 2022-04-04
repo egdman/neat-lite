@@ -2,6 +2,10 @@ from numbers import Real
 from copy import copy, deepcopy
 from itertools import chain
 
+try:
+    from yaml import dump as yaml_dump
+except ImportError:
+    yaml_dump = None
 
 def unicode_representer(dumper, data):
     return dumper.represent_scalar(u'tag:yaml.org,2002:str', data)
@@ -11,12 +15,12 @@ def hm(gene):
 
 class Gene(object):
 
-    _metas = ('gene_type', 'historical_mark', 'protected')
+    _metas = ('gene_type', 'historical_mark', 'non_removable')
 
-    def __init__(self, gene_type, historical_mark=0, protected=False, **params):
+    def __init__(self, gene_type, historical_mark=0, non_removable=False, **params):
         self.gene_type = gene_type
         self.historical_mark = historical_mark
-        self.protected = protected
+        self.non_removable = non_removable
 
         for key, value in params.items():
             setattr(self, key, value)
@@ -71,17 +75,18 @@ class NeuronGene(Gene):
 
     _metas = Gene._metas
 
-    def __init__(self, gene_type, historical_mark=0, protected=False, **params):
-        super(NeuronGene, self).__init__(gene_type, historical_mark, protected, **params)
+    def __init__(self, gene_type, historical_mark=0, non_removable=False, **params):
+        super(NeuronGene, self).__init__(gene_type, historical_mark, non_removable, **params)
 
 
     def __str__(self):
-        return "NEAT Neuron gene, mark: {}, type: {}, {}".format(
+        s = "NEAT Neuron gene, mark: {}, type: {}".format(
             self.historical_mark,
             self.gene_type,
-            'p' if self.protected else 'up'
         )
-
+        if self.non_removable:
+            s = "{} norem".format(s)
+        return s
 
 
 
@@ -90,22 +95,23 @@ class ConnectionGene(Gene):
 
     _metas = Gene._metas + ('mark_from', 'mark_to')
 
-    def __init__(self, gene_type, mark_from, mark_to, historical_mark=0, protected=False, **params):
-        super(ConnectionGene, self).__init__(gene_type, historical_mark, protected, **params)
+    def __init__(self, gene_type, mark_from, mark_to, historical_mark=0, non_removable=False, **params):
+        super(ConnectionGene, self).__init__(gene_type, historical_mark, non_removable, **params)
 
         self.mark_from = mark_from
         self.mark_to = mark_to
 
 
     def __str__(self):
-        return "NEAT Connection gene, mark: {}, type: {}, from: {}, to: {}, {}".format(
+        s = "NEAT Connection gene, mark: {}, type: {}, {} -> {}".format(
             self.historical_mark,
             self.gene_type,
             self.mark_from,
             self.mark_to,
-           'p' if self.protected else ''
         )
-
+        if self.non_removable:
+            s = "{} norem".format(s)
+        return s
 
 
 class GeneticEncoding:
@@ -301,38 +307,30 @@ class GeneticEncoding:
         return st
 
 
-    try:
-        import yaml
+    def from_yaml(self, y_desc):
+        del self.neuron_genes[:]
+        del self.connection_genes[:]
 
-        def from_yaml(self, y_desc):
-            del self.neuron_genes[:]
-            del self.connection_genes[:]
+        y_neurons = y_desc['neurons']
+        y_connections = y_desc['connections']
 
-            y_neurons = y_desc['neurons']
-            y_connections = y_desc['connections']
+        for y_neuron in y_neurons:
+            # y_neuron.update(y_neuron.pop("params"))
+            self.neuron_genes.append(NeuronGene(**y_neuron))
 
-            for y_neuron in y_neurons:
-                # y_neuron.update(y_neuron.pop("params"))
-                self.neuron_genes.append(NeuronGene(**y_neuron))
+        for y_connection in y_connections:
+            # y_connection.update(y_connection.pop("params"))
+            self.connection_genes.append(ConnectionGene(**y_connection))
 
-            for y_connection in y_connections:
-                # y_connection.update(y_connection.pop("params"))
-                self.connection_genes.append(ConnectionGene(**y_connection))
-
-            return self
+        return self
 
 
-
-        def to_yaml(self):
-            neuron_genes = list(n_g.__dict__ for n_g in self.neuron_genes)
-            conn_genes = list(c_g.__dict__ for c_g in self.connection_genes)
-            yaml.add_representer(unicode, unicode_representer)
-            yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
-            return yaml.dump(yaml_repr, default_flow_style=False)
-
-    except ImportError:
-        def from_yaml(self, y_desc):
+    def to_yaml(self):
+        if yaml_dump is None:
             raise NotImplementedError("PyYaml not installed")
 
-        def to_yaml(self):
-            raise NotImplementedError("PyYaml not installed")
+        neuron_genes = list(n_g.__dict__ for n_g in self.neuron_genes)
+        conn_genes = list(c_g.__dict__ for c_g in self.connection_genes)
+        # yaml.add_representer(unicode, unicode_representer)
+        yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
+        return yaml_dump(yaml_repr, default_flow_style=False)

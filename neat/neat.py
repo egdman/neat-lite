@@ -19,12 +19,12 @@ def default_gene_factory(*gene_specs):
     return _generate
 
 
-def two_best_in_subsample(subsample_size):
-    def _impl(genome_and_fitness_list):
-        subsample = random.sample(genome_and_fitness_list, subsample_size)
+def two_best_in_sample(sample_size):
+    def _select(genome_and_fitness_list):
+        sample = random.sample(genome_and_fitness_list, sample_size)
         parent1, parent2 = heapq.nlargest(2, subset, key=itemgetter(1))
         return parent1[0], parent2[0]
-    return _impl
+    return _select
 
 
 def parameters_mutation(neuron_specs, connection_specs, neuron_param_mut_proba, connection_param_mut_proba):
@@ -40,7 +40,7 @@ def parameters_mutation(neuron_specs, connection_specs, neuron_param_mut_proba, 
                 new_value = param_spec.mutate_value(current_value)
                 gene[param_name] = new_value
 
-    def _impl(genome):
+    def _parameters_mutation(genome):
         if neuron_param_mut_proba > 0:
             for gene in genome.neuron_genes:
                 spec = neuron_specs.get(gene.gene_type, None)
@@ -52,11 +52,11 @@ def parameters_mutation(neuron_specs, connection_specs, neuron_param_mut_proba, 
                 _mutate_gene_params(gene, spec, connection_param_mut_proba)
 
         return genome
-    return _impl
+    return _parameters_mutation
 
 
 def topology_augmentation(mutator, probability):
-    def _impl(genome):
+    def _augment(genome):
         if random.random() < probability:
             # if no connections, add a connection
             if len(genome.connection_genes) == 0:
@@ -69,29 +69,29 @@ def topology_augmentation(mutator, probability):
                 mutator.add_random_neuron(genome)
         return genome
 
-    return _impl
+    return _augment
 
 
 def topology_reduction(mutator, probability):
-    def _impl(genome):
+    def _reduce(genome):
         if random.random() < probability:
             if random.random() < 0.5:
                 mutator.remove_random_connection(genome)
             else:
                 mutator.remove_random_neuron(genome)
         return genome
-    return _impl
+    return _reduce
 
 
 def crossover_two_genomes():
-    def _impl(genomes):
+    def _crossover(genomes):
         genome1, genome2 = genomes
         return crossover(genome1, genome2)
-    return _impl
+    return _crossover
 
 
 _defaults = {
-    'selection_subsample_size': None,
+    'selection_sample_size': None,
 
     'topology_augmentation_proba': None,
     'topology_reduction_proba': 0.,
@@ -142,12 +142,12 @@ class NEAT(object):
                     raise InvalidConfigError("please provide value for {}".format(setting_name))
 
             # check validity of settings:
-            if self.selection_subsample_size < 2:
-                raise InvalidConfigError("selection_subsample_size must be greater than 1")
+            if self.selection_sample_size < 2:
+                raise InvalidConfigError("selection_sample_size must be greater than 1")
 
 
             if self.selection_step is None:
-                self.selection_step = two_best_in_subsample(self.selection_subsample_size)
+                self.selection_step = two_best_in_sample(self.selection_sample_size)
             if self.crossover_step is None:
                 self.crossover_step = crossover_two_genomes()
             if self.parameters_mutation_step is None:
