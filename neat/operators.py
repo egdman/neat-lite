@@ -5,14 +5,14 @@ from .genes import NeuronGene, ConnectionGene, Genome
 from .utils import zip_with_probabilities, weighted_random
 
 
-class GeneInfo(object): pass
+class GeneDescription(object): pass
 
 
 def neuron(gene_type, non_removable=False, **params):
     '''
     Helper function to use with Mutator.produce_genome
     '''
-    n = GeneInfo()
+    n = GeneDescription()
     n.non_removable = non_removable
     n.type = gene_type
     n.params = params
@@ -23,7 +23,7 @@ def connection(gene_type, src, dst, non_removable=False, **params):
     '''
     Helper function to use with Mutator.produce_genome
     '''
-    c = GeneInfo()
+    c = GeneDescription()
     c.non_removable = non_removable
     c.type = gene_type
     c.src = src
@@ -50,7 +50,6 @@ class Mutator:
 
 
     def add_random_connection(self, genome, max_attempts=100):
-
         """
         Pick two neurons A and B at random. Make sure that connection AB does not exist.
         If that's the case, add new connection whose type is randomly selected from the set
@@ -104,7 +103,6 @@ class Mutator:
 
 
     def add_random_neuron(self, genome):
-
         """
         Pick a connection at random from neuron A to neuron B.
         And add a neuron C in between A and B.
@@ -113,8 +111,6 @@ class Mutator:
         Connection AC will have the same type and parameters as AB.
         Connection CB will have random type (chosen from the allowed ones)
         and randomly initialized parameters.
-
-        :type genome: Genome
         """
 
         unprotected_conn_ids = self._unprotected_connection_ids(genome)
@@ -172,20 +168,11 @@ class Mutator:
         if len(unprotected_neuron_ids) == 0: return
 
         gene_id = random.choice(unprotected_neuron_ids)
-
-        neuron_gene = genome.neuron_genes[gene_id]
-        neuron_mark = neuron_gene.historical_mark
-
-        # find indices of attached connection genes:
-        bad_connections = list(g_id for g_id, gene \
-            in enumerate(genome.connection_genes)\
-            if gene.mark_from == neuron_mark or gene.mark_to == neuron_mark)
-
+        neuron_mark = genome.neuron_genes[gene_id].historical_mark
 
         # remove attached connection genes
-        # (list is reversed because indices will be screwed up otherwise)
-        for g_id in reversed(bad_connections):
-            genome.remove_connection_gene(g_id)
+        genome.connection_genes = list(g for g in genome.connection_genes \
+            if neuron_mark not in (g.mark_from, g.mark_to))
 
         # remove the neuron gene:
         genome.remove_neuron_gene(gene_id)
@@ -262,50 +249,44 @@ class Mutator:
         return genome
 
 
-def crossover(genome_more_fit, genome_less_fit):
+def crossover(genome_primary, genome_secondary) -> Genome:
     '''
     Perform crossover of two genomes. The input genomes are kept unchanged.
-    The first genome in the arguments must be the more fit one.
+    The first genome in the arguments will provide 100% of unpaired genes.
     '''
-
-    # copy original genomes to keep them intact:
-    genome_more_fit = genome_more_fit.copy()
-    genome_less_fit = genome_less_fit.copy()
-
-
     # sort genes by historical marks:
-    genes_better = sorted(chain(
-        genome_more_fit.neuron_genes,
-        genome_more_fit.connection_genes),
+    genes_primary = sorted(chain(
+        genome_primary.neuron_genes,
+        genome_primary.connection_genes),
         key = lambda gene: gene.historical_mark)
 
-    genes_worse = sorted(chain(
-        genome_less_fit.neuron_genes,
-        genome_less_fit.connection_genes),
+    genes_secondary = sorted(chain(
+        genome_secondary.neuron_genes,
+        genome_secondary.connection_genes),
         key = lambda gene: gene.historical_mark)
 
-    gene_pairs = Genome.get_pairs(genes_better, genes_worse)
+    gene_pairs = Genome.get_pairs(genes_primary, genes_secondary)
 
-    child_genes = []
+    child_genome = Genome()
+
+    def _add(gene):
+        # it is very important to copy the genes due to reference semantics
+        if isinstance(gene, NeuronGene):
+            child_genome.add_neuron_gene(gene.copy())
+        elif isinstance(gene, ConnectionGene):
+            child_genome.add_connection_gene(gene.copy())
 
     for gene0, gene1 in gene_pairs:
 
         # if gene is paired, inherit one of the pair with 50/50 chance:
         if gene0 is not None and gene1 is not None:
             if random.random() < 0.5:
-                child_genes.append(gene0)
+                _add(gene0)
             else:
-                child_genes.append(gene1)
+                _add(gene1)
 
-        # inherit unpaired gene from the more fit parent:
+        # inherit unpaired gene from the primary parent:
         elif gene0 is not None:
-            child_genes.append(gene0)
-
-    child_genome = Genome()
-    for gene in child_genes:
-        if isinstance(gene, NeuronGene):
-            child_genome.add_neuron_gene(gene)
-        elif isinstance(gene, ConnectionGene):
-            child_genome.add_connection_gene(gene)
+            _add(gene0)
 
     return child_genome
