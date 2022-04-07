@@ -38,12 +38,8 @@ class Gene(object):
         return key in self.__dict__
 
 
-    def _prop_names(self):
-        return (name for name in self.__dict__ if name not in self._metas)
-
-
     def get_params(self):
-        return {name: self.__dict__[name] for name in self._prop_names()}
+        return {key: value for key, value in self.__dict__.items() if key not in self._metas}
 
 
     def copy_params(self):
@@ -114,7 +110,7 @@ class ConnectionGene(Gene):
         return s
 
 
-class GeneticEncoding:
+class Genome:
 
     def __init__(self, neuron_genes=None, connection_genes=None):
         self.neuron_genes = neuron_genes if neuron_genes else []
@@ -134,17 +130,17 @@ class GeneticEncoding:
 
 
     @staticmethod
-    def get_dissimilarity(genotype1, genotype2,
+    def get_dissimilarity(genome1, genome2,
         excess_coef=1.,
         disjoint_coef=1.,
         neuron_diff_coef=0.,
         connection_diff_coef=0.):
 
         genes_sorted1 = sorted(
-            genotype1.neuron_genes + genotype1.connection_genes, key = hm)
+            genome1.neuron_genes + genome1.connection_genes, key = hm)
 
         genes_sorted2 = sorted(
-            genotype2.neuron_genes + genotype2.connection_genes, key = hm)
+            genome2.neuron_genes + genome2.connection_genes, key = hm)
 
         # save ranges of hmarks for both genomes
         min_mark1 = hm(genes_sorted1[0])
@@ -152,8 +148,8 @@ class GeneticEncoding:
 
         min_mark2 = hm(genes_sorted2[0])
         max_mark2 = hm(genes_sorted2[-1])
-        
-        pairs = GeneticEncoding.get_pairs(genes_sorted1, genes_sorted2)
+
+        pairs = tuple(Genome.get_pairs(genes_sorted1, genes_sorted2))
 
         excess_num = 0
         disjoint_num = 0
@@ -168,7 +164,7 @@ class GeneticEncoding:
                     disjoint_num += 1
                 else:
                     excess_num += 1
-                    
+
             elif gene1 and not gene0:
                 mark = gene1.historical_mark
                 if (min_mark1 - 1) < mark and mark < (max_mark1 + 1):
@@ -178,7 +174,7 @@ class GeneticEncoding:
 
 
         # calculate missing pair difference
-        num_genes = max(genotype1.num_genes(), genotype2.num_genes())
+        num_genes = max(genome1.num_genes(), genome2.num_genes())
         miss_pair_diff = (disjoint_coef * disjoint_num + excess_coef * excess_num) / float(num_genes)
 
 
@@ -187,7 +183,7 @@ class GeneticEncoding:
         connection_diff = 0.
 
         if neuron_diff_coef > 0 or connection_diff_coef > 0:
-            neuron_diff, connection_diff = GeneticEncoding._calc_numeric_diff(pairs)
+            neuron_diff, connection_diff = Genome._calc_numeric_diff(pairs)
 
         return miss_pair_diff + neuron_diff_coef*neuron_diff + connection_diff_coef*connection_diff
 
@@ -211,38 +207,26 @@ class GeneticEncoding:
 
     @staticmethod
     def get_pairs(genes_sorted1, genes_sorted2):
-        def findAllLeft(leftGenes, rightGenes):
-            pairs = []
-            rightGenes = iter(rightGenes)
-            rightGene = next(rightGenes, None)
+        rightGenes = iter(genes_sorted2)
+        rightGene = next(rightGenes, None)
 
-            for leftGene in leftGenes:
-                while rightGene and hm(leftGene) > hm(rightGene):
-                    rightGene = next(rightGenes, None)
-                if rightGene and hm(leftGene) == hm(rightGene):
-                    pairs.append((leftGene, rightGene))
-                    rightGene = next(rightGenes, None)
-                else:
-                    pairs.append((leftGene, None))
-            return pairs
+        for leftGene in genes_sorted1:
+            while rightGene and hm(leftGene) > hm(rightGene):
+                rightGene = next(rightGenes, None)
+            if rightGene and hm(leftGene) == hm(rightGene):
+                yield leftGene, rightGene
+                rightGene = next(rightGenes, None)
+            else:
+                yield leftGene, None
 
+        leftGenes = iter(genes_sorted1)
+        leftGene = next(leftGenes, None)
 
-        def findUnpairedRight(leftGenes, rightGenes):
-            unpaired = []
-            leftGenes = iter(leftGenes)
-            leftGene = next(leftGenes, None)
-
-            for rightGene in rightGenes:
-                while leftGene and hm(leftGene) < hm(rightGene):
-                    leftGene = next(leftGenes, None)
-                if leftGene is None or hm(leftGene) != hm(rightGene):
-                    unpaired.append((None, rightGene))
-            return unpaired
-
-
-        pairs = findAllLeft(genes_sorted1, genes_sorted2)
-        pairs.extend(findUnpairedRight(genes_sorted1, genes_sorted2))
-        return pairs
+        for rightGene in genes_sorted2:
+            while leftGene and hm(leftGene) < hm(rightGene):
+                leftGene = next(leftGenes, None)
+            if leftGene is None or hm(leftGene) != hm(rightGene):
+                yield None, rightGene
 
 
 
@@ -267,7 +251,7 @@ class GeneticEncoding:
 
 
     def copy(self):
-        copy_gen = GeneticEncoding()
+        copy_gen = Genome()
 
         for n_gene in self.neuron_genes:
             copy_gen.add_neuron_gene(n_gene.copy())

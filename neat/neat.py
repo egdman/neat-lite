@@ -2,13 +2,13 @@ import random
 import heapq
 from operator import itemgetter
 
-from .genes import GeneticEncoding
+from .genes import Genome
 from .operators import crossover
 
 
-def validate_genotype(genotype, error_msg):
-    if not genotype.check_validity():
-        raise RuntimeError(error_msg + '\n' + str(genotype))
+def validate_genome(genome, error_msg):
+    if not genome.check_validity():
+        raise RuntimeError(error_msg + '\n' + str(genome))
 
 
 def default_gene_factory(*gene_specs):
@@ -101,7 +101,7 @@ _defaults = {
 
     'speciation_threshold': 0.,
 
-    # coefficients for calculating genotype dissimilarity
+    # coefficients for calculating genome dissimilarity
     'excess_coef': 1.,
     'disjoint_coef': 1.,
     'neuron_diff_coef': 0.,
@@ -166,7 +166,7 @@ class NEAT(object):
             for other_genome, other_fitness in genomes_fitnesses:
                 if not other_genome == genome:
 
-                    distance = GeneticEncoding.get_dissimilarity(
+                    distance = Genome.get_dissimilarity(
                         other_genome, genome,
                         excess_coef = self.excess_coef,
                         disjoint_coef = self.disjoint_coef,

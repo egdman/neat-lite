@@ -1,7 +1,7 @@
 import random
 from itertools import chain
 
-from .genes import NeuronGene, ConnectionGene, GeneticEncoding
+from .genes import NeuronGene, ConnectionGene, Genome
 from .utils import zip_with_probabilities, weighted_random
 
 
@@ -49,7 +49,7 @@ class Mutator:
         self.innovation_number = innovation_number
 
 
-    def add_random_connection(self, genotype, max_attempts=100):
+    def add_random_connection(self, genome, max_attempts=100):
 
         """
         Pick two neurons A and B at random. Make sure that connection AB does not exist.
@@ -62,8 +62,8 @@ class Mutator:
         # TODO: rewrite this function better, get rid of attempts
 
         def _get_pair_neurons():
-            neuron_from = random.choice(genotype.neuron_genes)
-            neuron_to = random.choice(genotype.neuron_genes)
+            neuron_from = random.choice(genome.neuron_genes)
+            neuron_to = random.choice(genome.neuron_genes)
             mark_from = neuron_from.historical_mark
             mark_to = neuron_to.historical_mark
             are_valid = neuron_from.gene_type not in self.pure_output_types and \
@@ -73,14 +73,14 @@ class Mutator:
         mark_from, mark_to, are_valid = _get_pair_neurons()
         num_attempts = 0
 
-        while len(genotype.get_connection_genes(mark_from, mark_to)) > 0 or not are_valid:
+        while len(genome.get_connection_genes(mark_from, mark_to)) > 0 or not are_valid:
             mark_from, mark_to, are_valid = _get_pair_neurons()
             num_attempts += 1
             if num_attempts >= max_attempts: return False
 
         new_connection_type, new_connection_params = self.connection_factory()
         self.add_connection(
-            genotype,
+            genome,
             new_connection_type,
             mark_from,
             mark_to,
@@ -90,20 +90,20 @@ class Mutator:
 
 
 
-    def _unprotected_connection_ids(self, genotype):
-        return list(cg_i for cg_i, cg in enumerate(genotype.connection_genes) \
+    def _unprotected_connection_ids(self, genome):
+        return list(cg_i for cg_i, cg in enumerate(genome.connection_genes) \
             if not cg.non_removable)
 
 
 
-    def _unprotected_neuron_ids(self, genotype):
-        return list(ng_i for ng_i, ng in enumerate(genotype.neuron_genes) \
+    def _unprotected_neuron_ids(self, genome):
+        return list(ng_i for ng_i, ng in enumerate(genome.neuron_genes) \
             if not ng.non_removable)
 
 
 
 
-    def add_random_neuron(self, genotype):
+    def add_random_neuron(self, genome):
 
         """
         Pick a connection at random from neuron A to neuron B.
@@ -114,15 +114,15 @@ class Mutator:
         Connection CB will have random type (chosen from the allowed ones)
         and randomly initialized parameters.
 
-        :type genotype: GeneticEncoding
+        :type genome: Genome
         """
 
-        unprotected_conn_ids = self._unprotected_connection_ids(genotype)
-        # unprotected_conn_ids = range(len(genotype.connection_genes))
+        unprotected_conn_ids = self._unprotected_connection_ids(genome)
+        # unprotected_conn_ids = range(len(genome.connection_genes))
         if len(unprotected_conn_ids) == 0: return
 
         connection_to_split_id = random.choice(unprotected_conn_ids)
-        connection_to_split = genotype.connection_genes[connection_to_split_id]
+        connection_to_split = genome.connection_genes[connection_to_split_id]
 
 
         # get all the info about the old connection
@@ -133,15 +133,15 @@ class Mutator:
         mark_to = connection_to_split.mark_to
 
 
-        # delete the old connection from the genotype
-        genotype.remove_connection_gene(connection_to_split_id)
+        # delete the old connection from the genome
+        genome.remove_connection_gene(connection_to_split_id)
 
         # insert new neuron
         new_neuron_type, new_neuron_params = self.neuron_factory()
-        mark_middle = self.add_neuron(genotype, new_neuron_type, **new_neuron_params)
+        mark_middle = self.add_neuron(genome, new_neuron_type, **new_neuron_params)
 
         self.add_connection(
-            genotype,
+            genome,
             old_connection_type,
             mark_from,
             mark_middle,
@@ -149,7 +149,7 @@ class Mutator:
 
         new_connection_type, new_connection_params = self.connection_factory()
         self.add_connection(
-            genotype,
+            genome,
             new_connection_type,
             mark_middle,
             mark_to,
@@ -158,42 +158,42 @@ class Mutator:
 
 
 
-    def remove_random_connection(self, genotype):
-        unprotected_conn_ids = self._unprotected_connection_ids(genotype)
-        # unprotected_conn_ids = range(len(genotype.connection_genes))
+    def remove_random_connection(self, genome):
+        unprotected_conn_ids = self._unprotected_connection_ids(genome)
+        # unprotected_conn_ids = range(len(genome.connection_genes))
         if len(unprotected_conn_ids) == 0: return
         gene_id = random.choice(unprotected_conn_ids)
-        genotype.remove_connection_gene(gene_id)
+        genome.remove_connection_gene(gene_id)
 
 
 
-    def remove_random_neuron(self, genotype):
-        unprotected_neuron_ids = self._unprotected_neuron_ids(genotype)
+    def remove_random_neuron(self, genome):
+        unprotected_neuron_ids = self._unprotected_neuron_ids(genome)
         if len(unprotected_neuron_ids) == 0: return
 
         gene_id = random.choice(unprotected_neuron_ids)
 
-        neuron_gene = genotype.neuron_genes[gene_id]
+        neuron_gene = genome.neuron_genes[gene_id]
         neuron_mark = neuron_gene.historical_mark
 
         # find indices of attached connection genes:
         bad_connections = list(g_id for g_id, gene \
-            in enumerate(genotype.connection_genes)\
+            in enumerate(genome.connection_genes)\
             if gene.mark_from == neuron_mark or gene.mark_to == neuron_mark)
 
 
         # remove attached connection genes
         # (list is reversed because indices will be screwed up otherwise)
         for g_id in reversed(bad_connections):
-            genotype.remove_connection_gene(g_id)
+            genome.remove_connection_gene(g_id)
 
         # remove the neuron gene:
-        genotype.remove_neuron_gene(gene_id)
+        genome.remove_neuron_gene(gene_id)
 
 
 
 
-    def add_neuron(self, genotype, neuron_type, non_removable=False, **neuron_params):
+    def add_neuron(self, genome, neuron_type, non_removable=False, **neuron_params):
         new_neuron_gene = NeuronGene(
                                 gene_type = neuron_type,
                                 historical_mark = self.innovation_number,
@@ -201,12 +201,12 @@ class Mutator:
                                 **neuron_params)
 
         self.innovation_number += 1
-        genotype.add_neuron_gene(new_neuron_gene)
+        genome.add_neuron_gene(new_neuron_gene)
         return new_neuron_gene.historical_mark
 
 
 
-    def add_connection(self, genotype, connection_type, mark_from, mark_to, non_removable=False, **connection_params):
+    def add_connection(self, genome, connection_type, mark_from, mark_to, non_removable=False, **connection_params):
         new_conn_gene = ConnectionGene(
                                   gene_type = connection_type,
                                   mark_from = mark_from,
@@ -216,14 +216,17 @@ class Mutator:
                                   **connection_params)
 
         self.innovation_number += 1
-        genotype.add_connection_gene(new_conn_gene)
+        genome.add_connection_gene(new_conn_gene)
         return new_conn_gene.historical_mark
 
 
-    def produce_genome(self, **genes):
+    def produce_genome(self, **genes) -> Genome:
+        """
+        Helper function that allows to create a genome by describing its neurons and connections
+        """
         connections = genes.pop('connections', ())
         neurons = genes
-        genome = GeneticEncoding()
+        genome = Genome()
 
         # if we want to protect a connection from removal we also
         # want to protect its 2 adjacent neurons
@@ -259,29 +262,29 @@ class Mutator:
         return genome
 
 
-def crossover(genotype_more_fit, genotype_less_fit):
+def crossover(genome_more_fit, genome_less_fit):
     '''
-    Perform crossover of two genotypes. The input genotypes are kept unchanged.
-    The first genotype in the arguments must be the more fit one.
+    Perform crossover of two genomes. The input genomes are kept unchanged.
+    The first genome in the arguments must be the more fit one.
     '''
 
-    # copy original genotypes to keep them intact:
-    genotype_more_fit = genotype_more_fit.copy()
-    genotype_less_fit = genotype_less_fit.copy()
+    # copy original genomes to keep them intact:
+    genome_more_fit = genome_more_fit.copy()
+    genome_less_fit = genome_less_fit.copy()
 
 
     # sort genes by historical marks:
     genes_better = sorted(chain(
-        genotype_more_fit.neuron_genes,
-        genotype_more_fit.connection_genes),
+        genome_more_fit.neuron_genes,
+        genome_more_fit.connection_genes),
         key = lambda gene: gene.historical_mark)
 
     genes_worse = sorted(chain(
-        genotype_less_fit.neuron_genes,
-        genotype_less_fit.connection_genes),
+        genome_less_fit.neuron_genes,
+        genome_less_fit.connection_genes),
         key = lambda gene: gene.historical_mark)
 
-    gene_pairs = GeneticEncoding.get_pairs(genes_better, genes_worse)
+    gene_pairs = Genome.get_pairs(genes_better, genes_worse)
 
     child_genes = []
 
@@ -298,11 +301,11 @@ def crossover(genotype_more_fit, genotype_less_fit):
         elif gene0 is not None:
             child_genes.append(gene0)
 
-    child_genotype = GeneticEncoding()
+    child_genome = Genome()
     for gene in child_genes:
         if isinstance(gene, NeuronGene):
-            child_genotype.add_neuron_gene(gene)
+            child_genome.add_neuron_gene(gene)
         elif isinstance(gene, ConnectionGene):
-            child_genotype.add_connection_gene(gene)
+            child_genome.add_connection_gene(gene)
 
-    return child_genotype
+    return child_genome

@@ -1,5 +1,5 @@
 import unittest
-from neat import GeneticEncoding, Mutator, NetworkSpec, GeneSpec
+from neat import Genome, Mutator, NetworkSpec, GeneSpec
 import os
 import sys
 import yaml
@@ -14,7 +14,7 @@ class TestMutator(unittest.TestCase):
     def setUpClass(cls):
         print("Testing Mutator")
         with open(os.path.join(here, "loopback_test_genome.yaml"), 'r') as in_file:
-            cls.loopback_test_genome = GeneticEncoding().from_yaml(yaml.load(in_file.read()))
+            cls.loopback_test_genome = Genome().from_yaml(yaml.load(in_file.read()))
 
 
 

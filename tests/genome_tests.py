@@ -1,5 +1,5 @@
 import unittest
-from neat import GeneticEncoding
+from neat import Genome
 import os
 import sys
 import yaml
@@ -16,9 +16,9 @@ class TestGenome(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        print("Testing GeneticEncoding")
+        print("Testing Genome")
         with open(os.path.join(here, "xor_genome.yaml"), 'r') as in_file:
-            cls.genome = GeneticEncoding().from_yaml(yaml.load(in_file.read()))
+            cls.genome = Genome().from_yaml(yaml.load(in_file.read()))
 
 
 
