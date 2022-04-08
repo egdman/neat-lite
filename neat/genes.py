@@ -136,57 +136,55 @@ class Genome:
         neuron_diff_coef=0.,
         connection_diff_coef=0.):
 
+        # calculate missing pair difference
+        excess_num, disjoint_num = count_excess_disjoint(genome1, genome2)
+
+        num_genes = max(genome1.num_genes(), genome2.num_genes())
+        miss_pair_diff = (disjoint_coef * disjoint_num + excess_coef * excess_num) / float(num_genes)
+
+        # calculate difference of numeric params between genes
+        neuron_diff = 0.
+        connection_diff = 0.
+
+        # if neuron_diff_coef > 0 or connection_diff_coef > 0:
+        #     neuron_diff, connection_diff = Genome._calc_numeric_diff(pairs)
+
+        return miss_pair_diff + neuron_diff_coef*neuron_diff + connection_diff_coef*connection_diff
+
+
+    @staticmethod
+    def count_excess_disjoint(genome1, genome2):
         genes_sorted1 = sorted(
-            genome1.neuron_genes + genome1.connection_genes, key = hm)
+            genome1.neuron_genes + genome1.connection_genes, key=hm)
 
         genes_sorted2 = sorted(
-            genome2.neuron_genes + genome2.connection_genes, key = hm)
+            genome2.neuron_genes + genome2.connection_genes, key=hm)
 
-        # save ranges of hmarks for both genomes
+        # save ranges of historical marks for both genomes
         min_mark1 = hm(genes_sorted1[0])
         max_mark1 = hm(genes_sorted1[-1])
 
         min_mark2 = hm(genes_sorted2[0])
         max_mark2 = hm(genes_sorted2[-1])
 
-        pairs = tuple(Genome.get_pairs(genes_sorted1, genes_sorted2))
-
         excess_num = 0
         disjoint_num = 0
 
-
         # calculate numbers of excess and disjoint genes
-        for gene0, gene1 in pairs:
-
-            if gene0 and not gene1:
-                mark = gene0.historical_mark
-                if (min_mark2 - 1) < mark and mark < (max_mark2 + 1):
-                    disjoint_num += 1
-                else:
+        for gene1, gene2 in Genome.get_pairs(genes_sorted1, genes_sorted2):
+            if gene2 is None:
+                if gene1.historical_mark < min_mark2 or gene1.historical_mark > max_mark2:
                     excess_num += 1
-
-            elif gene1 and not gene0:
-                mark = gene1.historical_mark
-                if (min_mark1 - 1) < mark and mark < (max_mark1 + 1):
-                    disjoint_num += 1
                 else:
+                    disjoint_num += 1
+
+            elif gene1 is None:
+                if gene2.historical_mark < min_mark1 or gene2.historical_mark > max_mark1:
                     excess_num += 1
+                else:
+                    disjoint_num += 1
 
-
-        # calculate missing pair difference
-        num_genes = max(genome1.num_genes(), genome2.num_genes())
-        miss_pair_diff = (disjoint_coef * disjoint_num + excess_coef * excess_num) / float(num_genes)
-
-
-        # calculate difference of numeric params between genes
-        neuron_diff = 0.
-        connection_diff = 0.
-
-        if neuron_diff_coef > 0 or connection_diff_coef > 0:
-            neuron_diff, connection_diff = Genome._calc_numeric_diff(pairs)
-
-        return miss_pair_diff + neuron_diff_coef*neuron_diff + connection_diff_coef*connection_diff
-
+        return excess_num, disjoint_num
 
 
     @staticmethod
@@ -207,6 +205,9 @@ class Genome:
 
     @staticmethod
     def get_pairs(genes_sorted1, genes_sorted2):
+        # TODO: rewrite this function. Make it output gene pairs sorted by mark.
+        #   After that rewrite count_excess_disjoint accordingly.
+
         rightGenes = iter(genes_sorted2)
         rightGene = next(rightGenes, None)
 
@@ -264,21 +265,22 @@ class Genome:
 
 
     def check_validity(self):
+        neuron_hmarks = set(gene.historical_mark for gene in self.neuron_genes)
+        if len(self.neuron_genes) != len(neuron_hmarks):
+            return False
+
+        conn_hmarks = set()
         for conn_gene in self.connection_genes:
-            mark_from = conn_gene.mark_from
-            mark_to = conn_gene.mark_to
-            if not self.check_neuron_exists(mark_from):
+            if conn_gene.historical_mark in conn_hmarks:
                 return False
-            if not self.check_neuron_exists(mark_to):
+            if conn_gene.historical_mark in neuron_hmarks:
                 return False
+            if conn_gene.mark_from not in neuron_hmarks:
+                return False
+            if conn_gene.mark_to not in neuron_hmarks:
+                return False
+            conn_hmarks.add(conn_gene.historical_mark)
         return True
-
-
-
-    def check_neuron_exists(self, mark):
-        for neuron_gene in self.neuron_genes:
-            if mark == neuron_gene.historical_mark: return True
-        return False
 
 
 

@@ -179,7 +179,7 @@ class NEAT(object):
         return list((g, f / species_size(g, f)) for g, f in genomes_fitnesses)
 
 
-    def produce_new_genome(self, genome_and_fitness_list):
+    def produce_new_genome(self, genome_and_fitness_list) -> Genome:
         if self.custom_reproduction_pipeline is None:
             pipeline = (
                 self.selection_step,

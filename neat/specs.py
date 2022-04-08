@@ -75,10 +75,6 @@ class GeneSpec(object):
         self.param_specs = {param_spec.name: param_spec for param_spec in param_specs}
 
 
-    def __getitem__(self, key):
-        return self.param_specs[key]
-    
-
     def __iter__(self):
         return self.param_specs.__iter__()
 
