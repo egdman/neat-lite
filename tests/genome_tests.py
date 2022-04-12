@@ -2,6 +2,7 @@ import unittest
 from neat.genes import Genome, NeuronGene
 # import os
 import sys
+from operator import itemgetter
 # import yaml
 # import math
 
@@ -12,55 +13,145 @@ import sys
 # from nn_impl import NN
 
 
+def hm(gene1, gene2=None):
+    if gene1 is None:
+        return None if gene2 is None else gene2.historical_mark
+    else:
+        return gene1.historical_mark
 
-# no overlap
-hm1 = (1, 2, 3, 5, 6, 8, 9, 10, 14, 15, 17, 18, 19, 20, 21, 23, 24, 26, 27, 29, 32, 33, 35, 38, 39, 40, 41, 42, 43, 44, 45, 48)
-hm2 = (51, 52, 53, 54, 55, 57, 58, 59, 61, 63, 65, 67, 68, 69, 70, 71, 72, 73, 74, 76, 80, 81, 82, 84, 85, 87, 88, 89, 91, 92, 95, 96)
 
+def make_genomes(marks1, marks2):
+    g1, g2 = [NeuronGene('1', m) for m in marks1], [NeuronGene('2', m) for m in marks2]
+    return sorted(g1, key=hm), sorted(g2, key=hm)
 
-# overlap
-hm1 = (5, 6, 7, 9, 11, 15, 19, 20, 21, 25, 26, 29, 30, 33, 34, 36, 37, 38, 43, 44, 46, 47, 48, 49, 52, 54, 64, 65, 66, 68, 69, 70)
-hm2 = (25, 27, 28, 30, 32, 34, 36, 39, 43, 44, 52, 56, 57, 58, 59, 61, 63, 67, 68, 69, 70, 74, 76, 77, 79, 80, 84, 85, 89, 92, 94, 96)
-# 25 25
-# 30 30
-# 34 34
-# 36 36
-# 43 43
-# 44 44
-# 52 52
-# 68 68
-# 69 69
-# 70 70
-
-def hm(gene):
-    return gene.historical_mark if gene is not None else None
 
 class TestGenome(unittest.TestCase):
+    def assertGenePair(self, gene1, gene2, marks1, marks2):
+        if gene1 is not None and gene2 is not None:
+            self.assertEqual(hm(gene1), hm(gene2))
+            self.assertIn(hm(gene1), marks1)
+            self.assertIn(hm(gene1), marks2)
+        elif gene1 is not None:
+            self.assertIn(hm(gene1), marks1)
+        else:
+            self.assertIsNotNone(gene2)
+            self.assertIn(hm(gene2), marks2)
 
-    @classmethod
-    def setUpClass(cls):
-        cls.genome1 = Genome()
-        for hm in hm1:
-            cls.genome1.neuron_genes.append(NeuronGene('1', hm))
 
-        cls.genome2 = Genome()
-        for hm in hm2:
-            cls.genome2.neuron_genes.append(NeuronGene('2', hm))
+    def assertUniqueAndSorted(self, elems):
+        if len(elems) == 0:
+            return
+        self.assertEqual(len(elems), len(set(elems)))
+        elems = iter(elems)
+        e1 = next(elems)
+        for e2 in elems:
+            self.assertLess(e1, e2)
+            e1 = e2
+
+
+    def assertSwapped(self, genes1, genes2):
+        pairs = tuple(Genome.get_pairs(genes1, genes2))
+        expected1 = tuple(hm(itemgetter(0)(p)) for p in pairs)
+        expected2 = tuple(hm(itemgetter(1)(p)) for p in pairs)
+
+        pairs = tuple(Genome.get_pairs(genes2, genes1))
+        received1 = tuple(hm(itemgetter(0)(p)) for p in pairs)
+        received2 = tuple(hm(itemgetter(1)(p)) for p in pairs)
+        self.assertEqual(received1, expected2)
+        self.assertEqual(received2, expected1)
 
 
     def test_gene_pairing(self):
-        genes1 = sorted(
-            self.genome1.neuron_genes + self.genome1.connection_genes, key=hm)
+        # genes without overlap
+        marks1 = (1, 2, 3, 5, 6, 8, 9, 10, 14, 15, 17, 18, 19, 20, 21, 23)
+        marks2 = (24, 26, 27, 29, 32, 33, 35, 38, 39, 40, 41, 42, 43, 44, 45, 48)
+        genes1, genes2 = make_genomes(marks1, marks2)
 
-        genes2 = sorted(
-            self.genome2.neuron_genes + self.genome2.connection_genes, key=hm)
-
+        combined_marks = []
         for g1, g2 in Genome.get_pairs(genes1, genes2):
-            print("{} {}".format(hm(g1), hm(g2)))
+            self.assertGenePair(g1, g2, marks1, marks2)
+            combined_marks.append(hm(g1, g2))
+        self.assertUniqueAndSorted(combined_marks)
+        self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
+        self.assertSwapped(genes1, genes2)
+
+        # genes with partial overlap, last is unpaired
+        marks1 = (1, 2, 4, 6, 7, 8, 10, 14, 16, 17, 22, 26, 29, 32, 33, 34)
+        marks2 = (14, 15, 21, 23, 24, 25, 26, 28, 30, 31, 32, 36, 39, 41, 43, 48)
+        genes1, genes2 = make_genomes(marks1, marks2)
+
+        combined_marks = []
+        for g1, g2 in Genome.get_pairs(genes1, genes2):
+            self.assertGenePair(g1, g2, marks1, marks2)
+            combined_marks.append(hm(g1, g2))
+        self.assertUniqueAndSorted(combined_marks)
+        self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
+        self.assertSwapped(genes1, genes2)
+
+
+        # genes with partial overlap, last is paired
+        marks1 = (1, 2, 4, 6, 7, 8, 10, 14, 16, 17, 22, 26, 29, 32, 33, 36)
+        marks2 = (14, 15, 21, 23, 24, 25, 26, 28, 30, 31, 32, 36, 39, 41, 43, 48)
+        genes1, genes2 = make_genomes(marks1, marks2)
+
+        combined_marks = []
+        for g1, g2 in Genome.get_pairs(genes1, genes2):
+            self.assertGenePair(g1, g2, marks1, marks2)
+            combined_marks.append(hm(g1, g2))
+        self.assertUniqueAndSorted(combined_marks)
+        self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
+        self.assertSwapped(genes1, genes2)
+
+
+        # genes with full overlap, last is unpaired
+        marks1 = (1, 2, 4, 6, 7, 8, 10, 14, 16, 17, 22, 26, 29, 32, 33, 34, 39, 41, 43, 48)
+        marks2 = (12, 16, 21, 22, 25, 26, 28, 30, 31, 32, 36)
+        genes1, genes2 = make_genomes(marks1, marks2)
+
+        combined_marks = []
+        for g1, g2 in Genome.get_pairs(genes1, genes2):
+            self.assertGenePair(g1, g2, marks1, marks2)
+            combined_marks.append(hm(g1, g2))
+        self.assertUniqueAndSorted(combined_marks)
+        self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
+        self.assertSwapped(genes1, genes2)
+
+
+        # genes with full overlap, last is paired
+        marks1 = (1, 2, 4, 6, 7, 8, 10, 14, 16, 17, 22, 26, 29, 32, 33, 34, 39, 41, 43, 48)
+        marks2 = (12, 16, 21, 22, 25, 26, 28, 30, 31, 32, 34)
+        genes1, genes2 = make_genomes(marks1, marks2)
+
+        combined_marks = []
+        for g1, g2 in Genome.get_pairs(genes1, genes2):
+            self.assertGenePair(g1, g2, marks1, marks2)
+            combined_marks.append(hm(g1, g2))
+        self.assertUniqueAndSorted(combined_marks)
+        self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
+        self.assertSwapped(genes1, genes2)
+
+
+        # one genome is empty
+        marks1 = (8, 9, 15, 17, 18, 19, 21, 23, 25, 28, 29, 30, 31, 32, 33, 34)
+        marks2 = ()
+        genes1, genes2 = make_genomes(marks1, marks2)
+
+        combined_marks = []
+        for g1, g2 in Genome.get_pairs(genes1, genes2):
+            self.assertIsNotNone(g1)
+            self.assertIsNone(g2)
+            self.assertIn(hm(g1), marks1)
+            combined_marks.append(hm(g1))
+        self.assertUniqueAndSorted(combined_marks)
+        self.assertEqual(len(combined_marks), len(marks1))
+        self.assertSwapped(genes1, genes2)
+
+        # both genomes are empty
+        self.assertEqual(tuple(Genome.get_pairs((), ())), ())
 
 
     # def test_neuron_gene(self):
-        
+
     #     genome = self.genome
     #     # print(genome)
 
