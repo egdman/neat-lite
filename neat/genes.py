@@ -205,30 +205,38 @@ class Genome:
 
     @staticmethod
     def get_pairs(genes_sorted1, genes_sorted2):
-        # TODO: rewrite this function. Make it output gene pairs sorted by mark.
-        #   After that rewrite count_excess_disjoint accordingly.
+        left_genes = iter(genes_sorted1)
+        right_genes = iter(genes_sorted2)
 
-        rightGenes = iter(genes_sorted2)
-        rightGene = next(rightGenes, None)
+        left_gene = next(left_genes, None)
+        right_gene = next(right_genes, None)
 
-        for leftGene in genes_sorted1:
-            while rightGene and hm(leftGene) > hm(rightGene):
-                rightGene = next(rightGenes, None)
-            if rightGene and hm(leftGene) == hm(rightGene):
-                yield leftGene, rightGene
-                rightGene = next(rightGenes, None)
+        while True:
+            if left_gene is None:
+                if right_gene is not None:
+                    yield None, right_gene
+                    for right_gene in right_genes:
+                        yield None, right_gene
+                break
+
+            elif right_gene is None:
+                yield left_gene, None
+                for left_gene in left_genes:
+                    yield left_gene, None
+                break
+
+            elif hm(left_gene) < hm(right_gene):
+                yield left_gene, None
+                left_gene = next(left_genes, None)
+
+            elif hm(left_gene) > hm(right_gene):
+                yield None, right_gene
+                right_gene = next(right_genes, None)
+
             else:
-                yield leftGene, None
-
-        leftGenes = iter(genes_sorted1)
-        leftGene = next(leftGenes, None)
-
-        for rightGene in genes_sorted2:
-            while leftGene and hm(leftGene) < hm(rightGene):
-                leftGene = next(leftGenes, None)
-            if leftGene is None or hm(leftGene) != hm(rightGene):
-                yield None, rightGene
-
+                yield left_gene, right_gene
+                left_gene = next(left_genes, None)
+                right_gene = next(right_genes, None)
 
 
     def add_neuron_gene(self, neuron_gene):
