@@ -1,7 +1,5 @@
 import unittest
-from neat import NeuronGene, ConnectionGene
-
-
+from neat.genes import NeuronGene, ConnectionGene
 
 class TestGenes(unittest.TestCase):
     def test_neuron_gene(self):
@@ -9,20 +7,20 @@ class TestGenes(unittest.TestCase):
         
         ng = NeuronGene('sigmoid', bias=0.3, gain=0.96)
 
-        self.assertEquals(
+        self.assertEqual(
             'sigmoid',
             ng.gene_type,
             msg="ng.gene_type is wrong: {}".format(ng.gene_type)
             )
 
-        self.assertEquals(
+        self.assertEqual(
             0.96,
             ng.gain,
             msg="ng.gain is wrong"
             )
 
         
-        self.assertEquals(
+        self.assertEqual(
             {'bias': 0.3, 'gain': 0.96},
             ng.get_params(),
             msg="ng.get_params() is wrong: {}".format(ng.get_params())
@@ -31,7 +29,7 @@ class TestGenes(unittest.TestCase):
         # params = ng.get_params()
         # params['gain'] = 4444.8888
 
-        # self.assertEquals(
+        # self.assertEqual(
         #     {'bias': 0.3, 'gain': 4444.8888},
         #     ng.get_params(),
         #     msg="ng's params should have changed after we make changes to their reference" 
@@ -39,21 +37,21 @@ class TestGenes(unittest.TestCase):
 
 
         copied_params = ng.copy_params()
-        self.assertEquals(
+        self.assertEqual(
             {'bias': 0.3, 'gain': 0.96},
             copied_params,
             msg="ng.copy_params() is wrong"
             )
         copied_params['bias'] = 1111.2222
 
-        self.assertEquals(
+        self.assertEqual(
             {'bias': 0.3, 'gain': 0.96},
             ng.get_params(),
             msg="ng's params should not have changed after we make changes to their copy"
             )
 
 
-        self.assertEquals(
+        self.assertEqual(
             0.96,
             ng['gain'],
             msg="ng['gain'] is wrong"
@@ -61,7 +59,7 @@ class TestGenes(unittest.TestCase):
 
 
         ng.gain = 0.15
-        self.assertEquals(
+        self.assertEqual(
             0.15,
             ng['gain'],
             msg="ng.gain <- 0.5 assignment did not work"
@@ -69,7 +67,7 @@ class TestGenes(unittest.TestCase):
 
 
         ng['bias'] = 0.95
-        self.assertEquals(
+        self.assertEqual(
             0.95,
             ng['bias'],
             msg="ng['bias'] <- 0.95 assignment did not work"
@@ -78,7 +76,7 @@ class TestGenes(unittest.TestCase):
 
         # check that new attribute assignment with dot notation works
         ng.new_param = 'foo'
-        self.assertEquals(
+        self.assertEqual(
             'foo',
             ng['new_param'],
             msg="ng.new_param <- 'foo' : addition of a new parameter did not work"
@@ -87,7 +85,7 @@ class TestGenes(unittest.TestCase):
 
         # check that new attribute assignment with [] notation works
         ng['newer_param'] = 'bar'
-        self.assertEquals(
+        self.assertEqual(
             'bar',
             ng['newer_param'],
             msg="ng['newer_param'] <- 'bar' : addition of a new parameter did not work"
@@ -99,13 +97,13 @@ class TestGenes(unittest.TestCase):
 
 
         # check that 'in' operator works correctly (it uses __contains__() method)
-        self.assertEquals(
+        self.assertEqual(
             False,
             'does_not_exist' in ng,
             msg="\"'does_not_exist' in ng\" should return False"
             )
 
-        self.assertEquals(
+        self.assertEqual(
             True,
             'new_param' in ng,
             msg="\"'new_param' in ng\" should return True"
@@ -113,7 +111,7 @@ class TestGenes(unittest.TestCase):
 
 
        # check that 'hasattr' works correctly
-        self.assertEquals(
+        self.assertEqual(
             False,
             hasattr(ng, 'surprise'),
             msg="hasattr(ng, 'surprise') should be False"
@@ -121,7 +119,7 @@ class TestGenes(unittest.TestCase):
 
 
         ng.surprise = 'foo'
-        self.assertEquals(
+        self.assertEqual(
             True,
             hasattr(ng, 'surprise'),
             msg="hasattr(ng, 'surprise') should be False"
@@ -136,21 +134,21 @@ class TestGenes(unittest.TestCase):
         cg = ConnectionGene('def_con', 888, 999, weight=0.8)
 
 
-        self.assertEquals(
+        self.assertEqual(
             'def_con',
             cg.gene_type,
             msg="ng.gene_type is wrong: {}".format(cg.gene_type)
             )
 
 
-        self.assertEquals(
+        self.assertEqual(
             888,
             cg.mark_from,
             msg="cg.mark_from is wrong"
             )
 
 
-        self.assertEquals(
+        self.assertEqual(
             0.8,
             cg.weight,
             msg="cg.weight is wrong"
@@ -159,7 +157,7 @@ class TestGenes(unittest.TestCase):
 
         cg.mark_to = 556
 
-        self.assertEquals(
+        self.assertEqual(
             556,
             cg.mark_to,
             msg="cg.mark_to <- 556 : assignment did not work"
@@ -168,14 +166,14 @@ class TestGenes(unittest.TestCase):
 
         cg.second_param = 62.
 
-        self.assertEquals(
+        self.assertEqual(
             62.,
             cg.second_param,
             msg="cg.second_param <- 62 : addition of a new parameter did not work"
             )
 
 
-        self.assertEquals(
+        self.assertEqual(
             False,
             hasattr(cg, 'surprise'),
             msg="hasattr(cg, 'surprise') should be False"
@@ -183,14 +181,14 @@ class TestGenes(unittest.TestCase):
 
 
         cg.surprise = 'foo'
-        self.assertEquals(
+        self.assertEqual(
             True,
             hasattr(cg, 'surprise'),
             msg="hasattr(cg, 'surprise') should be False"
             )
 
 
-        self.assertEquals(
+        self.assertEqual(
             {'surprise': 'foo', 'second_param': 62.0, 'weight': 0.8},
             cg.get_params(),
             msg="cg.get_params() is wrong: {}".format(cg.get_params())
@@ -202,7 +200,7 @@ class TestGenes(unittest.TestCase):
         cg2 = ConnectionGene('con', 3, 10, weight=0.65, another_num_param=-0.4, nominal='def')
 
         true_diff = 2.15
-        self.assertEquals(
+        self.assertEqual(
             true_diff,
             cg1.numeric_difference(cg2),
             msg="Numeric difference between genes gives wrong result"
