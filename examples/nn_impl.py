@@ -69,14 +69,17 @@ class NN:
 
                 # output nodes go in both compute list and output list
                 # hidden nodes only go in compute list
-                if ng.layer in ['hidden', 'output']:
+                if ng.layer.startswith('h'):
                     self.comp_nodes.append(node)
-                if ng.layer == 'output':
+                elif ng.layer.startswith('o'):
+                    self.comp_nodes.append(node)
                     self.out_nodes.append(node)
 
             elif ng.gene_type == 'input':
                 node = InputNode()
                 self.in_nodes.append(node)
+            else:
+                raise RuntimeError("unknown gene type '{}'".format(ng.gene_type))
 
             nodes[ng.historical_mark] = node
 
@@ -88,9 +91,10 @@ class NN:
 
     def reset(self):
         # reset node values
-        for node in chain(self.in_nodes, self.comp_nodes, self.out_nodes):
+        for node in self.in_nodes:
             node.reset(0)
-
+        for node in self.comp_nodes:
+            node.reset(0)
 
     def compute(self, inputs):
         # set inputs
