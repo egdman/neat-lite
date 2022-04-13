@@ -4,6 +4,7 @@ import math
 import random
 import heapq
 from operator import itemgetter
+from itertools import chain
 
 try:
     from itertools import izip as zip
@@ -35,11 +36,12 @@ from nn_impl import NN
 neuron_sigma = 0.25                 # mutation sigma for neuron params
 conn_sigma = 10.                    # mutation sigma for connection params
 
-popul = 10
+popul = 50
+num_species = 5
 elite_num = 1 # best performing genomes in a generation will be copied without change to the next generation
 
 conf = dict(
-selection_sample_size = int(.75 * popul), # size of the selection sample (must be in the range [2, pop_size])
+selection_sample_size = int(.75 * popul) // num_species, # size of the selection sample (must be in the range [2, pop_size])
 neuron_param_mut_proba = 0.5,       # probability to mutate each single neuron in the genome
 connection_param_mut_proba = 0.5,   # probability to mutate each single connection in the genome
 topology_augmentation_proba = 0,    # probability to augment the topology of a newly created genome
@@ -47,6 +49,14 @@ topology_reduction_proba = 0,       # probability to reduce the topology of a ne
 speciation_threshold = 0.2          # genomes that are more similar than this value will be considered the same species
 )
 #### ###### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
+
+
+def species_sizes(n, num_species):
+    return (n // num_species,) * (num_species - 1) + (n // num_species + n % num_species,)
+
+
+def count_members(species_list):
+    return sum(len(species) for species in species_list)
 
 
 ## CREATE MUTATION SPEC ##
@@ -114,18 +124,13 @@ def evaluate(genome):
     return fitness
 
 
-def complexity(genomes):
-    return (sum((len(ge.neuron_genes)) for ge in genomes),
-    sum((len(ge.connection_genes)) for ge in genomes))
+def complexity(species_list):
+    n = (len(ge.neuron_genes) for ge in chain(*species_list))
+    c = (len(ge.connection_genes) for ge in chain(*species_list))
+    return sum(n), sum(c)
 
-def get_stats(genomes, best_gen, best_fitness):
-    n_neurons, n_conns = complexity(genomes)
-    return ("evals: {}, best genome has: {}N, {}C, complexity: {}N, {}C, best fitness = {}"
-        .format(evals_num,
-            len(best_gen.neuron_genes), len(best_gen.connection_genes),
-            n_neurons, n_conns, best_fitness))
 
-def next_gen(current_gen):
+def next_gen_species(current_gen):
     # evaluated_gen = list(evaluate(current_gen))
     evaluated_gen = list((genome, evaluate(genome)) for genome in current_gen)
     next_gen = list(produce_new_generation(neat_obj, evaluated_gen))
@@ -133,12 +138,31 @@ def next_gen(current_gen):
     return next_gen, best_genome, best_fitness
 
 
+class Run:
+    def __init__(self):
+        self.evals_num = 0
+        self.best_fitness = None
+        self.best_genome = None
+        self.target_reached = False
+
+    def next_gen_all_species(self, current_gen):
+        self.evals_num += count_members(current_gen)
+        current_gen = [next_gen_species(species) for species in current_gen]
+        _, self.best_genome, self.best_fitness = max(current_gen, key=itemgetter(2))
+        return list(map(itemgetter(0), current_gen))
+
+    def get_stats(self, genomes):
+        n_neurons, n_conns = complexity(genomes)
+        return ("evals: {}, best genome has: {}N, {}C, complexity: {}N, {}C, best fitness = {}"
+            .format(self.evals_num,
+                len(self.best_genome.neuron_genes), len(self.best_genome.connection_genes),
+                n_neurons, n_conns, self.best_fitness))
+
+
 num_epochs = 20 #1000000000
 gens_per_epoch = 250
 aug_proba = .9
 red_proba = .9
-
-evals_num = 0
 
 augment_gens_per_epoch = int(.4 * gens_per_epoch)
 reduct_gens_per_epoch = gens_per_epoch - augment_gens_per_epoch
@@ -182,8 +206,12 @@ init_genome = mutator.produce_genome(
 def copy_with_mutation(neat, source_genome):
     return neat.topology_augmentation_step(neat.parameters_mutation_step(source_genome.copy()))
 
-current_gen = list(copy_with_mutation(neat_obj, init_genome) for _ in range(popul))
+current_gen = list(
+    list(copy_with_mutation(neat_obj, init_genome) for _ in range(species_size)) \
+    for species_size in species_sizes(popul, num_species))
 
+
+run = Run()
 
 ## RUN ALTERNATING AUGMENTATION AND REDUCTION STAGES ##
 for epoch in range(num_epochs):
@@ -200,9 +228,8 @@ for epoch in range(num_epochs):
             **conf)
 
         for _ in range(augment_gens_per_epoch):
-            evals_num += len(current_gen)
-            current_gen, best_genome, best_fitness = next_gen(current_gen)
-        print("  AUG " + get_stats(current_gen, best_genome, best_fitness))
+            current_gen = run.next_gen_all_species(current_gen)
+        print("  AUG " + run.get_stats(current_gen))
 
 
         conf.update({
@@ -215,22 +242,22 @@ for epoch in range(num_epochs):
             **conf)
 
         for _ in range(reduct_gens_per_epoch):
-            evals_num += len(current_gen)
-            current_gen, best_genome, best_fitness = next_gen(current_gen)
-        print("  RED " + get_stats(current_gen, best_genome, best_fitness))
+            current_gen = run.next_gen_all_species(current_gen)
+        print("  RED " + run.get_stats(current_gen))
 
-        # if abs(best_fitness) < 1e-6:
-        if abs(best_fitness - 1) < 1e-6:
+        # if abs(run.best_fitness) < 1e-6:
+        if abs(run.best_fitness - 1) < 1e-6:
+            run.target_reached = True
             break
 
     except KeyboardInterrupt:
         break
 
 
-print("Number of performed evaluations: {}, best fitness: {}".format(evals_num, best_fitness))
+print("Number of performed evaluations: {}, best fitness: {}".format(run.evals_num, run.best_fitness))
 print("Final test:")
 
-final_nn = NN().from_genome(best_genome)
+final_nn = NN().from_genome(run.best_genome)
 
 test_inputs = list(inputs) * 4
 random.shuffle(test_inputs)
@@ -242,7 +269,7 @@ for inp in test_inputs:
 # write final genome as YAML file
 try:
     with open('xor_genome.yaml', 'w+') as genfile:
-        genfile.write(best_genome.to_yaml())
+        genfile.write(run.best_genome.to_yaml())
 
 except AnyError:
     pass
