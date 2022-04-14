@@ -2,6 +2,7 @@ from os import path
 import sys
 import math
 import random
+from random import seed
 import heapq
 from operator import itemgetter
 from itertools import chain
@@ -261,12 +262,15 @@ def make_attempt(num_epochs, gens_per_epoch):
 num_attempts = 100
 
 for attempt_id in range(num_attempts):
+    # attempt_id += 300
+
     num_epochs = 20
     gens_per_epoch = 250
 
+    seed(attempt_id)
     attempt = make_attempt(num_epochs=num_epochs, gens_per_epoch=gens_per_epoch)
     result = dict(
-        run = attempt_id,
+        id = attempt_id,
         t = timestamp(),
         species = tuple(species_sizes(popul, num_species)),
         gens_in_epoch = gens_per_epoch,
