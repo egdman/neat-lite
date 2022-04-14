@@ -5,6 +5,8 @@ import random
 import heapq
 from operator import itemgetter
 from itertools import chain
+import time
+from datetime import datetime, timezone
 
 try:
     from itertools import izip as zip
@@ -21,6 +23,9 @@ try:
 except NameError:
     pass
 
+def timestamp():
+    ts = datetime.fromtimestamp(time.time(), tz=timezone.utc)
+    return ts.strftime("%b %d %y %H:%M")
 
 here_dir = path.dirname(path.abspath(__file__))
 sys.path.append(path.join(here_dir, '..'))
@@ -36,8 +41,8 @@ from nn_impl import NN
 neuron_sigma = 0.25                 # mutation sigma for neuron params
 conn_sigma = 10.                    # mutation sigma for connection params
 
-popul = 50
-num_species = 5
+popul = 10
+num_species = 2
 elite_num = 1 # best performing genomes in a generation will be copied without change to the next generation
 
 conf = dict(
@@ -75,20 +80,6 @@ connection_spec = GeneSpec(
     'connection',
     PS('weight', gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
 )
-
-## CREATE MUTATOR ##
-mutator = Mutator(
-    neuron_factory=default_gene_factory(sigmoid_neuron_spec),
-    connection_factory=default_gene_factory(connection_spec),
-    pure_input_types=('input',),
-)
-
-## CREATE MAIN NEAT OBJECT ##
-neat_obj = NEAT(
-    topology_mutator=mutator,
-    neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
-    connection_specs=(connection_spec,),
-    **conf)
 
 
 def produce_new_generation(neat, genome_fitness_list):
@@ -130,24 +121,24 @@ def complexity(species_list):
     return sum(n), sum(c)
 
 
-def next_gen_species(current_gen):
+def next_gen_species(neat, current_gen):
     # evaluated_gen = list(evaluate(current_gen))
     evaluated_gen = list((genome, evaluate(genome)) for genome in current_gen)
-    next_gen = list(produce_new_generation(neat_obj, evaluated_gen))
+    next_gen = list(produce_new_generation(neat, evaluated_gen))
     best_genome, best_fitness = max(evaluated_gen, key=itemgetter(1))
     return next_gen, best_genome, best_fitness
 
 
-class Run:
+class Attempt:
     def __init__(self):
         self.evals_num = 0
         self.best_fitness = None
         self.best_genome = None
         self.target_reached = False
 
-    def next_gen_all_species(self, current_gen):
+    def next_gen_all_species(self, neat, current_gen):
         self.evals_num += count_members(current_gen)
-        current_gen = [next_gen_species(species) for species in current_gen]
+        current_gen = [next_gen_species(neat, species) for species in current_gen]
         _, self.best_genome, self.best_fitness = max(current_gen, key=itemgetter(2))
         return list(map(itemgetter(0), current_gen))
 
@@ -158,30 +149,6 @@ class Run:
                 len(self.best_genome.neuron_genes), len(self.best_genome.connection_genes),
                 n_neurons, n_conns, self.best_fitness))
 
-
-num_epochs = 20 #1000000000
-gens_per_epoch = 250
-aug_proba = .9
-red_proba = .9
-
-augment_gens_per_epoch = int(.4 * gens_per_epoch)
-reduct_gens_per_epoch = gens_per_epoch - augment_gens_per_epoch
-
-
-## CREATE INITIAL GENOME ##
-# we specify initial input and output neurons and protect them from removal
-sigmoid_params = sigmoid_neuron_spec.get_random_parameters()
-sigmoid_params['layer'] = 'output'
-
-init_genome = mutator.produce_genome(
-    in1=neuron('input', non_removable=True, layer='input'),
-    in2=neuron('input', non_removable=True, layer='input'),
-    out1=neuron('sigmoid', non_removable=True, **sigmoid_params),
-    connections=(
-        # connection('connection', src='in1', dst='out1'),
-        # connection('connection', src='in2', dst='out1')
-    )
-)
 
 # init_genome = mutator.produce_genome(
 #     in1=neuron('input', non_removable=True, layer='input'),
@@ -206,21 +173,57 @@ init_genome = mutator.produce_genome(
 def copy_with_mutation(neat, source_genome):
     return neat.topology_augmentation_step(neat.parameters_mutation_step(source_genome.copy()))
 
-current_gen = list(
-    list(copy_with_mutation(neat_obj, init_genome) for _ in range(species_size)) \
-    for species_size in species_sizes(popul, num_species))
 
+def make_attempt(num_epochs, gens_per_epoch):
+    augmentation_proba = .9
+    reduction_proba = .9
 
-run = Run()
+    augment_gens_per_epoch = int(.4 * gens_per_epoch)
+    reduct_gens_per_epoch = gens_per_epoch - augment_gens_per_epoch
 
-## RUN ALTERNATING AUGMENTATION AND REDUCTION STAGES ##
-for epoch in range(num_epochs):
-    try:
-        print("Epoch #{}".format(epoch))
+    ## CREATE MUTATOR ##
+    mutator = Mutator(
+        neuron_factory=default_gene_factory(sigmoid_neuron_spec),
+        connection_factory=default_gene_factory(connection_spec),
+        pure_input_types=('input',),
+    )
+
+    ## CREATE MAIN NEAT OBJECT ##
+    neat_obj = NEAT(
+        topology_mutator=mutator,
+        neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
+        connection_specs=(connection_spec,),
+        **conf)
+
+    ## CREATE INITIAL GENOME ##
+    # we specify initial input and output neurons and protect them from removal
+    sigmoid_params = sigmoid_neuron_spec.get_random_parameters()
+    sigmoid_params['layer'] = 'output'
+
+    init_genome = mutator.produce_genome(
+        in1=neuron('input', non_removable=True, layer='input'),
+        in2=neuron('input', non_removable=True, layer='input'),
+        out1=neuron('sigmoid', non_removable=True, **sigmoid_params),
+        connections=(
+            # connection('connection', src='in1', dst='out1'),
+            # connection('connection', src='in2', dst='out1')
+        )
+    )
+
+    current_gen = list(
+        list(copy_with_mutation(neat_obj, init_genome) for _ in range(species_size)) \
+        for species_size in species_sizes(popul, num_species))
+
+    attempt = Attempt()
+
+    ## RUN ALTERNATING AUGMENTATION AND REDUCTION STAGES ##
+    for epoch in range(num_epochs):
+        # try:
+        # print("Epoch #{}".format(epoch))
 
         conf.update({
             'topology_reduction_proba': 0,
-            'topology_augmentation_proba': aug_proba})
+            'topology_augmentation_proba': augmentation_proba})
         neat_obj = NEAT(
             topology_mutator=mutator,
             neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
@@ -228,12 +231,12 @@ for epoch in range(num_epochs):
             **conf)
 
         for _ in range(augment_gens_per_epoch):
-            current_gen = run.next_gen_all_species(current_gen)
-        print("  AUG " + run.get_stats(current_gen))
+            current_gen = attempt.next_gen_all_species(neat_obj, current_gen)
+        # print("  AUG " + attempt.get_stats(current_gen))
 
 
         conf.update({
-            'topology_reduction_proba': red_proba,
+            'topology_reduction_proba': reduction_proba,
             'topology_augmentation_proba': 0})
         neat_obj = NEAT(
             topology_mutator=mutator,
@@ -242,34 +245,56 @@ for epoch in range(num_epochs):
             **conf)
 
         for _ in range(reduct_gens_per_epoch):
-            current_gen = run.next_gen_all_species(current_gen)
-        print("  RED " + run.get_stats(current_gen))
+            current_gen = attempt.next_gen_all_species(neat_obj, current_gen)
+        # print("  RED " + attempt.get_stats(current_gen))
 
-        # if abs(run.best_fitness) < 1e-6:
-        if abs(run.best_fitness - 1) < 1e-6:
-            run.target_reached = True
+        # if abs(attempt.best_fitness) < 1e-6:
+        if abs(attempt.best_fitness - 1) < 1e-6:
+            attempt.target_reached = True
             break
 
-    except KeyboardInterrupt:
-        break
+        # except KeyboardInterrupt:
+        #     break
+    return attempt
 
 
-print("Number of performed evaluations: {}, best fitness: {}".format(run.evals_num, run.best_fitness))
-print("Final test:")
+num_attempts = 100
 
-final_nn = NN().from_genome(run.best_genome)
+for attempt_id in range(num_attempts):
+    num_epochs = 20
+    gens_per_epoch = 250
 
-test_inputs = list(inputs) * 4
-random.shuffle(test_inputs)
-for inp in test_inputs:
-    final_nn.reset()
-    print("{} -> {}".format(inp, final_nn.compute(inp)[0]))
+    attempt = make_attempt(num_epochs=num_epochs, gens_per_epoch=gens_per_epoch)
+    result = dict(
+        run = attempt_id,
+        t = timestamp(),
+        species = tuple(species_sizes(popul, num_species)),
+        gens_in_epoch = gens_per_epoch,
+        n_epochs = num_epochs,
+        n_evals = attempt.evals_num,
+        fitness = attempt.best_fitness,
+        target_reached = attempt.target_reached,
+    )
+    print(result)
 
 
-# write final genome as YAML file
-try:
-    with open('xor_genome.yaml', 'w+') as genfile:
-        genfile.write(run.best_genome.to_yaml())
 
-except AnyError:
-    pass
+# print("Number of performed evaluations: {}, best fitness: {}".format(attempt.evals_num, attempt.best_fitness))
+# print("Final test:")
+
+# final_nn = NN().from_genome(attempt.best_genome)
+
+# test_inputs = list(inputs) * 4
+# random.shuffle(test_inputs)
+# for inp in test_inputs:
+#     final_nn.reset()
+#     print("{} -> {}".format(inp, final_nn.compute(inp)[0]))
+
+
+# # write final genome as YAML file
+# try:
+#     with open('xor_genome.yaml', 'w+') as genfile:
+#         genfile.write(attempt.best_genome.to_yaml())
+
+# except AnyError:
+#     pass
