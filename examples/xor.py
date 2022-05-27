@@ -69,11 +69,11 @@ def count_members(species_list):
 
 input_neuron_spec = GeneSpec(
     'input',
-    PS('layer', gen(lambda *a: 'input')),
+    PS('layer', gen.const('input')),
 )
 sigmoid_neuron_spec = GeneSpec(
     'sigmoid',
-    PS('layer', gen(lambda *a: 'hidden')),
+    PS('layer', gen.const('hidden')),
     PS('bias', gen.uniform(), mut.gauss(neuron_sigma), bounds(-1., 1.)),
     PS('gain', gen.uniform(), mut.gauss(neuron_sigma), bounds(0., 1.)),
 )

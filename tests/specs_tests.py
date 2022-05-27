@@ -6,7 +6,7 @@ class TestSpecs(unittest.TestCase):
         self.spec = GeneSpec("my_spec",
             PS('param1', bounds(-1., 1.), gen.uniform(), mut.gauss(0.5)),
             PS('param2', gen.random_choice(("x",)), mut.random_choice(("x",))),
-            PS('param3', gen(lambda *a: 53)),
+            PS('param3', gen.const(53)),
         )
 
     def test_gene_spec(self):

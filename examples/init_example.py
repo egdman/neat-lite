@@ -16,7 +16,7 @@ conn_sigma = 1.0    # gaussian distribution sigma for connection params mutation
 sigmoid_neuron_spec = GeneSpec('sigmoid',
     PS('bias', gen.uniform(), mut.gauss(neuron_sigma), bounds(-1., 1.)),
     PS('gain', gen.uniform(), mut.gauss(neuron_sigma), bounds(0., 1.)),
-    PS('layer', gen(lambda *a: 'hidden')),
+    PS('layer', gen.const('hidden')),
 )
 connection_spec = GeneSpec('default',
     PS('weight', gen.gauss(0, conn_sigma), mut.gauss(conn_sigma)),

@@ -38,6 +38,11 @@ class gen:
             return random.choice(values)
         return gen(_sample)
 
+    def const(value):
+        def _sample(_0, _1):
+            return value
+        return gen(_sample)
+
 class mut:
     def __init__(self, func):
         def _apply(spec):
