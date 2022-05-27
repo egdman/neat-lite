@@ -1,6 +1,4 @@
 import random
-from itertools import chain
-from .utils import zip_with_probabilities, weighted_random
 
 
 def clamp(min_value, value, max_value):
@@ -11,6 +9,13 @@ def clamp(min_value, value, max_value):
         value = max_value
     return value
 
+class bound_required: pass
+def require_missing_bounds(spec):
+    if spec.min_value is None:
+        spec.min_value = bound_required
+    if spec.max_value is None:
+        spec.max_value = bound_required
+
 class bounds:
     def __init__(self, min_value, max_value):
         def _apply(spec):
@@ -18,15 +23,17 @@ class bounds:
         self._apply = _apply
 
 class gen:
-    def __init__(self, func):
+    def __init__(self, func, require_bounds=False):
         def _apply(spec):
             spec.generator = func
+            if require_bounds:
+                require_missing_bounds(spec)
         self._apply = _apply
 
     def uniform():
         def _sample(min_value, max_value):
             return random.uniform(min_value, max_value)
-        return gen(_sample)
+        return gen(_sample, require_bounds=True)
 
     def gauss(mean, sigma):
         def _sample(min_value, max_value):
@@ -44,15 +51,17 @@ class gen:
         return gen(_sample)
 
 class mut:
-    def __init__(self, func):
+    def __init__(self, func, require_bounds=False):
         def _apply(spec):
             spec.mutator = func
+            if require_bounds:
+                require_missing_bounds(spec)
         self._apply = _apply
 
     def uniform():
         def _sample(min_value, _1, max_value):
             return random.uniform(min_value, max_value)
-        return mut(_sample)
+        return mut(_sample, require_bounds=True)
 
     def gauss(sigma):
         def _sample(min_value, current_value, max_value):
@@ -76,8 +85,14 @@ class ParamSpec:
         self.mutator = None
         for option in options:
             option._apply(self)
+
         if self.generator is None:
-            raise InvalidSpecError(f"value generator is not provided for ParamSpec '{name}'")
+            raise InvalidSpecError(
+                f"'gen' argument is required for ParamSpec '{name}'")
+
+        if self.min_value == bound_required or self.max_value == bound_required:
+            raise InvalidSpecError(
+                f"'bounds' argument with both min and max values is required for ParamSpec '{name}'")
 
 
     def get_random_value(self):
