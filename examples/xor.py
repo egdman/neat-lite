@@ -32,7 +32,7 @@ here_dir = path.dirname(path.abspath(__file__))
 sys.path.append(path.join(here_dir, '..'))
 
 from neat import (Mutator, NEAT, GeneSpec, ParamSpec as PS, validate_genome,
-    gen_uniform, gen_gauss, mut_gauss,
+    gen, mut, bounds,
     neuron, connection, default_gene_factory)
 
 from nn_impl import NN
@@ -69,18 +69,30 @@ def count_members(species_list):
 
 input_neuron_spec = GeneSpec(
     'input',
-    PS('layer', lambda *a: 'input'),
+    PS('layer', gen(lambda *a: 'input')),
 )
 sigmoid_neuron_spec = GeneSpec(
     'sigmoid',
-    PS('layer', lambda *a: 'hidden'),
-    PS('bias', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(-1., 1.),
-    PS('gain', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(0., 1.),
+    PS('layer', gen(lambda *a: 'hidden')),
+    PS('bias', gen.uniform(), mut.gauss(neuron_sigma), bounds(-1., 1.)),
+    PS('gain', gen.uniform(), mut.gauss(neuron_sigma), bounds(0., 1.)),
 )
 connection_spec = GeneSpec(
     'connection',
-    PS('weight', gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
+    PS('weight', gen.gauss(0, conn_sigma), mut.gauss(conn_sigma)),
 )
+
+
+def make_neat(mutator, **kw):
+    conf_ = conf.copy()
+    conf_.update(kw)
+    return NEAT(
+        topology_mutator=mutator,
+        neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
+        connection_specs=(connection_spec,),
+        # # disable 2-way crossover
+        # crossover_step=lambda genomes: genomes[0].copy(),
+        **conf_)
 
 
 def produce_new_generation(neat, genome_fitness_list):
@@ -190,11 +202,7 @@ def make_attempt(num_epochs, gens_per_epoch):
     )
 
     ## CREATE MAIN NEAT OBJECT ##
-    neat_obj = NEAT(
-        topology_mutator=mutator,
-        neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
-        connection_specs=(connection_spec,),
-        **conf)
+    neat_obj = make_neat(mutator)
 
     ## CREATE INITIAL GENOME ##
     # we specify initial input and output neurons and protect them from removal
@@ -222,28 +230,13 @@ def make_attempt(num_epochs, gens_per_epoch):
         # try:
         # print("Epoch #{}".format(epoch))
 
-        conf.update({
-            'topology_reduction_proba': 0,
-            'topology_augmentation_proba': augmentation_proba})
-        neat_obj = NEAT(
-            topology_mutator=mutator,
-            neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
-            connection_specs=(connection_spec,),
-            **conf)
+        neat_obj = make_neat(mutator, topology_augmentation_proba=augmentation_proba, topology_reduction_proba=0)
 
         for _ in range(augment_gens_per_epoch):
             current_gen = attempt.next_gen_all_species(neat_obj, current_gen)
         # print("  AUG " + attempt.get_stats(current_gen))
 
-
-        conf.update({
-            'topology_reduction_proba': reduction_proba,
-            'topology_augmentation_proba': 0})
-        neat_obj = NEAT(
-            topology_mutator=mutator,
-            neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
-            connection_specs=(connection_spec,),
-            **conf)
+        neat_obj = make_neat(mutator, topology_augmentation_proba=0, topology_reduction_proba=reduction_proba)
 
         for _ in range(reduct_gens_per_epoch):
             current_gen = attempt.next_gen_all_species(neat_obj, current_gen)
@@ -262,7 +255,7 @@ def make_attempt(num_epochs, gens_per_epoch):
 num_attempts = 100
 
 for attempt_id in range(num_attempts):
-    # attempt_id += 300
+    attempt_id += 100#20400
 
     num_epochs = 20
     gens_per_epoch = 250

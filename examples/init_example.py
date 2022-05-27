@@ -5,7 +5,7 @@ here_dir = path.dirname(path.abspath(__file__))
 sys.path.append(path.join(here_dir, '..'))
 
 from neat import (GeneSpec,
-                ParamSpec as PS, gen_uniform, gen_gauss, mut_gauss,
+                ParamSpec as PS, gen, mut, bounds,
                 Mutator, neuron, connection, default_gene_factory)
 
 
@@ -14,12 +14,12 @@ conn_sigma = 1.0    # gaussian distribution sigma for connection params mutation
 
 
 sigmoid_neuron_spec = GeneSpec('sigmoid',
-    PS('bias', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(-1., 1.),
-    PS('gain', gen_uniform(), mut_gauss(neuron_sigma)).with_bounds(0., 1.),
-    PS('layer', lambda *a: 'hidden'),
+    PS('bias', gen.uniform(), mut.gauss(neuron_sigma), bounds(-1., 1.)),
+    PS('gain', gen.uniform(), mut.gauss(neuron_sigma), bounds(0., 1.)),
+    PS('layer', gen(lambda *a: 'hidden')),
 )
 connection_spec = GeneSpec('default',
-    PS('weight', gen_gauss(0, conn_sigma), mut_gauss(conn_sigma)),
+    PS('weight', gen.gauss(0, conn_sigma), mut.gauss(conn_sigma)),
 )
 
 

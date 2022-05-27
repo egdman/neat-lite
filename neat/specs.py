@@ -11,44 +11,68 @@ def clamp(min_value, value, max_value):
         value = max_value
     return value
 
+class bounds:
+    def __init__(self, min_value, max_value):
+        def _apply(spec):
+            spec.min_value, spec.max_value = min_value, max_value
+        self._apply = _apply
 
-def gen_uniform():
-    def _sample(min_value, max_value):
-        return random.uniform(min_value, max_value)
-    return _sample
+class gen:
+    def __init__(self, func):
+        def _apply(spec):
+            spec.generator = func
+        self._apply = _apply
+
+    def uniform():
+        def _sample(min_value, max_value):
+            return random.uniform(min_value, max_value)
+        return gen(_sample)
+
+    def gauss(mean, sigma):
+        def _sample(min_value, max_value):
+            return clamp(min_value, random.gauss(mean, sigma), max_value)
+        return gen(_sample)
+
+    def random_choice(values):
+        def _sample(_0, _1):
+            return random.choice(values)
+        return gen(_sample)
+
+class mut:
+    def __init__(self, func):
+        def _apply(spec):
+            spec.mutator = func
+        self._apply = _apply
+
+    def uniform():
+        def _sample(min_value, _1, max_value):
+            return random.uniform(min_value, max_value)
+        return mut(_sample)
+
+    def gauss(sigma):
+        def _sample(min_value, current_value, max_value):
+            return clamp(min_value, random.gauss(current_value, sigma), max_value)
+        return mut(_sample)
+
+    def random_choice(values):
+        def _sample(_0, _1, _2):
+            return random.choice(values)
+        return mut(_sample)
 
 
-def gen_random_choice(values):
-    def _pick(*_):
-        return random.choice(values)
-    return _pick
-
-
-def gen_gauss(mean, sigma):
-    def _sample(min_value, max_value):
-        return clamp(min_value, random.gauss(mean, sigma), max_value)
-    return _sample
-
-
-def mut_gauss(sigma):
-    def _sample(min_value, current_value, max_value):
-        return clamp(min_value, random.gauss(current_value, sigma), max_value)
-    return _sample
-
+class InvalidSpecError(RuntimeError): pass
 
 class ParamSpec:
-    def __init__(self, name: str, value_generator, value_mutator=None):
+    def __init__(self, name: str, *options):
         self.name = name
         self.min_value = None
         self.max_value = None
-        self.generator = value_generator
-        self.mutator = value_mutator
-
-
-    def with_bounds(self, min_value, max_value):
-        self.min_value = min_value
-        self.max_value = max_value
-        return self
+        self.generator = None
+        self.mutator = None
+        for option in options:
+            option._apply(self)
+        if self.generator is None:
+            raise InvalidSpecError(f"value generator is not provided for ParamSpec '{name}'")
 
 
     def get_random_value(self):
