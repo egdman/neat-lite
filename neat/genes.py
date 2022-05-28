@@ -153,38 +153,46 @@ class Genome:
 
 
     @staticmethod
-    def count_excess_disjoint(genome1, genome2):
-        genes_sorted1 = sorted(
-            genome1.neuron_genes + genome1.connection_genes, key=hm)
+    def count_excess_disjoint(pairs):
+        def consume_(lg, rg):
+            if lg is None:
+                n_unpaired = 1
+                for lg, rg in pairs:
+                    if lg is None:
+                        n_unpaired += 1
+                    else:
+                        return lg, rg, n_unpaired, True
 
-        genes_sorted2 = sorted(
-            genome2.neuron_genes + genome2.connection_genes, key=hm)
+            elif rg is None:
+                n_unpaired = 1
+                for lg, rg in pairs:
+                    if rg is None:
+                        n_unpaired += 1
+                    else:
+                        return lg, rg, n_unpaired, True
 
-        # save ranges of historical marks for both genomes
-        min_mark1 = hm(genes_sorted1[0])
-        max_mark1 = hm(genes_sorted1[-1])
+            else:
+                n_unpaired = 0
+                for lg, rg in pairs:
+                    if lg is None or rg is None:
+                        return lg, rg, n_unpaired, True
 
-        min_mark2 = hm(genes_sorted2[0])
-        max_mark2 = hm(genes_sorted2[-1])
+            return lg, rg, n_unpaired, False
 
-        excess_num = 0
+        pairs = iter(pairs)
+        try:
+            lg, rg = next(pairs)
+        except StopIteration:
+            return 0, 0
+
+        lg, rg, excess_num, has_more = consume_(lg, rg)
+        excess_tail = 0
         disjoint_num = 0
+        while has_more:
+            disjoint_num += excess_tail
+            lg, rg, excess_tail, has_more = consume_(lg, rg)
 
-        # calculate numbers of excess and disjoint genes
-        for gene1, gene2 in Genome.get_pairs(genes_sorted1, genes_sorted2):
-            if gene2 is None:
-                if gene1.historical_mark < min_mark2 or gene1.historical_mark > max_mark2:
-                    excess_num += 1
-                else:
-                    disjoint_num += 1
-
-            elif gene1 is None:
-                if gene2.historical_mark < min_mark1 or gene2.historical_mark > max_mark1:
-                    excess_num += 1
-                else:
-                    disjoint_num += 1
-
-        return excess_num, disjoint_num
+        return excess_num + excess_tail, disjoint_num
 
 
     @staticmethod
@@ -215,14 +223,12 @@ class Genome:
             if left_gene is None:
                 if right_gene is not None:
                     yield None, right_gene
-                    for right_gene in right_genes:
-                        yield None, right_gene
+                    yield from ((None, rg) for rg in right_genes)
                 break
 
             elif right_gene is None:
                 yield left_gene, None
-                for left_gene in left_genes:
-                    yield left_gene, None
+                yield from ((lg, None) for lg in left_genes)
                 break
 
             elif hm(left_gene) < hm(right_gene):

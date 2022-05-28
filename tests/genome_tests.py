@@ -24,6 +24,17 @@ def make_genomes(marks1, marks2):
     g1, g2 = [NeuronGene('1', m) for m in marks1], [NeuronGene('2', m) for m in marks2]
     return sorted(g1, key=hm), sorted(g2, key=hm)
 
+def n_excess_marks(marks1, marks2):
+    min_mark, max_mark = min(marks1), max(marks1)
+    n = sum((1 for m in marks2 if m < min_mark or m > max_mark))
+    min_mark, max_mark = min(marks2), max(marks2)
+    return n + sum((1 for m in marks1 if m < min_mark or m > max_mark))
+
+def n_disjoint_marks(marks1, marks2):
+    n = sum((1 for m in marks1 if m not in marks2)) + \
+        sum((1 for m in marks2 if m not in marks1)) - \
+        n_excess_marks(marks1, marks2)
+    return n
 
 class TestGenome(unittest.TestCase):
     def assertGenePair(self, gene1, gene2, marks1, marks2):
@@ -62,6 +73,23 @@ class TestGenome(unittest.TestCase):
 
 
     def test_gene_pairing(self):
+        # identical genes
+        marks1 = (1, 2, 3, 5, 6, 8, 9, 10, 14, 15, 17, 18, 19, 20, 21, 23)
+        marks2 = marks1
+        genes1, genes2 = make_genomes(marks1, marks2)
+
+        combined_marks = []
+        for g1, g2 in Genome.get_pairs(genes1, genes2):
+            self.assertGenePair(g1, g2, marks1, marks2)
+            combined_marks.append(hm(g1, g2))
+        self.assertUniqueAndSorted(combined_marks)
+        self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
+        self.assertSwapped(genes1, genes2)
+
+        excess, disjoint = Genome.count_excess_disjoint(Genome.get_pairs(genes1, genes2))
+        self.assertEqual(excess, n_excess_marks(marks1, marks2))
+        self.assertEqual(disjoint, n_disjoint_marks(marks1, marks2))
+
         # genes without overlap
         marks1 = (1, 2, 3, 5, 6, 8, 9, 10, 14, 15, 17, 18, 19, 20, 21, 23)
         marks2 = (24, 26, 27, 29, 32, 33, 35, 38, 39, 40, 41, 42, 43, 44, 45, 48)
@@ -74,6 +102,10 @@ class TestGenome(unittest.TestCase):
         self.assertUniqueAndSorted(combined_marks)
         self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
         self.assertSwapped(genes1, genes2)
+
+        excess, disjoint = Genome.count_excess_disjoint(Genome.get_pairs(genes1, genes2))
+        self.assertEqual(excess, n_excess_marks(marks1, marks2))
+        self.assertEqual(disjoint, n_disjoint_marks(marks1, marks2))
 
         # genes with partial overlap, last is unpaired
         marks1 = (1, 2, 4, 6, 7, 8, 10, 14, 16, 17, 22, 26, 29, 32, 33, 34)
@@ -88,6 +120,9 @@ class TestGenome(unittest.TestCase):
         self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
         self.assertSwapped(genes1, genes2)
 
+        excess, disjoint = Genome.count_excess_disjoint(Genome.get_pairs(genes1, genes2))
+        self.assertEqual(excess, n_excess_marks(marks1, marks2))
+        self.assertEqual(disjoint, n_disjoint_marks(marks1, marks2))
 
         # genes with partial overlap, last is paired
         marks1 = (1, 2, 4, 6, 7, 8, 10, 14, 16, 17, 22, 26, 29, 32, 33, 36)
@@ -102,6 +137,9 @@ class TestGenome(unittest.TestCase):
         self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
         self.assertSwapped(genes1, genes2)
 
+        excess, disjoint = Genome.count_excess_disjoint(Genome.get_pairs(genes1, genes2))
+        self.assertEqual(excess, n_excess_marks(marks1, marks2))
+        self.assertEqual(disjoint, n_disjoint_marks(marks1, marks2))
 
         # genes with full overlap, last is unpaired
         marks1 = (1, 2, 4, 6, 7, 8, 10, 14, 16, 17, 22, 26, 29, 32, 33, 34, 39, 41, 43, 48)
@@ -116,6 +154,9 @@ class TestGenome(unittest.TestCase):
         self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
         self.assertSwapped(genes1, genes2)
 
+        excess, disjoint = Genome.count_excess_disjoint(Genome.get_pairs(genes1, genes2))
+        self.assertEqual(excess, n_excess_marks(marks1, marks2))
+        self.assertEqual(disjoint, n_disjoint_marks(marks1, marks2))
 
         # genes with full overlap, last is paired
         marks1 = (1, 2, 4, 6, 7, 8, 10, 14, 16, 17, 22, 26, 29, 32, 33, 34, 39, 41, 43, 48)
@@ -130,6 +171,9 @@ class TestGenome(unittest.TestCase):
         self.assertEqual(len(combined_marks), len(set(marks1) | set(marks2)))
         self.assertSwapped(genes1, genes2)
 
+        excess, disjoint = Genome.count_excess_disjoint(Genome.get_pairs(genes1, genes2))
+        self.assertEqual(excess, n_excess_marks(marks1, marks2))
+        self.assertEqual(disjoint, n_disjoint_marks(marks1, marks2))
 
         # one genome is empty
         marks1 = (8, 9, 15, 17, 18, 19, 21, 23, 25, 28, 29, 30, 31, 32, 33, 34)
@@ -146,9 +190,15 @@ class TestGenome(unittest.TestCase):
         self.assertEqual(len(combined_marks), len(marks1))
         self.assertSwapped(genes1, genes2)
 
+        excess, disjoint = Genome.count_excess_disjoint(Genome.get_pairs(genes1, genes2))
+        self.assertEqual(excess, len(marks1))
+        self.assertEqual(disjoint, 0)
+
         # both genomes are empty
         self.assertEqual(tuple(Genome.get_pairs((), ())), ())
-
+        excess, disjoint = Genome.count_excess_disjoint(())
+        self.assertEqual(excess, 0)
+        self.assertEqual(disjoint, 0)
 
     # def test_neuron_gene(self):
 
