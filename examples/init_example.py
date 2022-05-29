@@ -28,7 +28,7 @@ mutator = Mutator(
     connection_factory=default_gene_factory(connection_spec),
 )
 
-sigmoid_params = sigmoid_neuron_spec.get_random_parameters()
+sigmoid_params = sigmoid_neuron_spec.generate_parameter_values()
 sigmoid_params['layer'] = 'output'
 
 genome = mutator.produce_genome(

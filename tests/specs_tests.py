@@ -25,7 +25,7 @@ class TestSpecs(unittest.TestCase):
         self.assertIsNone(p2.max_value)
         self.assertIsNotNone(p2.generator)
         self.assertIsNotNone(p2.mutator)
-        self.assertEqual(p2.get_random_value(), "x")
+        self.assertEqual(p2.generate_value(), "x")
         self.assertEqual(p2.mutate_value("irrelevant_value"), "x")
 
         p3 = self.spec.get("param3")
@@ -33,5 +33,5 @@ class TestSpecs(unittest.TestCase):
         self.assertIsNone(p3.max_value)
         self.assertIsNotNone(p3.generator)
         self.assertIsNone(p3.mutator)
-        self.assertEqual(p3.get_random_value(), 53)
+        self.assertEqual(p3.generate_value(), 53)
         self.assertEqual(p3.mutate_value(257), 257) # same value because no mutator is set for param3

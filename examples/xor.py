@@ -206,7 +206,7 @@ def make_attempt(num_epochs, gens_per_epoch):
 
     ## CREATE INITIAL GENOME ##
     # we specify initial input and output neurons and protect them from removal
-    sigmoid_params = sigmoid_neuron_spec.get_random_parameters()
+    sigmoid_params = sigmoid_neuron_spec.generate_parameter_values()
     sigmoid_params['layer'] = 'output'
 
     init_genome = mutator.produce_genome(

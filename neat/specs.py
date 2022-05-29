@@ -3,10 +3,9 @@ import random
 
 def clamp(min_value, value, max_value):
     if min_value is not None and value < min_value:
-        value = min_value
-
+        return min_value
     if max_value is not None and value > max_value:
-        value = max_value
+        return max_value
     return value
 
 class bound_required: pass
@@ -37,7 +36,7 @@ class gen:
 
     def gauss(mean, sigma):
         def _sample(min_value, max_value):
-            return clamp(min_value, random.gauss(mean, sigma), max_value)
+            return clamp(min_value, random.normalvariate(mean, sigma), max_value)
         return gen(_sample)
 
     def random_choice(values):
@@ -65,7 +64,7 @@ class mut:
 
     def gauss(sigma):
         def _sample(min_value, current_value, max_value):
-            return clamp(min_value, random.gauss(current_value, sigma), max_value)
+            return clamp(min_value, random.normalvariate(current_value, sigma), max_value)
         return mut(_sample)
 
     def random_choice(values):
@@ -95,7 +94,7 @@ class ParamSpec:
                 f"'bounds' argument with both min and max values is required for ParamSpec '{name}'")
 
 
-    def get_random_value(self):
+    def generate_value(self):
         return self.generator(self.min_value, self.max_value)
 
 
@@ -127,13 +126,8 @@ class GeneSpec(object):
         return self.param_specs.get(key, default)
 
 
-    def param_names(self):
-        return list(self.param_specs.keys())
-
-
-    def get_random_parameters(self):
+    def generate_parameter_values(self):
         '''
-        Return a dictionary where keys are parameter names and values are random parameter values.
+        Returns a dictionary {parameter_name: generated_parameter_value}
         '''
-        return {param_name: self.param_specs[param_name].get_random_value() \
-                for param_name in self.param_specs}
+        return {name: spec.generate_value() for name, spec in self.param_specs.items()}

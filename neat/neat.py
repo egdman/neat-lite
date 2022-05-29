@@ -15,7 +15,7 @@ def default_gene_factory(*gene_specs):
     def _generate():
         # select gene type at random
         gene_spec = random.choice(gene_specs)
-        return gene_spec.type_name, gene_spec.get_random_parameters()
+        return gene_spec.type_name, gene_spec.generate_parameter_values()
     return _generate
 
 
