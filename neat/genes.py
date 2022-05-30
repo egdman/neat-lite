@@ -127,6 +127,15 @@ class Genome:
                 downstream_set.add(m1)
 
 
+    def copy(self):
+        g = Genome.__new__(Genome)
+        g.neuron_genes = self.neuron_genes[:]
+        g._conn_genes = self._conn_genes[:]
+        g._conn_num = self._conn_num
+        g.connections_index = deepcopy(self.connections_index)
+        return g
+
+
     def num_connection_genes(self):
         return self._conn_num
 
@@ -307,19 +316,6 @@ class Genome:
         # now remove all the upstream connections
         for downstream_set in self.connections_index.values():
             downstream_set.discard(neuron_mark)
-
-
-    def copy(self):
-        copy_gen = Genome()
-
-        for n_gene in self.neuron_genes:
-            copy_gen.add_neuron_gene(n_gene.copy())
-
-        for c_gene in self.connection_genes():
-            copy_gen.add_connection_gene(c_gene.copy())
-
-        return copy_gen
-
 
 
     def check_validity(self):

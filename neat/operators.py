@@ -255,13 +255,13 @@ def crossover(genome_primary, genome_secondary) -> Genome:
         # if gene is paired, inherit one of the pair with 50/50 chance:
         if gene0 is not None and gene1 is not None:
             if random.random() < 0.5:
-                neuron_genes.append(gene0.copy())
+                neuron_genes.append(gene0)
             else:
-                neuron_genes.append(gene1.copy())
+                neuron_genes.append(gene1)
 
         # inherit unpaired gene from the primary parent:
         elif gene0 is not None:
-            neuron_genes.append(gene0.copy())
+            neuron_genes.append(gene0)
 
     connect_pairs = Genome.get_pairs(
         genome_primary.connection_genes(),
@@ -271,11 +271,11 @@ def crossover(genome_primary, genome_secondary) -> Genome:
     for gene0, gene1 in connect_pairs:
         if gene0 is not None and gene1 is not None:
             if random.random() < 0.5:
-                connect_genes.append(gene0.copy())
+                connect_genes.append(gene0)
             else:
-                connect_genes.append(gene1.copy())
+                connect_genes.append(gene1)
 
         elif gene0 is not None:
-            connect_genes.append(gene0.copy())
+            connect_genes.append(gene0)
 
     return Genome(neuron_genes, connect_genes)
