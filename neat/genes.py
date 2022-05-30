@@ -111,15 +111,23 @@ class ConnectionGene(Gene):
 
 
 class Genome:
-
     def __init__(self, neuron_genes=None, connection_genes=None):
         self.neuron_genes = neuron_genes if neuron_genes else []
         self.connection_genes = connection_genes if connection_genes else []
-        self.connections_index = {(g.mark_from, g.mark_to) for g in self.connection_genes}
+        self.connections_index = dict()
+        for g in self.connection_genes:
+            m0 = g.mark_from
+            m1 = g.mark_to
+            downstream_set = self.connections_index.get(m0, None)
+            if downstream_set is None:
+                self.connections_index[m0] = {m1}
+            else:
+                downstream_set.add(m1)
 
 
     def has_connection(self, mark_from, mark_to):
-        return (mark_from, mark_to) in self.connections_index
+        downstream_set = self.connections_index.get(mark_from, {})
+        return mark_to in downstream_set
 
 
     @staticmethod
@@ -248,15 +256,20 @@ class Genome:
 
     def add_connection_gene(self, connection_gene):
         self.connection_genes.append(connection_gene)
-        k = connection_gene.mark_from, connection_gene.mark_to
-        self.connections_index.add(k)
+        m0, m1 = connection_gene.mark_from, connection_gene.mark_to
+        downstream_set = self.connections_index.get(m0, None)
+        if downstream_set is None:
+            self.connections_index[m0] = {m1}
+        else:
+            downstream_set.add(m1)
 
 
 
     def remove_connection_gene(self, index):
         g = self.connection_genes[index]
         del self.connection_genes[index]
-        self.connections_index.remove((g.mark_from, g.mark_to))
+        downstream_set = self.connections_index.get(g.mark_from, {})
+        downstream_set.discard(g.mark_to)
 
 
 
@@ -267,8 +280,13 @@ class Genome:
         # remove attached connection genes
         self.connection_genes = list(g for g in self.connection_genes \
             if neuron_mark not in (g.mark_from, g.mark_to))
-        self.connections_index = {k for k in self.connections_index \
-            if neuron_mark not in k}
+
+        # remove all downstream connections of the neuron
+        self.connections_index.pop(neuron_mark, None)
+
+        # now remove all the upstream connections
+        for downstream_set in self.connections_index.values():
+            downstream_set.discard(neuron_mark)
 
 
     def copy(self):
