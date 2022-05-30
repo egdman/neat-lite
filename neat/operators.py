@@ -244,39 +244,36 @@ def crossover(genome_primary, genome_secondary) -> Genome:
     Perform crossover of two genomes. The input genomes are kept unchanged.
     The first genome in the arguments will provide 100% of unpaired genes.
     '''
-    # sort genes by historical marks:
-    genes_primary = sorted(chain(
+    neuron_genes = Genome.get_pairs(
         genome_primary.neuron_genes,
-        genome_primary.connection_genes),
-        key = lambda gene: gene.historical_mark)
+        genome_secondary.neuron_genes)
 
-    genes_secondary = sorted(chain(
-        genome_secondary.neuron_genes,
-        genome_secondary.connection_genes),
-        key = lambda gene: gene.historical_mark)
-
-    gene_pairs = Genome.get_pairs(genes_primary, genes_secondary)
+    connect_genes = Genome.get_pairs(
+        genome_primary.connection_genes,
+        genome_secondary.connection_genes)
 
     child_genome = Genome()
 
-    def _add(gene):
-        # it is very important to copy the genes due to reference semantics
-        if isinstance(gene, NeuronGene):
-            child_genome.add_neuron_gene(gene.copy())
-        elif isinstance(gene, ConnectionGene):
-            child_genome.add_connection_gene(gene.copy())
-
-    for gene0, gene1 in gene_pairs:
-
+    for gene0, gene1 in neuron_genes:
         # if gene is paired, inherit one of the pair with 50/50 chance:
         if gene0 is not None and gene1 is not None:
             if random.random() < 0.5:
-                _add(gene0)
+                child_genome.add_neuron_gene(gene0.copy())
             else:
-                _add(gene1)
+                child_genome.add_neuron_gene(gene1.copy())
 
         # inherit unpaired gene from the primary parent:
         elif gene0 is not None:
-            _add(gene0)
+            child_genome.add_neuron_gene(gene0.copy())
+
+    for gene0, gene1 in connect_genes:
+        if gene0 is not None and gene1 is not None:
+            if random.random() < 0.5:
+                child_genome.add_connection_gene(gene0.copy())
+            else:
+                child_genome.add_connection_gene(gene1.copy())
+
+        elif gene0 is not None:
+            child_genome.add_connection_gene(gene0.copy())
 
     return child_genome
