@@ -136,7 +136,7 @@ class Genome:
 
 
     def has_connection(self, mark_from, mark_to):
-        downstream_set = self.connections_index.get(mark_from, {})
+        downstream_set = self.connections_index.get(mark_from, ())
         return mark_to in downstream_set
 
 
@@ -287,7 +287,7 @@ class Genome:
             self._conn_genes = list(g for g in self._conn_genes if g is not None)
             self._conn_num = len(self._conn_genes)
 
-        downstream_set = self.connections_index.get(g.mark_from, {})
+        downstream_set = self.connections_index[g.mark_from]
         downstream_set.discard(g.mark_to)
 
 
