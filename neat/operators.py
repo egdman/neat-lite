@@ -96,14 +96,22 @@ class Mutator:
 
 
     def _unprotected_connection_ids(self, genome):
-        return list(cg_i for cg_i, cg in enumerate(genome._conn_genes) \
-            if cg is not None and not cg.non_removable)
+        if len(genome._conn_genes) == genome._conn_num:
+            return tuple(idx for idx, g in enumerate(genome._conn_genes) \
+                if not g.non_removable)
+        else:
+            return tuple(idx for idx, g in enumerate(genome._conn_genes) \
+                if g is not None and not g.non_removable)
 
 
 
     def _unprotected_neuron_ids(self, genome):
-        return list(ng_i for ng_i, ng in enumerate(genome._neuron_genes) \
-            if ng is not None and not ng.non_removable)
+        if len(genome._neuron_genes) == genome._neuron_num:
+            return tuple(idx for idx, g in enumerate(genome._neuron_genes) \
+                if not g.non_removable)
+        else:
+            return tuple(idx for idx, g in enumerate(genome._neuron_genes) \
+                if g is not None and not g.non_removable)
 
 
 

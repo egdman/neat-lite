@@ -142,11 +142,17 @@ class Genome:
 
 
     def neuron_genes(self):
-        return (g for g in self._neuron_genes if g is not None)
+        if len(self._neuron_genes) == self._neuron_num:
+            return self._neuron_genes
+        else:
+            return (g for g in self._neuron_genes if g is not None)
 
 
     def connection_genes(self):
-        return (g for g in self._conn_genes if g is not None)
+        if len(self._conn_genes) == self._conn_num:
+            return self._conn_genes
+        else:
+            return (g for g in self._conn_genes if g is not None)
 
 
     def has_connection(self, mark_from, mark_to):
