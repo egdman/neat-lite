@@ -129,7 +129,7 @@ def evaluate(genome):
 
 
 def complexity(species_list):
-    n = (len(ge.neuron_genes) for ge in chain(*species_list))
+    n = (ge.num_neuron_genes() for ge in chain(*species_list))
     c = (ge.num_connection_genes() for ge in chain(*species_list))
     return sum(n), sum(c)
 
@@ -166,7 +166,7 @@ class Attempt:
         n_neurons, n_conns = complexity(genomes)
         return ("evals: {}, best genome has: {}N, {}C, complexity: {}N, {}C, best fitness = {}"
             .format(self.evals_num,
-                len(self.best_genome.neuron_genes), self.best_genome.num_connection_genes(),
+                self.best_genome.num_neuron_genes(), self.best_genome.num_connection_genes(),
                 n_neurons, n_conns, self.best_fitness))
 
 

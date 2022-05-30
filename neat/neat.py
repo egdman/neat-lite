@@ -42,10 +42,13 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
 
     def _parameters_mutation(genome):
         if neuron_param_mut_proba > 0:
-            for idx, gene in enumerate(genome.neuron_genes):
+            for idx, gene in enumerate(genome._neuron_genes):
+                if gene is None:
+                    continue
+
                 m_gene = _mutate_gene_params(gene, neuron_param_mut_proba)
                 if m_gene is not None:
-                    genome.neuron_genes[idx] = m_gene
+                    genome._neuron_genes[idx] = m_gene
 
 
         if connection_param_mut_proba > 0:

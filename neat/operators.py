@@ -61,8 +61,14 @@ class Mutator:
         # TODO: rewrite this function better, get rid of attempts
 
         def _get_pair_neurons():
-            neuron_from = random.choice(genome.neuron_genes)
-            neuron_to = random.choice(genome.neuron_genes)
+            neuron_from = random.choice(genome._neuron_genes)
+            if neuron_from is None:
+                return None, None, False
+
+            neuron_to = random.choice(genome._neuron_genes)
+            if neuron_to is None:
+                return None, None, False
+
             mark_from = neuron_from.historical_mark
             mark_to = neuron_to.historical_mark
             are_valid = neuron_from.spec not in self.pure_output_types and \
@@ -96,8 +102,8 @@ class Mutator:
 
 
     def _unprotected_neuron_ids(self, genome):
-        return list(ng_i for ng_i, ng in enumerate(genome.neuron_genes) \
-            if not ng.non_removable)
+        return list(ng_i for ng_i, ng in enumerate(genome._neuron_genes) \
+            if ng is not None and not ng.non_removable)
 
 
 
@@ -246,8 +252,8 @@ def crossover(genome_primary, genome_secondary) -> Genome:
     The first genome in the arguments will provide 100% of unpaired genes.
     '''
     neuron_pairs = Genome.get_pairs(
-        genome_primary.neuron_genes,
-        genome_secondary.neuron_genes)
+        genome_primary.neuron_genes(),
+        genome_secondary.neuron_genes())
 
     neuron_genes = []
     for gene0, gene1 in neuron_pairs:

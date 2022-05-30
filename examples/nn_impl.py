@@ -60,7 +60,7 @@ class NN:
 
         nodes = {}
 
-        for ng in genome.neuron_genes:
+        for ng in genome.neuron_genes():
             if ng.get_type() == 'sigmoid':
 
                 node = ComputeNode(

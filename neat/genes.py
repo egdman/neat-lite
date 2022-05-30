@@ -107,8 +107,9 @@ class ConnectionGene(Gene):
 
 class Genome:
     def __init__(self, neuron_genes=None, connection_genes=None):
-        self.neuron_genes = neuron_genes if neuron_genes else []
+        self._neuron_genes = neuron_genes if neuron_genes else []
         self._conn_genes = connection_genes if connection_genes else []
+        self._neuron_num = len(self._neuron_genes)
         self._conn_num = len(self._conn_genes)
 
         self.connections_index = dict()
@@ -124,15 +125,24 @@ class Genome:
 
     def copy(self):
         g = Genome.__new__(Genome)
-        g.neuron_genes = self.neuron_genes[:]
+        g._neuron_genes = self._neuron_genes[:]
         g._conn_genes = self._conn_genes[:]
+        g._neuron_num = self._neuron_num
         g._conn_num = self._conn_num
         g.connections_index = deepcopy(self.connections_index)
         return g
 
 
+    def num_neuron_genes(self):
+        return self._neuron_num
+
+
     def num_connection_genes(self):
         return self._conn_num
+
+
+    def neuron_genes(self):
+        return (g for g in self._neuron_genes if g is not None)
 
 
     def connection_genes(self):
@@ -152,7 +162,7 @@ class Genome:
         connection_diff_coef=0.):
 
         def _num_genes(g):
-            return len(g.neuron_genes) + g._conn_num
+            return g._neuron_num + g._conn_num
 
         # calculate missing pair difference
         excess_num, disjoint_num = count_excess_disjoint(genome1, genome2)
@@ -264,7 +274,8 @@ class Genome:
 
 
     def add_neuron_gene(self, neuron_gene):
-        self.neuron_genes.append(neuron_gene)
+        self._neuron_genes.append(neuron_gene)
+        self._neuron_num += 1
 
 
 
@@ -297,8 +308,14 @@ class Genome:
 
 
     def remove_neuron_gene(self, index):
-        neuron_mark = self.neuron_genes[index].historical_mark
-        del self.neuron_genes[index]
+        neuron_mark = self._neuron_genes[index].historical_mark
+        self._neuron_genes[index] = None
+        self._neuron_num -= 1
+
+        # collect garbage
+        if len(self._neuron_genes) > 2 * self._neuron_num:
+            self._neuron_genes = list(g for g in self._neuron_genes if g is not None)
+            self._neuron_num = len(self._neuron_genes)
 
         # remove all attached connection genes
         for idx, g in enumerate(self._conn_genes):
@@ -320,8 +337,8 @@ class Genome:
 
 
     def check_validity(self):
-        neuron_hmarks = set(gene.historical_mark for gene in self.neuron_genes)
-        if len(self.neuron_genes) != len(neuron_hmarks):
+        neuron_hmarks = set(gene.historical_mark for gene in self.neuron_genes())
+        if self._neuron_num != len(neuron_hmarks):
             return False
 
         conn_hmarks = set()
@@ -342,7 +359,7 @@ class Genome:
     def __str__(self):
         st = ''
         st += 'neurons:\n'
-        for ng in self.neuron_genes: st += str(ng.__dict__) + '\n'
+        for ng in self.neuron_genes(): st += str(ng.__dict__) + '\n'
         st += 'connections:\n'
         for cg in self.connection_genes():
             st += str(cg.__dict__) + '\n'
@@ -350,7 +367,7 @@ class Genome:
 
 
     def from_yaml(self, y_desc):
-        del self.neuron_genes[:]
+        del self._neuron_genes[:]
         del self._conn_genes[:]
 
         y_neurons = y_desc['neurons']
@@ -376,7 +393,7 @@ class Genome:
             s["gene_type"] = s.pop("spec").type_name
             return s
 
-        neuron_genes = list(_serialize(g) for g in self.neuron_genes)
+        neuron_genes = list(_serialize(g) for g in self.neuron_genes())
         conn_genes = list(_serialize(g) for g in self.connection_genes())
         # yaml.add_representer(unicode, unicode_representer)
         yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
