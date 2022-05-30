@@ -246,36 +246,36 @@ def crossover(genome_primary, genome_secondary) -> Genome:
     Perform crossover of two genomes. The input genomes are kept unchanged.
     The first genome in the arguments will provide 100% of unpaired genes.
     '''
-    neuron_genes = Genome.get_pairs(
+    neuron_pairs = Genome.get_pairs(
         genome_primary.neuron_genes,
         genome_secondary.neuron_genes)
 
-    connect_genes = Genome.get_pairs(
-        genome_primary.connection_genes(),
-        genome_secondary.connection_genes())
-
-    child_genome = Genome()
-
-    for gene0, gene1 in neuron_genes:
+    neuron_genes = []
+    for gene0, gene1 in neuron_pairs:
         # if gene is paired, inherit one of the pair with 50/50 chance:
         if gene0 is not None and gene1 is not None:
             if random.random() < 0.5:
-                child_genome.add_neuron_gene(gene0.copy())
+                neuron_genes.append(gene0.copy())
             else:
-                child_genome.add_neuron_gene(gene1.copy())
+                neuron_genes.append(gene1.copy())
 
         # inherit unpaired gene from the primary parent:
         elif gene0 is not None:
-            child_genome.add_neuron_gene(gene0.copy())
+            neuron_genes.append(gene0.copy())
 
-    for gene0, gene1 in connect_genes:
+    connect_pairs = Genome.get_pairs(
+        genome_primary.connection_genes(),
+        genome_secondary.connection_genes())
+
+    connect_genes = []
+    for gene0, gene1 in connect_pairs:
         if gene0 is not None and gene1 is not None:
             if random.random() < 0.5:
-                child_genome.add_connection_gene(gene0.copy())
+                connect_genes.append(gene0.copy())
             else:
-                child_genome.add_connection_gene(gene1.copy())
+                connect_genes.append(gene1.copy())
 
         elif gene0 is not None:
-            child_genome.add_connection_gene(gene0.copy())
+            connect_genes.append(gene0.copy())
 
-    return child_genome
+    return Genome(neuron_genes, connect_genes)
