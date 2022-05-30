@@ -110,6 +110,8 @@ def produce_new_generation(neat, genome_fitness_list):
 ## INPUTS AND CORRECT OUTPUTS FOR THE NETWORK ##
 inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 true_outputs = (0, .75, .75, 0)
+total_eval_time = [0]
+total_neat_time = [0]
 
 def rmse(X, Y):
     return math.sqrt( sum( (x - y)**2 for x, y in zip(X, Y) ) )
@@ -136,8 +138,15 @@ def complexity(species_list):
 
 def next_gen_species(neat, current_gen):
     # evaluated_gen = list(evaluate(current_gen))
+    t0 = time.perf_counter()
     evaluated_gen = list((genome, evaluate(genome)) for genome in current_gen)
+    t1 = time.perf_counter()
+    total_eval_time[0] += t1 - t0
+
     next_gen = list(produce_new_generation(neat, evaluated_gen))
+    t2 = time.perf_counter()
+    total_neat_time[0] += t2 - t1
+
     best_genome, best_fitness = max(evaluated_gen, key=itemgetter(1))
     return next_gen, best_genome, best_fitness
 
@@ -251,8 +260,11 @@ def make_attempt(num_epochs, gens_per_epoch):
         #     break
     return attempt
 
+best_genome = None
 
-num_attempts = 100
+num_attempts = 10
+total_eval_num = 0
+start_timer = time.perf_counter()
 
 for attempt_id in range(num_attempts):
     attempt_id += 100#20400
@@ -262,6 +274,10 @@ for attempt_id in range(num_attempts):
 
     seed(attempt_id)
     attempt = make_attempt(num_epochs=num_epochs, gens_per_epoch=gens_per_epoch)
+
+    if attempt.target_reached:
+        best_genome = attempt.best_genome
+    total_eval_num += attempt.evals_num
     result = dict(
         id = attempt_id,
         t = timestamp(),
@@ -274,6 +290,13 @@ for attempt_id in range(num_attempts):
     )
     print(result)
 
+total_time = time.perf_counter() - start_timer
+print(f"took {total_time} ticks")
+print(f"total eval time {total_eval_time[0]} ticks")
+print(f"total neat time {total_neat_time[0]} ticks")
+print(f"eval time per 10000 evals: {10000*total_eval_time[0] / total_eval_num} ticks")
+print(f"neat time per 10000 evals: {10000*total_neat_time[0] / total_eval_num} ticks")
+print(f"neat time percentage = {100*total_neat_time[0] / total_time}")
 
 
 # print("Number of performed evaluations: {}, best fitness: {}".format(attempt.evals_num, attempt.best_fitness))
@@ -288,10 +311,13 @@ for attempt_id in range(num_attempts):
 #     print("{} -> {}".format(inp, final_nn.compute(inp)[0]))
 
 
-# # write final genome as YAML file
-# try:
-#     with open('xor_genome.yaml', 'w+') as genfile:
-#         genfile.write(attempt.best_genome.to_yaml())
+# write final genome as YAML file
+if best_genome is None:
+    print("could not reach the target")
+else:
+    try:
+        with open('xor_genome.yaml', 'w+') as genfile:
+            genfile.write(best_genome.to_yaml())
 
-# except AnyError:
-#     pass
+    except AnyError:
+        pass
