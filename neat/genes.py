@@ -115,18 +115,11 @@ class Genome:
     def __init__(self, neuron_genes=None, connection_genes=None):
         self.neuron_genes = neuron_genes if neuron_genes else []
         self.connection_genes = connection_genes if connection_genes else []
+        self.connections_index = {(g.mark_from, g.mark_to) for g in self.connection_genes}
 
 
-
-    def num_genes(self):
-        return len(self.neuron_genes) + len(self.connection_genes)
-
-
-
-    def get_connection_genes(self, mark_from, mark_to):
-        return list(c_g for c_g in self.connection_genes \
-            if c_g.mark_from == mark_from and c_g.mark_to == mark_to)
-
+    def has_connection(self, mark_from, mark_to):
+        return (mark_from, mark_to) in self.connections_index
 
 
     @staticmethod
@@ -136,10 +129,13 @@ class Genome:
         neuron_diff_coef=0.,
         connection_diff_coef=0.):
 
+        def _num_genes(g):
+            return len(g.neuron_genes) + len(g.connection_genes)
+
         # calculate missing pair difference
         excess_num, disjoint_num = count_excess_disjoint(genome1, genome2)
 
-        num_genes = max(genome1.num_genes(), genome2.num_genes())
+        num_genes = max(_num_genes(genome1), _num_genes(genome2))
         miss_pair_diff = (disjoint_coef * disjoint_num + excess_coef * excess_num) / float(num_genes)
 
         # calculate difference of numeric params between genes
@@ -252,17 +248,27 @@ class Genome:
 
     def add_connection_gene(self, connection_gene):
         self.connection_genes.append(connection_gene)
+        k = connection_gene.mark_from, connection_gene.mark_to
+        self.connections_index.add(k)
 
 
 
     def remove_connection_gene(self, index):
+        g = self.connection_genes[index]
         del self.connection_genes[index]
+        self.connections_index.remove((g.mark_from, g.mark_to))
 
 
 
     def remove_neuron_gene(self, index):
+        neuron_mark = self.neuron_genes[index].historical_mark
         del self.neuron_genes[index]
 
+        # remove attached connection genes
+        self.connection_genes = list(g for g in self.connection_genes \
+            if neuron_mark not in (g.mark_from, g.mark_to))
+        self.connections_index = {k for k in self.connections_index \
+            if neuron_mark not in k}
 
 
     def copy(self):
@@ -316,11 +322,11 @@ class Genome:
 
         for y_neuron in y_neurons:
             # y_neuron.update(y_neuron.pop("params"))
-            self.neuron_genes.append(NeuronGene(**y_neuron))
+            self.add_neuron_gene(NeuronGene(**y_neuron))
 
         for y_connection in y_connections:
             # y_connection.update(y_connection.pop("params"))
-            self.connection_genes.append(ConnectionGene(**y_connection))
+            self.add_connection_gene(ConnectionGene(**y_connection))
 
         return self
 

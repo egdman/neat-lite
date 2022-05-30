@@ -72,7 +72,7 @@ class Mutator:
         mark_from, mark_to, are_valid = _get_pair_neurons()
         num_attempts = 0
 
-        while len(genome.get_connection_genes(mark_from, mark_to)) > 0 or not are_valid:
+        while not are_valid or genome.has_connection(mark_from, mark_to):
             mark_from, mark_to, are_valid = _get_pair_neurons()
             num_attempts += 1
             if num_attempts >= max_attempts: return False
@@ -114,7 +114,6 @@ class Mutator:
         """
 
         unprotected_conn_ids = self._unprotected_connection_ids(genome)
-        # unprotected_conn_ids = range(len(genome.connection_genes))
         if len(unprotected_conn_ids) == 0: return
 
         connection_to_split_id = random.choice(unprotected_conn_ids)
@@ -156,7 +155,6 @@ class Mutator:
 
     def remove_random_connection(self, genome):
         unprotected_conn_ids = self._unprotected_connection_ids(genome)
-        # unprotected_conn_ids = range(len(genome.connection_genes))
         if len(unprotected_conn_ids) == 0: return
         gene_id = random.choice(unprotected_conn_ids)
         genome.remove_connection_gene(gene_id)
@@ -166,15 +164,7 @@ class Mutator:
     def remove_random_neuron(self, genome):
         unprotected_neuron_ids = self._unprotected_neuron_ids(genome)
         if len(unprotected_neuron_ids) == 0: return
-
         gene_id = random.choice(unprotected_neuron_ids)
-        neuron_mark = genome.neuron_genes[gene_id].historical_mark
-
-        # remove attached connection genes
-        genome.connection_genes = list(g for g in genome.connection_genes \
-            if neuron_mark not in (g.mark_from, g.mark_to))
-
-        # remove the neuron gene:
         genome.remove_neuron_gene(gene_id)
 
 
