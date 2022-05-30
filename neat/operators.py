@@ -90,8 +90,8 @@ class Mutator:
 
 
     def _unprotected_connection_ids(self, genome):
-        return list(cg_i for cg_i, cg in enumerate(genome.connection_genes) \
-            if not cg.non_removable)
+        return list(cg_i for cg_i, cg in enumerate(genome._conn_genes) \
+            if cg is not None and not cg.non_removable)
 
 
 
@@ -108,16 +108,18 @@ class Mutator:
         And add a neuron C in between A and B.
         Old connection AB gets deleted.
         Two new connections AC and CB are added.
-        Connection AC will have the same type and parameters as AB.
-        Connection CB will have random type (chosen from the allowed ones)
-        and randomly initialized parameters.
+        Connection AC will be a copy of AB, but with a new h-mark.
+        Connection CB will be newly generated.
         """
 
         unprotected_conn_ids = self._unprotected_connection_ids(genome)
         if len(unprotected_conn_ids) == 0: return
 
         connection_to_split_id = random.choice(unprotected_conn_ids)
-        connection_to_split = genome.connection_genes[connection_to_split_id]
+        connection_to_split = genome._conn_genes[connection_to_split_id]
+        while connection_to_split is None:
+            connection_to_split_id = random.choice(unprotected_conn_ids)
+            connection_to_split = genome._conn_genes[connection_to_split_id]
 
 
         # get all the info about the old connection
@@ -249,8 +251,8 @@ def crossover(genome_primary, genome_secondary) -> Genome:
         genome_secondary.neuron_genes)
 
     connect_genes = Genome.get_pairs(
-        genome_primary.connection_genes,
-        genome_secondary.connection_genes)
+        genome_primary.connection_genes(),
+        genome_secondary.connection_genes())
 
     child_genome = Genome()
 

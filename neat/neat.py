@@ -47,7 +47,7 @@ def parameters_mutation(neuron_specs, connection_specs, neuron_param_mut_proba, 
                 _mutate_gene_params(gene, spec, neuron_param_mut_proba)
 
         if connection_param_mut_proba > 0:
-            for gene in genome.connection_genes:
+            for gene in genome.connection_genes():
                 spec = connection_specs.get(gene.gene_type, None)
                 _mutate_gene_params(gene, spec, connection_param_mut_proba)
 
@@ -59,7 +59,7 @@ def topology_augmentation(mutator, probability):
     def _augment(genome):
         if random.random() < probability:
             # if no connections, add a connection
-            if len(genome.connection_genes) == 0:
+            if genome.num_connection_genes() == 0:
                 mutator.add_random_connection(genome)
 
             # otherwise add connection or neuron with equal probability
