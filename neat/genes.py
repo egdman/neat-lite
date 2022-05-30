@@ -305,10 +305,16 @@ class Genome:
         neuron_mark = self.neuron_genes[index].historical_mark
         del self.neuron_genes[index]
 
-        # remove attached connection genes
-        self._conn_genes = list(g for g in self._conn_genes \
-            if g is not None and neuron_mark not in (g.mark_from, g.mark_to))
-        self._conn_num = len(self._conn_genes)
+        # remove all attached connection genes
+        for idx, g in enumerate(self._conn_genes):
+            if g is not None and neuron_mark in (g.mark_from, g.mark_to):
+                self._conn_genes[idx] = None
+                self._conn_num -= 1
+
+        # collect garbage
+        if len(self._conn_genes) > 2 * self._conn_num:
+            self._conn_genes = list(g for g in self._conn_genes if g is not None)
+            self._conn_num = len(self._conn_genes)
 
         # remove all downstream connections of the neuron
         self.connections_index.pop(neuron_mark, None)
