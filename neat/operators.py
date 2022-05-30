@@ -8,24 +8,24 @@ from .utils import zip_with_probabilities, weighted_random
 class GeneDescription(object): pass
 
 
-def neuron(gene_type, non_removable=False, **params):
+def neuron(gene_spec, non_removable=False, **params):
     '''
     Helper function to use with Mutator.produce_genome
     '''
     n = GeneDescription()
     n.non_removable = non_removable
-    n.type = gene_type
+    n.spec = gene_spec
     n.params = params
     return n
 
 
-def connection(gene_type, src, dst, non_removable=False, **params):
+def connection(gene_spec, src, dst, non_removable=False, **params):
     '''
     Helper function to use with Mutator.produce_genome
     '''
     c = GeneDescription()
     c.non_removable = non_removable
-    c.type = gene_type
+    c.spec = gene_spec
     c.src = src
     c.dst = dst
     c.params = params
@@ -65,8 +65,8 @@ class Mutator:
             neuron_to = random.choice(genome.neuron_genes)
             mark_from = neuron_from.historical_mark
             mark_to = neuron_to.historical_mark
-            are_valid = neuron_from.gene_type not in self.pure_output_types and \
-                        neuron_to.gene_type not in self.pure_input_types
+            are_valid = neuron_from.spec not in self.pure_output_types and \
+                        neuron_to.spec not in self.pure_input_types
             return mark_from, mark_to, are_valid
 
         mark_from, mark_to, are_valid = _get_pair_neurons()
@@ -77,10 +77,10 @@ class Mutator:
             num_attempts += 1
             if num_attempts >= max_attempts: return False
 
-        new_connection_type, new_connection_params = self.connection_factory()
+        new_connection_spec, new_connection_params = self.connection_factory()
         self.add_connection(
             genome,
-            new_connection_type,
+            new_connection_spec,
             mark_from,
             mark_to,
             **new_connection_params)
@@ -123,7 +123,6 @@ class Mutator:
 
 
         # get all the info about the old connection
-        old_connection_type = connection_to_split.gene_type
         old_connection_params = connection_to_split.get_params()
 
         mark_from = connection_to_split.mark_from
@@ -134,20 +133,20 @@ class Mutator:
         genome.remove_connection_gene(connection_to_split_id)
 
         # insert new neuron
-        new_neuron_type, new_neuron_params = self.neuron_factory()
-        mark_middle = self.add_neuron(genome, new_neuron_type, **new_neuron_params)
+        new_neuron_spec, new_neuron_params = self.neuron_factory()
+        mark_middle = self.add_neuron(genome, new_neuron_spec, **new_neuron_params)
 
         self.add_connection(
             genome,
-            old_connection_type,
+            connection_to_split.spec,
             mark_from,
             mark_middle,
             **old_connection_params)
 
-        new_connection_type, new_connection_params = self.connection_factory()
+        new_connection_spec, new_connection_params = self.connection_factory()
         self.add_connection(
             genome,
-            new_connection_type,
+            new_connection_spec,
             mark_middle,
             mark_to,
             **new_connection_params)
@@ -172,9 +171,9 @@ class Mutator:
 
 
 
-    def add_neuron(self, genome, neuron_type, non_removable=False, **neuron_params):
+    def add_neuron(self, genome, neuron_spec, non_removable=False, **neuron_params):
         new_neuron_gene = NeuronGene(
-                                gene_type = neuron_type,
+                                gene_spec = neuron_spec,
                                 historical_mark = self.innovation_number,
                                 non_removable = non_removable,
                                 **neuron_params)
@@ -185,9 +184,9 @@ class Mutator:
 
 
 
-    def add_connection(self, genome, connection_type, mark_from, mark_to, non_removable=False, **connection_params):
+    def add_connection(self, genome, connection_spec, mark_from, mark_to, non_removable=False, **connection_params):
         new_conn_gene = ConnectionGene(
-                                  gene_type = connection_type,
+                                  gene_spec = connection_spec,
                                   mark_from = mark_from,
                                   mark_to = mark_to,
                                   historical_mark = self.innovation_number,
@@ -221,7 +220,7 @@ class Mutator:
         for neuron_id, neuron_info in neurons.items():
             hmark = self.add_neuron(
                 genome,
-                neuron_info.type,
+                neuron_info.spec,
                 non_removable=neuron_info.non_removable,
                 **neuron_info.params
             )
@@ -231,7 +230,7 @@ class Mutator:
         for conn_info in connections:
             self.add_connection(
                 genome,
-                conn_info.type,
+                conn_info.spec,
                 mark_from = neuron_map[conn_info.src],
                 mark_to = neuron_map[conn_info.dst],
                 non_removable=conn_info.non_removable,

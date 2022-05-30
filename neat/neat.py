@@ -15,7 +15,7 @@ def default_gene_factory(*gene_specs):
     def _generate():
         # select gene type at random
         gene_spec = random.choice(gene_specs)
-        return gene_spec.type_name, gene_spec.generate_parameter_values()
+        return gene_spec, gene_spec.generate_parameter_values()
     return _generate
 
 
@@ -27,30 +27,23 @@ def two_best_in_sample(sample_size):
     return _select
 
 
-def parameters_mutation(neuron_specs, connection_specs, neuron_param_mut_proba, connection_param_mut_proba):
-    neuron_specs = {spec.type_name: spec for spec in neuron_specs}
-    connection_specs = {spec.type_name: spec for spec in connection_specs}
-
-    def _mutate_gene_params(gene, spec, probability):
-        if spec is None:
-            return None
-
+def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
+    def _mutate_gene_params(gene, probability):
         gene_copy = None
-        for param_name, param_spec in spec.param_specs.items():
+        for param_spec in gene.spec.param_specs:
             if random.random() < probability:
-                current_value = gene[param_name]
+                current_value = gene[param_spec.name]
                 new_value = param_spec.mutate_value(current_value)
                 if gene_copy is None:
                     gene_copy = gene.copy()
-                gene_copy[param_name] = new_value
+                gene_copy[param_spec.name] = new_value
 
         return gene_copy
 
     def _parameters_mutation(genome):
         if neuron_param_mut_proba > 0:
             for idx, gene in enumerate(genome.neuron_genes):
-                spec = neuron_specs.get(gene.gene_type, None)
-                m_gene = _mutate_gene_params(gene, spec, neuron_param_mut_proba)
+                m_gene = _mutate_gene_params(gene, neuron_param_mut_proba)
                 if m_gene is not None:
                     genome.neuron_genes[idx] = m_gene
 
@@ -60,8 +53,7 @@ def parameters_mutation(neuron_specs, connection_specs, neuron_param_mut_proba, 
                 if gene is None:
                     continue
 
-                spec = connection_specs.get(gene.gene_type, None)
-                m_gene = _mutate_gene_params(gene, spec, connection_param_mut_proba)
+                m_gene = _mutate_gene_params(gene, connection_param_mut_proba)
                 if m_gene is not None:
                     genome._conn_genes[idx] = m_gene
 
@@ -127,8 +119,6 @@ class InvalidConfigError(RuntimeError): pass
 class NEAT(object):
     def __init__(self,
         topology_mutator,
-        neuron_specs=(),
-        connection_specs=(),
         selection_step=None,
         crossover_step=None,
         parameters_mutation_step=None,
@@ -166,7 +156,7 @@ class NEAT(object):
             if self.crossover_step is None:
                 self.crossover_step = crossover_two_genomes()
             if self.parameters_mutation_step is None:
-                self.parameters_mutation_step = parameters_mutation(neuron_specs, connection_specs, self.neuron_param_mut_proba, self.connection_param_mut_proba)
+                self.parameters_mutation_step = parameters_mutation(self.neuron_param_mut_proba, self.connection_param_mut_proba)
             if self.topology_augmentation_step is None:
                 self.topology_augmentation_step = topology_augmentation(topology_mutator, self.topology_augmentation_proba)
             if self.topology_reduction_step is None:

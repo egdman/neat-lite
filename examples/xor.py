@@ -88,8 +88,6 @@ def make_neat(mutator, **kw):
     conf_.update(kw)
     return NEAT(
         topology_mutator=mutator,
-        neuron_specs=(input_neuron_spec, sigmoid_neuron_spec),
-        connection_specs=(connection_spec,),
         # # disable 2-way crossover
         # crossover_step=lambda genomes: genomes[0].copy(),
         **conf_)
@@ -173,20 +171,20 @@ class Attempt:
 
 
 # init_genome = mutator.produce_genome(
-#     in1=neuron('input', non_removable=True, layer='input'),
-#     in2=neuron('input', non_removable=True, layer='input'),
-#     out1=neuron('sigmoid', non_removable=True, gain=1, bias=-0.2, layer='output'),
-#     h11 = neuron('sigmoid', gain=1, bias=-0.6, layer='hidden'),
-#     h11066=neuron('sigmoid', gain=1, bias=-1, layer='hidden'),
-#     h11242=neuron('sigmoid', gain=1, bias=1, layer='hidden'),
+#     in1=neuron(input_neuron_spec, non_removable=True, layer='input'),
+#     in2=neuron(input_neuron_spec, non_removable=True, layer='input'),
+#     out1=neuron(sigmoid_neuron_spec, non_removable=True, gain=1, bias=-0.2, layer='output'),
+#     h11 = neuron(sigmoid_neuron_spec, gain=1, bias=-0.6, layer='hidden'),
+#     h11066=neuron(sigmoid_neuron_spec, gain=1, bias=-1, layer='hidden'),
+#     h11242=neuron(sigmoid_neuron_spec, gain=1, bias=1, layer='hidden'),
 #     connections=(
-#         connection('connection', src='in1', dst='h11', weight=-125),
-#         connection('connection', src='in1', dst='h11066', weight=-40),
-#         connection('connection', src='in2', dst='h11', weight=-45),
-#         connection('connection', src='in2', dst='out1', weight=35),
-#         connection('connection', src='h11', dst='out1', weight=125),
-#         connection('connection', src='h11066', dst='out1', weight=-50),
-#         connection('connection', src='h11242', dst='out1', weight=-60),
+#         connection(connection_spec, src='in1', dst='h11', weight=-125),
+#         connection(connection_spec, src='in1', dst='h11066', weight=-40),
+#         connection(connection_spec, src='in2', dst='h11', weight=-45),
+#         connection(connection_spec, src='in2', dst='out1', weight=35),
+#         connection(connection_spec, src='h11', dst='out1', weight=125),
+#         connection(connection_spec, src='h11066', dst='out1', weight=-50),
+#         connection(connection_spec, src='h11242', dst='out1', weight=-60),
 #     )
 # )
 
@@ -207,7 +205,7 @@ def make_attempt(num_epochs, gens_per_epoch):
     mutator = Mutator(
         neuron_factory=default_gene_factory(sigmoid_neuron_spec),
         connection_factory=default_gene_factory(connection_spec),
-        pure_input_types=('input',),
+        pure_input_types=(input_neuron_spec,),
     )
 
     ## CREATE MAIN NEAT OBJECT ##
@@ -219,12 +217,12 @@ def make_attempt(num_epochs, gens_per_epoch):
     sigmoid_params['layer'] = 'output'
 
     init_genome = mutator.produce_genome(
-        in1=neuron('input', non_removable=True, layer='input'),
-        in2=neuron('input', non_removable=True, layer='input'),
-        out1=neuron('sigmoid', non_removable=True, **sigmoid_params),
+        in1=neuron(input_neuron_spec, non_removable=True, layer='input'),
+        in2=neuron(input_neuron_spec, non_removable=True, layer='input'),
+        out1=neuron(sigmoid_neuron_spec, non_removable=True, **sigmoid_params),
         connections=(
-            # connection('connection', src='in1', dst='out1'),
-            # connection('connection', src='in2', dst='out1')
+            # connection(connection_spec, src='in1', dst='out1'),
+            # connection(connection_spec, src='in2', dst='out1')
         )
     )
 

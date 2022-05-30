@@ -61,7 +61,7 @@ class NN:
         nodes = {}
 
         for ng in genome.neuron_genes:
-            if ng.gene_type == 'sigmoid':
+            if ng.get_type() == 'sigmoid':
 
                 node = ComputeNode(
                     act_func = partial(sigmoid, bias = ng.bias, gain = ng.gain)
@@ -75,11 +75,11 @@ class NN:
                     self.comp_nodes.append(node)
                     self.out_nodes.append(node)
 
-            elif ng.gene_type == 'input':
+            elif ng.get_type() == 'input':
                 node = InputNode()
                 self.in_nodes.append(node)
             else:
-                raise RuntimeError("unknown gene type '{}'".format(ng.gene_type))
+                raise RuntimeError("unknown gene type '{}'".format(ng.get_type()))
 
             nodes[ng.historical_mark] = node
 

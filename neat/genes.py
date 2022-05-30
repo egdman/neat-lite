@@ -14,10 +14,10 @@ def hm(gene):
 
 class Gene(object):
 
-    _metas = ('gene_type', 'historical_mark', 'non_removable')
+    _metas = ('spec', 'historical_mark', 'non_removable')
 
-    def __init__(self, gene_type, historical_mark=0, non_removable=False, **params):
-        self.gene_type = gene_type
+    def __init__(self, gene_spec, historical_mark=0, non_removable=False, **params):
+        self.spec = gene_spec
         self.historical_mark = historical_mark
         self.non_removable = non_removable
 
@@ -42,7 +42,7 @@ class Gene(object):
 
 
     def get_type(self):
-        return self.gene_type
+        return self.spec.type_name
 
 
     def copy(self):
@@ -66,14 +66,14 @@ class NeuronGene(Gene):
 
     _metas = Gene._metas
 
-    def __init__(self, gene_type, historical_mark=0, non_removable=False, **params):
-        super(NeuronGene, self).__init__(gene_type, historical_mark, non_removable, **params)
+    def __init__(self, gene_spec, historical_mark=0, non_removable=False, **params):
+        super(NeuronGene, self).__init__(gene_spec, historical_mark, non_removable, **params)
 
 
     def __str__(self):
         s = "NEAT Neuron gene, mark: {}, type: {}".format(
             self.historical_mark,
-            self.gene_type,
+            self.get_type(),
         )
         if self.non_removable:
             s = "{} norem".format(s)
@@ -86,8 +86,8 @@ class ConnectionGene(Gene):
 
     _metas = Gene._metas + ('mark_from', 'mark_to')
 
-    def __init__(self, gene_type, mark_from, mark_to, historical_mark=0, non_removable=False, **params):
-        super(ConnectionGene, self).__init__(gene_type, historical_mark, non_removable, **params)
+    def __init__(self, gene_spec, mark_from, mark_to, historical_mark=0, non_removable=False, **params):
+        super(ConnectionGene, self).__init__(gene_spec, historical_mark, non_removable, **params)
 
         self.mark_from = mark_from
         self.mark_to = mark_to
@@ -96,7 +96,7 @@ class ConnectionGene(Gene):
     def __str__(self):
         s = "NEAT Connection gene, mark: {}, type: {}, {} -> {}".format(
             self.historical_mark,
-            self.gene_type,
+            self.get_type(),
             self.mark_from,
             self.mark_to,
         )
@@ -371,8 +371,13 @@ class Genome:
         if yaml_dump is None:
             raise NotImplementedError("PyYaml not installed")
 
-        neuron_genes = list(g.__dict__ for g in self.neuron_genes)
-        conn_genes = list(g.__dict__ for g in self.connection_genes())
+        def _serialize(gene):
+            s = copy(gene.__dict__)
+            s["gene_type"] = s.pop("spec").type_name
+            return s
+
+        neuron_genes = list(_serialize(g) for g in self.neuron_genes)
+        conn_genes = list(_serialize(g) for g in self.connection_genes())
         # yaml.add_representer(unicode, unicode_representer)
         yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
         return yaml_dump(yaml_repr, default_flow_style=False)

@@ -115,19 +115,11 @@ class GeneSpec(object):
 
     def __init__(self, type_name, *param_specs):
         self.type_name = type_name
-        self.param_specs = {param_spec.name: param_spec for param_spec in param_specs}
-
-
-    def __iter__(self):
-        return self.param_specs.__iter__()
-
-
-    def get(self, key, default=None):
-        return self.param_specs.get(key, default)
+        self.param_specs = tuple(param_specs)
 
 
     def generate_parameter_values(self):
         '''
         Returns a dictionary {parameter_name: generated_parameter_value}
         '''
-        return {name: spec.generate_value() for name, spec in self.param_specs.items()}
+        return {spec.name: spec.generate_value() for spec in self.param_specs}
