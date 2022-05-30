@@ -132,7 +132,7 @@ def evaluate(genome):
 
 def complexity(species_list):
     n = (len(ge.neuron_genes) for ge in chain(*species_list))
-    c = (len(ge.connection_genes) for ge in chain(*species_list))
+    c = (ge.num_connection_genes() for ge in chain(*species_list))
     return sum(n), sum(c)
 
 
@@ -168,7 +168,7 @@ class Attempt:
         n_neurons, n_conns = complexity(genomes)
         return ("evals: {}, best genome has: {}N, {}C, complexity: {}N, {}C, best fitness = {}"
             .format(self.evals_num,
-                len(self.best_genome.neuron_genes), len(self.best_genome.connection_genes),
+                len(self.best_genome.neuron_genes), self.best_genome.num_connection_genes(),
                 n_neurons, n_conns, self.best_fitness))
 
 
@@ -262,6 +262,7 @@ def make_attempt(num_epochs, gens_per_epoch):
 
 
 num_attempts = 5
+total_eval_num = 0
 start_timer = time.perf_counter()
 
 for attempt_id in range(num_attempts):
@@ -272,6 +273,7 @@ for attempt_id in range(num_attempts):
 
     seed(attempt_id)
     attempt = make_attempt(num_epochs=num_epochs, gens_per_epoch=gens_per_epoch)
+    total_eval_num += attempt.evals_num
     result = dict(
         id = attempt_id,
         t = timestamp(),
@@ -287,6 +289,7 @@ for attempt_id in range(num_attempts):
 print(f"took {time.perf_counter() - start_timer} ticks")
 print(f"total eval time {total_eval_time[0]} ticks")
 print(f"total neat time {total_neat_time[0]} ticks")
+print(f"neat time per 1000 evals: {1000*total_neat_time[0] / total_eval_num} ticks")
 
 
 # print("Number of performed evaluations: {}, best fitness: {}".format(attempt.evals_num, attempt.best_fitness))

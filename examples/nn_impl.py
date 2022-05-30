@@ -83,7 +83,7 @@ class NN:
 
             nodes[ng.historical_mark] = node
 
-        for cg in genome.connection_genes:
+        for cg in genome.connection_genes():
             nodes[cg.mark_to].add_input(nodes[cg.mark_from], cg.weight)
 
         return self

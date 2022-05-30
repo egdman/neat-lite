@@ -113,9 +113,11 @@ class ConnectionGene(Gene):
 class Genome:
     def __init__(self, neuron_genes=None, connection_genes=None):
         self.neuron_genes = neuron_genes if neuron_genes else []
-        self.connection_genes = connection_genes if connection_genes else []
+        self._conn_genes = connection_genes if connection_genes else []
+        self._conn_num = len(self._conn_genes)
+
         self.connections_index = dict()
-        for g in self.connection_genes:
+        for g in self._conn_genes:
             m0 = g.mark_from
             m1 = g.mark_to
             downstream_set = self.connections_index.get(m0, None)
@@ -123,6 +125,14 @@ class Genome:
                 self.connections_index[m0] = {m1}
             else:
                 downstream_set.add(m1)
+
+
+    def num_connection_genes(self):
+        return self._conn_num
+
+
+    def connection_genes(self):
+        return (g for g in self._conn_genes if g is not None)
 
 
     def has_connection(self, mark_from, mark_to):
@@ -138,7 +148,7 @@ class Genome:
         connection_diff_coef=0.):
 
         def _num_genes(g):
-            return len(g.neuron_genes) + len(g.connection_genes)
+            return len(g.neuron_genes) + g._conn_num
 
         # calculate missing pair difference
         excess_num, disjoint_num = count_excess_disjoint(genome1, genome2)
@@ -255,7 +265,9 @@ class Genome:
 
 
     def add_connection_gene(self, connection_gene):
-        self.connection_genes.append(connection_gene)
+        self._conn_genes.append(connection_gene)
+        self._conn_num += 1
+
         m0, m1 = connection_gene.mark_from, connection_gene.mark_to
         downstream_set = self.connections_index.get(m0, None)
         if downstream_set is None:
@@ -266,8 +278,15 @@ class Genome:
 
 
     def remove_connection_gene(self, index):
-        g = self.connection_genes[index]
-        del self.connection_genes[index]
+        g = self._conn_genes[index]
+        self._conn_genes[index] = None
+        self._conn_num -= 1
+
+        # collect garbage
+        if len(self._conn_genes) > 2 * self._conn_num:
+            self._conn_genes = list(g for g in self._conn_genes if g is not None)
+            self._conn_num = len(self._conn_genes)
+
         downstream_set = self.connections_index.get(g.mark_from, {})
         downstream_set.discard(g.mark_to)
 
@@ -278,8 +297,9 @@ class Genome:
         del self.neuron_genes[index]
 
         # remove attached connection genes
-        self.connection_genes = list(g for g in self.connection_genes \
-            if neuron_mark not in (g.mark_from, g.mark_to))
+        self._conn_genes = list(g for g in self._conn_genes \
+            if g is not None and neuron_mark not in (g.mark_from, g.mark_to))
+        self._conn_num = len(self._conn_genes)
 
         # remove all downstream connections of the neuron
         self.connections_index.pop(neuron_mark, None)
@@ -295,7 +315,7 @@ class Genome:
         for n_gene in self.neuron_genes:
             copy_gen.add_neuron_gene(n_gene.copy())
 
-        for c_gene in self.connection_genes:
+        for c_gene in self.connection_genes():
             copy_gen.add_connection_gene(c_gene.copy())
 
         return copy_gen
@@ -308,7 +328,7 @@ class Genome:
             return False
 
         conn_hmarks = set()
-        for conn_gene in self.connection_genes:
+        for conn_gene in self.connection_genes():
             if conn_gene.historical_mark in conn_hmarks:
                 return False
             if conn_gene.historical_mark in neuron_hmarks:
@@ -327,13 +347,14 @@ class Genome:
         st += 'neurons:\n'
         for ng in self.neuron_genes: st += str(ng.__dict__) + '\n'
         st += 'connections:\n'
-        for cg in self.connection_genes: st += str(cg.__dict__) + '\n'
+        for cg in self.connection_genes():
+            st += str(cg.__dict__) + '\n'
         return st
 
 
     def from_yaml(self, y_desc):
         del self.neuron_genes[:]
-        del self.connection_genes[:]
+        del self._conn_genes[:]
 
         y_neurons = y_desc['neurons']
         y_connections = y_desc['connections']
@@ -353,8 +374,8 @@ class Genome:
         if yaml_dump is None:
             raise NotImplementedError("PyYaml not installed")
 
-        neuron_genes = list(n_g.__dict__ for n_g in self.neuron_genes)
-        conn_genes = list(c_g.__dict__ for c_g in self.connection_genes)
+        neuron_genes = list(g.__dict__ for g in self.neuron_genes)
+        conn_genes = list(g.__dict__ for g in self.connection_genes())
         # yaml.add_representer(unicode, unicode_representer)
         yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
         return yaml_dump(yaml_repr, default_flow_style=False)
