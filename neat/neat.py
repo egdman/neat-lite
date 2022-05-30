@@ -33,23 +33,37 @@ def parameters_mutation(neuron_specs, connection_specs, neuron_param_mut_proba, 
 
     def _mutate_gene_params(gene, spec, probability):
         if spec is None:
-            return
+            return None
+
+        gene_copy = None
         for param_name, param_spec in spec.param_specs.items():
             if random.random() < probability:
                 current_value = gene[param_name]
                 new_value = param_spec.mutate_value(current_value)
-                gene[param_name] = new_value
+                if gene_copy is None:
+                    gene_copy = gene.copy()
+                gene_copy[param_name] = new_value
+
+        return gene_copy
 
     def _parameters_mutation(genome):
         if neuron_param_mut_proba > 0:
-            for gene in genome.neuron_genes:
+            for idx, gene in enumerate(genome.neuron_genes):
                 spec = neuron_specs.get(gene.gene_type, None)
-                _mutate_gene_params(gene, spec, neuron_param_mut_proba)
+                m_gene = _mutate_gene_params(gene, spec, neuron_param_mut_proba)
+                if m_gene is not None:
+                    genome.neuron_genes[idx] = m_gene
+
 
         if connection_param_mut_proba > 0:
-            for gene in genome.connection_genes():
+            for idx, gene in enumerate(genome._conn_genes):
+                if gene is None:
+                    continue
+
                 spec = connection_specs.get(gene.gene_type, None)
-                _mutate_gene_params(gene, spec, connection_param_mut_proba)
+                m_gene = _mutate_gene_params(gene, spec, connection_param_mut_proba)
+                if m_gene is not None:
+                    genome._conn_genes[idx] = m_gene
 
         return genome
     return _parameters_mutation
