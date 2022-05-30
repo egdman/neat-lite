@@ -1,6 +1,5 @@
 from numbers import Real
 from copy import copy, deepcopy
-from itertools import chain
 
 try:
     from yaml import dump as yaml_dump
@@ -42,16 +41,12 @@ class Gene(object):
         return {key: value for key, value in self.__dict__.items() if key not in self._metas}
 
 
-    def copy_params(self):
-        return deepcopy(self.get_params())
-
-
     def get_type(self):
         return self.gene_type
 
 
     def copy(self):
-        return deepcopy(self)
+        return copy(self)
 
 
     def numeric_difference(self, other):
