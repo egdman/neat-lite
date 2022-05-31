@@ -125,8 +125,11 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
 
 
 def topology_augmentation(mutator, probability):
-    def _augment(genome):
-        if random.random() < probability:
+    if probability == 0:
+        def _augment(genome):
+            return genome
+    elif probability == 1:
+        def _augment(genome):
             # if no connections, add a connection
             if genome.num_connection_genes() == 0:
                 mutator.add_random_connection(genome)
@@ -136,19 +139,44 @@ def topology_augmentation(mutator, probability):
                 mutator.add_random_connection(genome)
             else:
                 mutator.add_random_neuron(genome)
-        return genome
+            return genome
+    else:
+        def _augment(genome):
+            rv = random.random()
+            if rv < probability:
+                # if no connections, add a connection
+                if genome.num_connection_genes() == 0:
+                    mutator.add_random_connection(genome)
 
+                # otherwise add connection or neuron with equal probability
+                elif rv < 0.5 * probability:
+                    mutator.add_random_connection(genome)
+                else:
+                    mutator.add_random_neuron(genome)
+            return genome
     return _augment
 
 
 def topology_reduction(mutator, probability):
-    def _reduce(genome):
-        if random.random() < probability:
+    if probability == 0:
+        def _reduce(genome):
+            return genome
+    elif probability == 1:
+        def _reduce(genome):
             if random.random() < 0.5:
                 mutator.remove_random_connection(genome)
             else:
                 mutator.remove_random_neuron(genome)
-        return genome
+            return genome
+    else:
+        def _reduce(genome):
+            rv = random.random()
+            if rv < probability:
+                if rv < 0.5 * probability:
+                    mutator.remove_random_connection(genome)
+                else:
+                    mutator.remove_random_neuron(genome)
+            return genome
     return _reduce
 
 
