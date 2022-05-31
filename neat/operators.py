@@ -1,8 +1,6 @@
 import random
 from .specs import GeneSpec
 from .genes import NeuronGene, ConnectionGene, Genome
-from .utils import zip_with_probabilities, weighted_random
-
 
 class GeneDescription(object): pass
 

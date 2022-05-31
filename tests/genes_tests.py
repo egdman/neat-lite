@@ -181,15 +181,3 @@ class TestGenes(unittest.TestCase):
             cg.get_params(),
             msg="cg.get_params() is wrong: {}".format(cg.get_params())
             )
-
-
-        # test Gene.numeric_difference method
-        cg1 = ConnectionGene('con', 3, 10, weight=0.5, another_num_param=-2.4, nominal='abc')
-        cg2 = ConnectionGene('con', 3, 10, weight=0.65, another_num_param=-0.4, nominal='def')
-
-        true_diff = 2.15
-        self.assertEqual(
-            true_diff,
-            cg1.numeric_difference(cg2),
-            msg="Numeric difference between genes gives wrong result"
-            )

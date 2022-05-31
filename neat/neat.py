@@ -254,26 +254,6 @@ class NEAT(object):
                 self.topology_reduction_step = topology_reduction(topology_mutator, self.topology_reduction_proba)
 
 
-    def share_fitness(self, genomes_fitnesses):
-
-        def species_size(genome, fitness):
-            size = 1
-            for other_genome, other_fitness in genomes_fitnesses:
-                if not other_genome == genome:
-
-                    distance = Genome.get_dissimilarity(
-                        other_genome, genome,
-                        excess_coef = self.excess_coef,
-                        disjoint_coef = self.disjoint_coef,
-                        neuron_diff_coef = self.neuron_diff_coef,
-                        connection_diff_coef = self.connection_diff_coef
-                    )
-                    if distance < self.speciation_threshold: size += 1
-            return size
-
-        return list((g, f / species_size(g, f)) for g, f in genomes_fitnesses)
-
-
     def produce_new_genome(self, genome_and_fitness_list) -> Genome:
         if self.custom_reproduction_pipeline is None:
             value = self.selection_step(genome_and_fitness_list)

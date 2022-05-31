@@ -1,13 +1,9 @@
-from numbers import Real
 from copy import copy, deepcopy
 
 try:
     from yaml import dump as yaml_dump
 except ImportError:
     yaml_dump = None
-
-def unicode_representer(dumper, data):
-    return dumper.represent_scalar(u'tag:yaml.org,2002:str', data)
 
 def hm(gene):
     return gene.historical_mark
@@ -47,19 +43,6 @@ class Gene(object):
 
     def copy(self):
         return copy(self)
-
-
-    def numeric_difference(self, other):
-        params1 = self.get_params()
-        params2 = other.get_params()
-        diff = 0.
-        for par_name, p1 in params1.items():
-            if not isinstance(p1, Real): continue
-            p2 = params2[par_name]
-            diff += abs(p2 - p1)
-        return diff
-
-
 
 
 class NeuronGene(Gene):
@@ -158,125 +141,6 @@ class Genome:
     def has_connection(self, mark_from, mark_to):
         downstream_set = self.connections_index.get(mark_from, ())
         return mark_to in downstream_set
-
-
-    @staticmethod
-    def get_dissimilarity(genome1, genome2,
-        excess_coef=1.,
-        disjoint_coef=1.,
-        neuron_diff_coef=0.,
-        connection_diff_coef=0.):
-
-        def _num_genes(g):
-            return g._neuron_num + g._conn_num
-
-        # calculate missing pair difference
-        excess_num, disjoint_num = count_excess_disjoint(genome1, genome2)
-
-        num_genes = max(_num_genes(genome1), _num_genes(genome2))
-        miss_pair_diff = (disjoint_coef * disjoint_num + excess_coef * excess_num) / float(num_genes)
-
-        # calculate difference of numeric params between genes
-        neuron_diff = 0.
-        connection_diff = 0.
-
-        # if neuron_diff_coef > 0 or connection_diff_coef > 0:
-        #     neuron_diff, connection_diff = Genome._calc_numeric_diff(pairs)
-
-        return miss_pair_diff + neuron_diff_coef*neuron_diff + connection_diff_coef*connection_diff
-
-
-    @staticmethod
-    def count_excess_disjoint(pairs):
-        def consume_(lg, rg):
-            if lg is None:
-                n_unpaired = 1
-                for lg, rg in pairs:
-                    if lg is None:
-                        n_unpaired += 1
-                    else:
-                        return lg, rg, n_unpaired, True
-
-            elif rg is None:
-                n_unpaired = 1
-                for lg, rg in pairs:
-                    if rg is None:
-                        n_unpaired += 1
-                    else:
-                        return lg, rg, n_unpaired, True
-
-            else:
-                n_unpaired = 0
-                for lg, rg in pairs:
-                    if lg is None or rg is None:
-                        return lg, rg, n_unpaired, True
-
-            return lg, rg, n_unpaired, False
-
-        pairs = iter(pairs)
-        try:
-            lg, rg = next(pairs)
-        except StopIteration:
-            return 0, 0
-
-        lg, rg, excess_num, has_more = consume_(lg, rg)
-        excess_tail = 0
-        disjoint_num = 0
-        while has_more:
-            disjoint_num += excess_tail
-            lg, rg, excess_tail, has_more = consume_(lg, rg)
-
-        return excess_num + excess_tail, disjoint_num
-
-
-    @staticmethod
-    def _calc_numeric_diff(gene_pairs):
-        neuron_diff = 0.
-        connection_diff = 0.
-
-        for gene1, gene2 in gene_pairs:
-            if gene1 is None or gene2 is None: continue
-
-            if isinstance(gene1, NeuronGene):
-                neuron_diff += gene1.numeric_difference(gene2)
-
-            elif isinstance(gene1, ConnectionGene):
-                connection_diff += gene1.numeric_difference(gene2)
-        return neuron_diff, connection_diff
-
-
-    @staticmethod
-    def get_pairs(genes_sorted1, genes_sorted2):
-        left_genes = iter(genes_sorted1)
-        right_genes = iter(genes_sorted2)
-
-        left_gene = next(left_genes, None)
-        right_gene = next(right_genes, None)
-
-        while True:
-            if left_gene is None:
-                if right_gene is not None:
-                    yield None, right_gene
-                    yield from ((None, rg) for rg in right_genes)
-                break
-
-            elif right_gene is None:
-                yield left_gene, None
-                yield from ((lg, None) for lg in left_genes)
-                break
-
-            elif hm(left_gene) < hm(right_gene):
-                yield left_gene, None
-                left_gene = next(left_genes, None)
-
-            elif hm(left_gene) > hm(right_gene):
-                yield None, right_gene
-                right_gene = next(right_genes, None)
-
-            else:
-                yield left_gene, right_gene
-                left_gene = next(left_genes, None)
-                right_gene = next(right_genes, None)
 
 
     def add_neuron_gene(self, neuron_gene):
@@ -401,6 +265,82 @@ class Genome:
 
         neuron_genes = list(_serialize(g) for g in self.neuron_genes())
         conn_genes = list(_serialize(g) for g in self.connection_genes())
-        # yaml.add_representer(unicode, unicode_representer)
         yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
         return yaml_dump(yaml_repr, default_flow_style=False)
+
+
+    @staticmethod
+    def count_excess_disjoint(pairs):
+        def consume_(lg, rg):
+            if lg is None:
+                n_unpaired = 1
+                for lg, rg in pairs:
+                    if lg is None:
+                        n_unpaired += 1
+                    else:
+                        return lg, rg, n_unpaired, True
+
+            elif rg is None:
+                n_unpaired = 1
+                for lg, rg in pairs:
+                    if rg is None:
+                        n_unpaired += 1
+                    else:
+                        return lg, rg, n_unpaired, True
+
+            else:
+                n_unpaired = 0
+                for lg, rg in pairs:
+                    if lg is None or rg is None:
+                        return lg, rg, n_unpaired, True
+
+            return lg, rg, n_unpaired, False
+
+        pairs = iter(pairs)
+        try:
+            lg, rg = next(pairs)
+        except StopIteration:
+            return 0, 0
+
+        lg, rg, excess_num, has_more = consume_(lg, rg)
+        excess_tail = 0
+        disjoint_num = 0
+        while has_more:
+            disjoint_num += excess_tail
+            lg, rg, excess_tail, has_more = consume_(lg, rg)
+
+        return excess_num + excess_tail, disjoint_num
+
+
+    @staticmethod
+    def get_pairs(genes_sorted1, genes_sorted2):
+        left_genes = iter(genes_sorted1)
+        right_genes = iter(genes_sorted2)
+
+        left_gene = next(left_genes, None)
+        right_gene = next(right_genes, None)
+
+        while True:
+            if left_gene is None:
+                if right_gene is not None:
+                    yield None, right_gene
+                    yield from ((None, rg) for rg in right_genes)
+                break
+
+            elif right_gene is None:
+                yield left_gene, None
+                yield from ((lg, None) for lg in left_genes)
+                break
+
+            elif hm(left_gene) < hm(right_gene):
+                yield left_gene, None
+                left_gene = next(left_genes, None)
+
+            elif hm(left_gene) > hm(right_gene):
+                yield None, right_gene
+                right_gene = next(right_genes, None)
+
+            else:
+                yield left_gene, right_gene
+                left_gene = next(left_genes, None)
+                right_gene = next(right_genes, None)
