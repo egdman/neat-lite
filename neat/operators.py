@@ -1,6 +1,5 @@
 import random
-from itertools import chain
-
+from .specs import GeneSpec
 from .genes import NeuronGene, ConnectionGene, Genome
 from .utils import zip_with_probabilities, weighted_random
 
@@ -8,7 +7,7 @@ from .utils import zip_with_probabilities, weighted_random
 class GeneDescription(object): pass
 
 
-def neuron(gene_spec, non_removable=False, **params):
+def neuron(gene_spec: GeneSpec, non_removable=False, **params):
     '''
     Helper function to use with Mutator.produce_genome
     '''
@@ -19,7 +18,7 @@ def neuron(gene_spec, non_removable=False, **params):
     return n
 
 
-def connection(gene_spec, src, dst, non_removable=False, **params):
+def connection(gene_spec: GeneSpec, src, dst, non_removable=False, **params):
     '''
     Helper function to use with Mutator.produce_genome
     '''

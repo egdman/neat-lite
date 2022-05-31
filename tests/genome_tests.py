@@ -1,16 +1,7 @@
 import unittest
 from neat.genes import Genome, NeuronGene
-# import os
 import sys
 from operator import itemgetter
-# import yaml
-# import math
-
-# here = os.path.abspath(os.path.dirname(__file__))
-
-# nn_impl_path = os.path.join(here, "../examples")
-# sys.path.append(nn_impl_path)
-# from nn_impl import NN
 
 
 def hm(gene1, gene2=None):
@@ -199,26 +190,3 @@ class TestGenome(unittest.TestCase):
         excess, disjoint = Genome.count_excess_disjoint(())
         self.assertEqual(excess, 0)
         self.assertEqual(disjoint, 0)
-
-    # def test_neuron_gene(self):
-
-    #     genome = self.genome
-    #     # print(genome)
-
-    #     self.assertEqual(
-    #         -0.09032,
-    #         round(genome.neuron_genes[-1].bias, 6),
-    #         msg="Got wrong attrribute value when converted from YAML"
-    #         )
-
-    #     self.assertEqual(
-    #         0.774753,
-    #         round(genome.neuron_genes[-3].gain, 6),
-    #         msg="Got wrong attrribute value when converted from YAML"
-    #         )
-
-    #     self.assertEqual(
-    #         535,
-    #         genome.neuron_genes[-3].historical_mark,
-    #         msg="Got wrong attribute value when converted from YAML"
-    #         )

@@ -1,16 +1,16 @@
 import unittest
 from neat.genes import NeuronGene, ConnectionGene
+from neat.specs import GeneSpec
 
 class TestGenes(unittest.TestCase):
     def test_neuron_gene(self):
-        print("Testing NeuronGene")
-        
-        ng = NeuronGene('sigmoid', bias=0.3, gain=0.96)
+        spec = GeneSpec('sigmoid')
+        ng = NeuronGene(spec, bias=0.3, gain=0.96)
 
         self.assertEqual(
             'sigmoid',
-            ng.gene_type,
-            msg="ng.gene_type is wrong: {}".format(ng.gene_type)
+            ng.get_type(),
+            msg="ng.get_type() is wrong: {}".format(ng.get_type())
             )
 
         self.assertEqual(
@@ -19,28 +19,18 @@ class TestGenes(unittest.TestCase):
             msg="ng.gain is wrong"
             )
 
-        
+
         self.assertEqual(
             {'bias': 0.3, 'gain': 0.96},
             ng.get_params(),
             msg="ng.get_params() is wrong: {}".format(ng.get_params())
             )
 
-        # params = ng.get_params()
-        # params['gain'] = 4444.8888
-
-        # self.assertEqual(
-        #     {'bias': 0.3, 'gain': 4444.8888},
-        #     ng.get_params(),
-        #     msg="ng's params should have changed after we make changes to their reference" 
-        #     )
-
-
-        copied_params = ng.copy_params()
+        copied_params = ng.get_params()
         self.assertEqual(
             {'bias': 0.3, 'gain': 0.96},
             copied_params,
-            msg="ng.copy_params() is wrong"
+            msg="ng.get_params() is wrong"
             )
         copied_params['bias'] = 1111.2222
 
@@ -127,17 +117,15 @@ class TestGenes(unittest.TestCase):
 
 
 
-        
-    def test_connection_gene(self):
-        print("Testing ConnectionGene")
-        
-        cg = ConnectionGene('def_con', 888, 999, weight=0.8)
 
+    def test_connection_gene(self):
+        spec = GeneSpec('connection')
+        cg = ConnectionGene(spec, 888, 999, weight=0.8)
 
         self.assertEqual(
-            'def_con',
-            cg.gene_type,
-            msg="ng.gene_type is wrong: {}".format(cg.gene_type)
+            'connection',
+            cg.get_type(),
+            msg="ng.get_type() is wrong: {}".format(cg.get_type())
             )
 
 
