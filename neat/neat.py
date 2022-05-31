@@ -276,17 +276,14 @@ class NEAT(object):
 
     def produce_new_genome(self, genome_and_fitness_list) -> Genome:
         if self.custom_reproduction_pipeline is None:
-            pipeline = (
-                self.selection_step,
-                self.crossover_step,
-                self.parameters_mutation_step,
-                self.topology_augmentation_step,
-                self.topology_reduction_step,
-            )
+            value = self.selection_step(genome_and_fitness_list)
+            value = self.crossover_step(value)
+            value = self.parameters_mutation_step(value)
+            value = self.topology_augmentation_step(value)
+            value = self.topology_reduction_step(value)
+            return value
         else:
-            pipeline = self.custom_reproduction_pipeline
-
-        value = genome_and_fitness_list
-        for step in pipeline:
-            value = step(value)
-        return value
+            value = genome_and_fitness_list
+            for step in self.custom_reproduction_pipeline:
+                value = step(value)
+            return value
