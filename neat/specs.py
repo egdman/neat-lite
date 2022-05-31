@@ -1,4 +1,5 @@
 import random
+from itertools import chain
 
 
 def clamp(min_value, value, max_value):
@@ -115,11 +116,20 @@ class GeneSpec(object):
 
     def __init__(self, type_name, *param_specs):
         self.type_name = type_name
-        self.param_specs = tuple(param_specs)
+        self.immutable_param_specs = []
+        self.mutable_param_specs = []
+        for spec in param_specs:
+            if spec.mutator is None:
+                self.immutable_param_specs.append(spec)
+            else:
+                self.mutable_param_specs.append(spec)
+        self.immutable_param_specs = tuple(self.immutable_param_specs)
+        self.mutable_param_specs = tuple(self.mutable_param_specs)
 
 
     def generate_parameter_values(self):
         '''
         Returns a dictionary {parameter_name: generated_parameter_value}
         '''
-        return {spec.name: spec.generate_value() for spec in self.param_specs}
+        return {spec.name: spec.generate_value() for spec in \
+            chain(self.immutable_param_specs, self.mutable_param_specs)}

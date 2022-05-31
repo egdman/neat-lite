@@ -30,7 +30,7 @@ def two_best_in_sample(sample_size):
 def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
     def _mutate_gene_params(gene, probability):
         gene_copy = None
-        for param_spec in gene.spec.param_specs:
+        for param_spec in gene.spec.mutable_param_specs:
             if random.random() < probability:
                 current_value = gene[param_spec.name]
                 new_value = param_spec.mutate_value(current_value)
