@@ -106,7 +106,7 @@ class ParamSpec:
             return self.mutator(self.min_value, current_value, self.max_value)
 
 
-class GeneSpec(object):
+class GeneSpec:
     '''
     A collection of parameter specifications for a gene.
 

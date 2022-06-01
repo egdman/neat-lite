@@ -14,7 +14,7 @@ def sigmoid(x, bias, gain):
     return 1. / ( 1. + math.exp( -gain * (x - bias) ) )
 
 
-class Node(object):
+class Node:
     def __init__(self):
         self.value = 0
         self._new_value = 0

@@ -5,7 +5,7 @@ try:
 except ImportError:
     yaml_dump = None
 
-class Gene(object):
+class Gene:
 
     _metas = ('spec', 'historical_mark', 'non_removable')
 

@@ -2,7 +2,7 @@ import random
 from .specs import GeneSpec
 from .genes import NeuronGene, ConnectionGene, Genome
 
-class GeneDescription(object): pass
+class GeneDescription: pass
 
 
 def neuron(gene_spec: GeneSpec, non_removable=False, **params):
