@@ -24,14 +24,10 @@ try:
 except NameError:
     pass
 
-def timestamp():
-    ts = datetime.fromtimestamp(time.time(), tz=timezone.utc)
-    return ts.strftime("%b %d %y %H:%M")
-
 here_dir = path.dirname(path.abspath(__file__))
 sys.path.append(path.join(here_dir, '..'))
 
-from neat import (Mutator, NEAT, GeneSpec, ParamSpec as PS, validate_genome,
+from neat import (Mutator, Pipeline, GeneSpec, ParamSpec as PS, validate_genome,
     gen, mut, bounds,
     neuron, connection, default_gene_factory)
 
@@ -39,21 +35,28 @@ from nn_impl import NN
 
 
 #### CONFIG #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
-neuron_sigma = 0.25                 # mutation sigma for neuron params
-conn_sigma = 10.                    # mutation sigma for connection params
-
-popul = 20
-num_species = 4
-elite_num = 1 # how many top performing genomes in a species will be copied unchanged into the next generation
+generation_size = 20 # number of genomes in each generation across all species
+num_species = 4      # number of species
+elite_num = 1        # how many top performing members of a species will be
+                     #   copied unchanged into the next generation
 
 conf = dict(
-selection_sample_size = int(.75 * popul) // num_species, # size of the selection sample (must be in the range [2, pop_size])
-neuron_param_mut_proba = 0.8,       # probability to mutate each single neuron in the genome
-connection_param_mut_proba = 0.8,   # probability to mutate each single connection in the genome
-topology_augmentation_proba = 0,    # probability to augment the topology of a newly created genome
-topology_reduction_proba = 0,       # probability to reduce the topology of a newly created genome
+selection_sample_size = int(.75 * generation_size) // num_species, # size of the selection sample (must be in the range [2, pop_size])
+neuron_param_mut_proba = 0.8,     # probability to mutate each single neuron in the genome
+connection_param_mut_proba = 0.8, # probability to mutate each single connection in the genome
+topology_augmentation_proba = 0,  # probability to augment the topology of a newly created genome
+topology_reduction_proba = 0,     # probability to reduce the topology of a newly created genome
 )
 #### ###### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
+
+def make_pipeline(mutator, **args):
+    conf_ = conf.copy()
+    conf_.update(args)
+    return Pipeline(
+        topology_mutator=mutator,
+        # # disable 2-way crossover
+        # crossover_step=lambda genomes: genomes[0].copy(),
+        **conf_)
 
 
 def species_sizes(n, num_species):
@@ -64,7 +67,9 @@ def count_members(species_list):
     return sum(len(species) for species in species_list)
 
 
-## CREATE MUTATION SPEC ##
+## CREATE GENE SPECS ##
+neuron_sigma = 0.25  # mutation sigma value for neuron params
+conn_sigma = 10.     # mutation sigma value for connection params
 
 input_neuron_spec = GeneSpec(
     'input',
@@ -82,19 +87,9 @@ connection_spec = GeneSpec(
 )
 
 
-def make_neat(mutator, **kw):
-    conf_ = conf.copy()
-    conf_.update(kw)
-    return NEAT(
-        topology_mutator=mutator,
-        # # disable 2-way crossover
-        # crossover_step=lambda genomes: genomes[0].copy(),
-        **conf_)
-
-
-def produce_new_generation(neat, genome_fitness_list):
+def produce_new_generation(pipeline, genome_fitness_list):
     for _ in range(len(genome_fitness_list) - elite_num):
-        g = neat.produce_new_genome(genome_fitness_list)
+        g = pipeline.produce_new_genome(genome_fitness_list)
         # validate_genome(g, 'invalid genome')
         yield g
 
@@ -104,11 +99,8 @@ def produce_new_generation(neat, genome_fitness_list):
         yield genome
 
 
-## INPUTS AND CORRECT OUTPUTS FOR THE NETWORK ##
+## INPUT VALUES FOR EVALUATING FITNESS OF THE SOLUTIONS ##
 inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
-total_eval_time = [0]
-total_neat_time = [0]
-
 
 def evaluate(genome):
     nn = NN().from_genome(genome)
@@ -128,13 +120,16 @@ def complexity(species_list):
     return sum(n), sum(c)
 
 
-def next_gen_species(neat, current_gen):
+total_eval_time = [0]
+total_neat_time = [0]
+
+def next_gen_species(pipeline, current_gen):
     t0 = time.perf_counter()
     evaluated_gen = list((genome, evaluate(genome)) for genome in current_gen)
     t1 = time.perf_counter()
     total_eval_time[0] += t1 - t0
 
-    next_gen = list(produce_new_generation(neat, evaluated_gen))
+    next_gen = list(produce_new_generation(pipeline, evaluated_gen))
     t2 = time.perf_counter()
     total_neat_time[0] += t2 - t1
 
@@ -149,9 +144,9 @@ class Attempt:
         self.best_genome = None
         self.target_reached = False
 
-    def next_gen_all_species(self, neat, current_gen):
+    def next_gen_all_species(self, pipeline, current_gen):
         self.evals_num += count_members(current_gen)
-        current_gen = [next_gen_species(neat, species) for species in current_gen]
+        current_gen = [next_gen_species(pipeline, species) for species in current_gen]
         _, self.best_genome, self.best_fitness = max(current_gen, key=itemgetter(2))
         return list(map(itemgetter(0), current_gen))
 
@@ -183,8 +178,8 @@ class Attempt:
 
 
 ## CREATE INITIAL GENERATION ##
-def copy_with_mutation(neat, source_genome):
-    return neat.topology_augmentation_step(neat.parameters_mutation_step(source_genome.copy()))
+def copy_with_mutation(pipeline, source_genome):
+    return pipeline.topology_augmentation_step(pipeline.parameters_mutation_step(source_genome.copy()))
 
 
 def make_attempt(num_epochs, gens_per_epoch):
@@ -201,8 +196,8 @@ def make_attempt(num_epochs, gens_per_epoch):
         pure_input_types=(input_neuron_spec,),
     )
 
-    ## CREATE MAIN NEAT OBJECT ##
-    neat_obj = make_neat(mutator)
+    ## CREATE THE REPRODUCTION PIPELINE ##
+    pipeline = make_pipeline(mutator)
 
     ## CREATE INITIAL GENOME ##
     # we specify initial input and output neurons and protect them from removal
@@ -220,8 +215,8 @@ def make_attempt(num_epochs, gens_per_epoch):
     )
 
     current_gen = list(
-        list(copy_with_mutation(neat_obj, init_genome) for _ in range(species_size)) \
-        for species_size in species_sizes(popul, num_species))
+        list(copy_with_mutation(pipeline, init_genome) for _ in range(species_size)) \
+        for species_size in species_sizes(generation_size, num_species))
 
     attempt = Attempt()
 
@@ -229,22 +224,27 @@ def make_attempt(num_epochs, gens_per_epoch):
     for epoch in range(num_epochs):
         # print("Epoch #{}".format(epoch))
 
-        neat_obj = make_neat(mutator, topology_augmentation_proba=augmentation_proba, topology_reduction_proba=0)
+        pipeline = make_pipeline(mutator, topology_augmentation_proba=augmentation_proba, topology_reduction_proba=0)
 
         for _ in range(augment_gens_per_epoch):
-            current_gen = attempt.next_gen_all_species(neat_obj, current_gen)
+            current_gen = attempt.next_gen_all_species(pipeline, current_gen)
         # print("  AUG " + attempt.get_stats(current_gen))
 
-        neat_obj = make_neat(mutator, topology_augmentation_proba=0, topology_reduction_proba=reduction_proba)
+        pipeline = make_pipeline(mutator, topology_augmentation_proba=0, topology_reduction_proba=reduction_proba)
 
         for _ in range(reduct_gens_per_epoch):
-            current_gen = attempt.next_gen_all_species(neat_obj, current_gen)
+            current_gen = attempt.next_gen_all_species(pipeline, current_gen)
         # print("  RED " + attempt.get_stats(current_gen))
 
         if abs(attempt.best_fitness - 1) < 1e-6:
             attempt.target_reached = True
             break
     return attempt
+
+
+def timestamp():
+    ts = datetime.fromtimestamp(time.time(), tz=timezone.utc)
+    return ts.strftime("%b %d %y %H:%M")
 
 
 ## RUN MULTIPLE ATTEMPTS TO CREATE A XOR NETWORK ##
@@ -269,7 +269,7 @@ for attempt_id in range(num_attempts):
     result = dict(
         id = attempt_id,
         t = timestamp(),
-        species = tuple(species_sizes(popul, num_species)),
+        species = tuple(species_sizes(generation_size, num_species)),
         gens_in_epoch = gens_per_epoch,
         n_epochs = num_epochs,
         n_evals = attempt.evals_num,

@@ -51,7 +51,7 @@ class NeuronGene(Gene):
 
 
     def __str__(self):
-        s = "NEAT Neuron gene, mark: {}, type: {}".format(
+        s = "node, mark: {}, type: {}".format(
             self.historical_mark,
             self.get_type(),
         )
@@ -74,7 +74,7 @@ class ConnectionGene(Gene):
 
 
     def __str__(self):
-        s = "NEAT Connection gene, mark: {}, type: {}, {} -> {}".format(
+        s = "link, mark: {}, type: {}, {} -> {}".format(
             self.historical_mark,
             self.get_type(),
             self.mark_from,

@@ -4,4 +4,4 @@ __version__ = '0.4.0'
 from .specs import GeneSpec, ParamSpec, bounds, gen, mut
 from .genes import NeuronGene, ConnectionGene, Genome
 from .operators import Mutator, crossover, neuron, connection
-from .neat import NEAT, validate_genome, default_gene_factory
+from .pipeline import Pipeline, validate_genome, default_gene_factory

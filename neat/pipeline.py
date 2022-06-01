@@ -194,7 +194,7 @@ def _check_setting(setting_name, setting_value):
         raise InvalidConfigError("please provide value for {}".format(setting_name))
 
 
-class NEAT(object):
+class Pipeline:
     def __init__(self,
         topology_mutator=None,
         topology_augmentation_proba=None,
