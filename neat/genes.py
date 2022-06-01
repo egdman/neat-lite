@@ -5,9 +5,6 @@ try:
 except ImportError:
     yaml_dump = None
 
-def hm(gene):
-    return gene.historical_mark
-
 class Gene(object):
 
     _metas = ('spec', 'historical_mark', 'non_removable')
@@ -170,7 +167,6 @@ class Genome:
         # collect garbage
         if len(self._conn_genes) > 2 * self._conn_num:
             self._conn_genes = list(g for g in self._conn_genes if g is not None)
-            self._conn_num = len(self._conn_genes)
 
         downstream_set = self.connections_index[g.mark_from]
         downstream_set.discard(g.mark_to)
@@ -185,7 +181,6 @@ class Genome:
         # collect garbage
         if len(self._neuron_genes) > 2 * self._neuron_num:
             self._neuron_genes = list(g for g in self._neuron_genes if g is not None)
-            self._neuron_num = len(self._neuron_genes)
 
         # remove all attached connection genes
         for idx, g in enumerate(self._conn_genes):
@@ -196,7 +191,6 @@ class Genome:
         # collect garbage
         if len(self._conn_genes) > 2 * self._conn_num:
             self._conn_genes = list(g for g in self._conn_genes if g is not None)
-            self._conn_num = len(self._conn_genes)
 
         # remove all downstream connections of the neuron
         self.connections_index.pop(neuron_mark, None)
@@ -332,11 +326,11 @@ class Genome:
                 yield from ((lg, None) for lg in left_genes)
                 break
 
-            elif hm(left_gene) < hm(right_gene):
+            elif left_gene.historical_mark < right_gene.historical_mark:
                 yield left_gene, None
                 left_gene = next(left_genes, None)
 
-            elif hm(left_gene) > hm(right_gene):
+            elif left_gene.historical_mark > right_gene.historical_mark:
                 yield None, right_gene
                 right_gene = next(right_genes, None)
 
