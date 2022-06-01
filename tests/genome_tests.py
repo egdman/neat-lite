@@ -1,5 +1,6 @@
 import unittest
 from neat.genes import Genome, NeuronGene
+from neat.specs import GeneSpec
 import sys
 from operator import itemgetter
 
@@ -12,7 +13,9 @@ def hm(gene1, gene2=None):
 
 
 def make_genomes(marks1, marks2):
-    g1, g2 = [NeuronGene('1', m) for m in marks1], [NeuronGene('2', m) for m in marks2]
+    spec0 = GeneSpec(0)
+    spec1 = GeneSpec(1)
+    g1, g2 = [NeuronGene(spec0, m) for m in marks1], [NeuronGene(spec1, m) for m in marks2]
     return sorted(g1, key=hm), sorted(g2, key=hm)
 
 def n_excess_marks(marks1, marks2):
