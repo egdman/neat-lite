@@ -1,6 +1,7 @@
 import random
 import heapq
 from operator import itemgetter
+from functools import partial
 
 from .genes import Genome
 from .operators import crossover
@@ -124,68 +125,88 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
     return _parameters_mutation
 
 
-def topology_augmentation(mutator, probability, max_num_augs):
-    if probability == 0 or max_num_augs == 0:
-        def _no_augment(genome):
-            return genome
-        return _no_augment
+def _to_tuple_and_trunc(tupl):
+    # convert to tuple and truncate up to the first zero
+    if not isinstance(tupl, tuple) and not isinstance(tupl, list):
+        tupl = tupl,
 
-    elif probability == 1:
-        def _augment(genome):
+    if 0 in tupl:
+        return tupl[: tupl.index(0)]
+    return tupl
+
+
+def topology_augmentation(mutator, probas):
+    def _augment_always(genome):
+        # if no connections, add a connection
+        if genome.num_connection_genes() == 0:
+            mutator.add_random_connection(genome)
+
+        # otherwise add connection or neuron with equal probability
+        elif random.random() < 0.5:
+            mutator.add_random_connection(genome)
+        else:
+            mutator.add_random_neuron(genome)
+        return True
+
+    def _augment(genome, probability):
+        rv = random.random()
+        if rv < probability:
             # if no connections, add a connection
             if genome.num_connection_genes() == 0:
                 mutator.add_random_connection(genome)
 
             # otherwise add connection or neuron with equal probability
-            elif random.random() < 0.5:
+            elif rv < 0.5 * probability:
                 mutator.add_random_connection(genome)
             else:
                 mutator.add_random_neuron(genome)
-    else:
-        def _augment(genome):
-            rv = random.random()
-            if rv < probability:
-                # if no connections, add a connection
-                if genome.num_connection_genes() == 0:
-                    mutator.add_random_connection(genome)
+            return True
+        return False
 
-                # otherwise add connection or neuron with equal probability
-                elif rv < 0.5 * probability:
-                    mutator.add_random_connection(genome)
-                else:
-                    mutator.add_random_neuron(genome)
+    def _select_func(probability):
+        if probability == 1:
+            return _augment_always
+        else:
+            return partial(_augment, probability=probability)
+
+    probas = _to_tuple_and_trunc(probas)
+    _funcs = tuple(_select_func(p) for p in probas)
 
     def _augment_n(genome):
-        for _ in range(max_num_augs):
-            _augment(genome)
+        all(f(genome) for f in _funcs)
         return genome
     return _augment_n
 
 
-def topology_reduction(mutator, probability, max_num_reducts):
-    if probability == 0 or max_num_reducts == 0:
-        def _no_reduce(genome):
-            return genome
-        return _no_reduce
+def topology_reduction(mutator, probas):
+    def _reduce_always(genome):
+        if random.random() < 0.5:
+            mutator.remove_random_connection(genome)
+        else:
+            mutator.remove_random_neuron(genome)
+        return True
 
-    elif probability == 1:
-        def _reduce(genome):
-            if random.random() < 0.5:
+    def _reduce(genome, probability):
+        rv = random.random()
+        if rv < probability:
+            if rv < 0.5 * probability:
                 mutator.remove_random_connection(genome)
             else:
                 mutator.remove_random_neuron(genome)
-    else:
-        def _reduce(genome):
-            rv = random.random()
-            if rv < probability:
-                if rv < 0.5 * probability:
-                    mutator.remove_random_connection(genome)
-                else:
-                    mutator.remove_random_neuron(genome)
+            return True
+        return False
+
+    def _select_func(probability):
+        if probability == 1:
+            return _reduce_always
+        else:
+            return partial(_reduce, probability=probability)
+
+    probas = _to_tuple_and_trunc(probas)
+    _funcs = tuple(_select_func(p) for p in probas)
 
     def _reduce_n(genome):
-        for _ in range(max_num_reducts):
-            _reduce(genome)
+        all(f(genome) for f in _funcs)
         return genome
     return _reduce_n
 
@@ -209,8 +230,6 @@ class Pipeline:
         topology_mutator=None,
         topology_augmentation_proba=None,
         topology_reduction_proba=0.,
-        max_num_augmentations=1,
-        max_num_reductions=1,
         neuron_param_mut_proba=None,
         connection_param_mut_proba=None,
         selection_sample_size=None,
@@ -249,14 +268,12 @@ class Pipeline:
             if self.topology_augmentation_step is None:
                 _check_setting("topology_mutator", topology_mutator)
                 _check_setting("topology_augmentation_proba", topology_augmentation_proba)
-                _check_setting("max_num_augmentations", max_num_augmentations)
-                self.topology_augmentation_step = topology_augmentation(topology_mutator, topology_augmentation_proba, max_num_augmentations)
+                self.topology_augmentation_step = topology_augmentation(topology_mutator, topology_augmentation_proba)
 
             if self.topology_reduction_step is None:
                 _check_setting("topology_mutator", topology_mutator)
                 _check_setting("topology_reduction_proba", topology_reduction_proba)
-                _check_setting("max_num_reductions", max_num_reductions)
-                self.topology_reduction_step = topology_reduction(topology_mutator, topology_reduction_proba, max_num_reductions)
+                self.topology_reduction_step = topology_reduction(topology_mutator, topology_reduction_proba)
 
 
     def produce_new_genome(self, genome_and_fitness_list) -> Genome:
