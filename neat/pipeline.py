@@ -124,10 +124,12 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
     return _parameters_mutation
 
 
-def topology_augmentation(mutator, probability):
-    if probability == 0:
-        def _augment(genome):
+def topology_augmentation(mutator, probability, max_num_augs):
+    if probability == 0 or max_num_augs == 0:
+        def _no_augment(genome):
             return genome
+        return _no_augment
+
     elif probability == 1:
         def _augment(genome):
             # if no connections, add a connection
@@ -139,7 +141,6 @@ def topology_augmentation(mutator, probability):
                 mutator.add_random_connection(genome)
             else:
                 mutator.add_random_neuron(genome)
-            return genome
     else:
         def _augment(genome):
             rv = random.random()
@@ -153,21 +154,26 @@ def topology_augmentation(mutator, probability):
                     mutator.add_random_connection(genome)
                 else:
                     mutator.add_random_neuron(genome)
-            return genome
-    return _augment
+
+    def _augment_n(genome):
+        for _ in range(max_num_augs):
+            _augment(genome)
+        return genome
+    return _augment_n
 
 
-def topology_reduction(mutator, probability):
-    if probability == 0:
-        def _reduce(genome):
+def topology_reduction(mutator, probability, max_num_reducts):
+    if probability == 0 or max_num_reducts == 0:
+        def _no_reduce(genome):
             return genome
+        return _no_reduce
+
     elif probability == 1:
         def _reduce(genome):
             if random.random() < 0.5:
                 mutator.remove_random_connection(genome)
             else:
                 mutator.remove_random_neuron(genome)
-            return genome
     else:
         def _reduce(genome):
             rv = random.random()
@@ -176,8 +182,12 @@ def topology_reduction(mutator, probability):
                     mutator.remove_random_connection(genome)
                 else:
                     mutator.remove_random_neuron(genome)
-            return genome
-    return _reduce
+
+    def _reduce_n(genome):
+        for _ in range(max_num_reducts):
+            _reduce(genome)
+        return genome
+    return _reduce_n
 
 
 def crossover_two_genomes():
@@ -199,6 +209,8 @@ class Pipeline:
         topology_mutator=None,
         topology_augmentation_proba=None,
         topology_reduction_proba=0.,
+        max_num_augmentations=1,
+        max_num_reductions=1,
         neuron_param_mut_proba=None,
         connection_param_mut_proba=None,
         selection_sample_size=None,
@@ -237,12 +249,14 @@ class Pipeline:
             if self.topology_augmentation_step is None:
                 _check_setting("topology_mutator", topology_mutator)
                 _check_setting("topology_augmentation_proba", topology_augmentation_proba)
-                self.topology_augmentation_step = topology_augmentation(topology_mutator, topology_augmentation_proba)
+                _check_setting("max_num_augmentations", max_num_augmentations)
+                self.topology_augmentation_step = topology_augmentation(topology_mutator, topology_augmentation_proba, max_num_augmentations)
 
             if self.topology_reduction_step is None:
                 _check_setting("topology_mutator", topology_mutator)
                 _check_setting("topology_reduction_proba", topology_reduction_proba)
-                self.topology_reduction_step = topology_reduction(topology_mutator, topology_reduction_proba)
+                _check_setting("max_num_reductions", max_num_reductions)
+                self.topology_reduction_step = topology_reduction(topology_mutator, topology_reduction_proba, max_num_reductions)
 
 
     def produce_new_genome(self, genome_and_fitness_list) -> Genome:
