@@ -187,37 +187,30 @@ def crossover_two_genomes():
     return _crossover
 
 
-_defaults = {
-    'selection_sample_size': None,
-
-    'topology_augmentation_proba': None,
-    'topology_reduction_proba': 0.,
-
-    'neuron_param_mut_proba': None,
-    'connection_param_mut_proba': None,
-
-    'speciation_threshold': 0.,
-
-    # coefficients for calculating genome dissimilarity
-    'excess_coef': 1.,
-    'disjoint_coef': 1.,
-    'neuron_diff_coef': 0.,
-    'connection_diff_coef': 0.,
-}
-
 class InvalidConfigError(RuntimeError): pass
+
+def _check_setting(setting_name, setting_value):
+    if setting_value is None:
+        raise InvalidConfigError("please provide value for {}".format(setting_name))
+
 
 class NEAT(object):
     def __init__(self,
-        topology_mutator,
+        topology_mutator=None,
+        topology_augmentation_proba=None,
+        topology_reduction_proba=0.,
+        neuron_param_mut_proba=None,
+        connection_param_mut_proba=None,
+        selection_sample_size=None,
+
         selection_step=None,
         crossover_step=None,
         parameters_mutation_step=None,
         topology_augmentation_step=None,
         topology_reduction_step=None,
-        custom_reproduction_pipeline=None,
-        **config):
 
+        custom_reproduction_pipeline=None,
+    ):
         self.selection_step = selection_step
         self.crossover_step = crossover_step
         self.parameters_mutation_step = parameters_mutation_step
@@ -225,33 +218,31 @@ class NEAT(object):
         self.topology_reduction_step = topology_reduction_step
         self.custom_reproduction_pipeline = custom_reproduction_pipeline
 
-        # use default order of operations for reproduction pipeline if no override provided
+        # use default operations for reproduction pipeline if no custom pipeline provided
         if self.custom_reproduction_pipeline is None:
-            for setting_name, default_value in _defaults.items():
-                provided_value = config.get(setting_name, None)
-
-                if provided_value is not None:
-                    setattr(self, setting_name, provided_value)
-                elif default_value is not None:
-                    setattr(self, setting_name, default_value)
-                else:
-                    raise InvalidConfigError("please provide value for {}".format(setting_name))
-
-            # check validity of settings:
-            if self.selection_sample_size < 2:
-                raise InvalidConfigError("selection_sample_size must be greater than 1")
-
-
             if self.selection_step is None:
-                self.selection_step = two_best_in_sample(self.selection_sample_size)
+                _check_setting("selection_sample_size", selection_sample_size)
+                if selection_sample_size < 2:
+                    raise InvalidConfigError("selection_sample_size must be greater than 1")
+                self.selection_step = two_best_in_sample(selection_sample_size)
+
             if self.crossover_step is None:
                 self.crossover_step = crossover_two_genomes()
+
             if self.parameters_mutation_step is None:
-                self.parameters_mutation_step = parameters_mutation(self.neuron_param_mut_proba, self.connection_param_mut_proba)
+                _check_setting("neuron_param_mut_proba", neuron_param_mut_proba)
+                _check_setting("connection_param_mut_proba", connection_param_mut_proba)
+                self.parameters_mutation_step = parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba)
+
             if self.topology_augmentation_step is None:
-                self.topology_augmentation_step = topology_augmentation(topology_mutator, self.topology_augmentation_proba)
+                _check_setting("topology_mutator", topology_mutator)
+                _check_setting("topology_augmentation_proba", topology_augmentation_proba)
+                self.topology_augmentation_step = topology_augmentation(topology_mutator, topology_augmentation_proba)
+
             if self.topology_reduction_step is None:
-                self.topology_reduction_step = topology_reduction(topology_mutator, self.topology_reduction_proba)
+                _check_setting("topology_mutator", topology_mutator)
+                _check_setting("topology_reduction_proba", topology_reduction_proba)
+                self.topology_reduction_step = topology_reduction(topology_mutator, topology_reduction_proba)
 
 
     def produce_new_genome(self, genome_and_fitness_list) -> Genome:
