@@ -62,16 +62,17 @@ class NN:
 
         for ng in genome.neuron_genes():
             if ng.get_type() == 'sigmoid':
+                bias, gain, layer = ng.params
 
                 node = ComputeNode(
-                    act_func = partial(sigmoid, bias = ng.bias, gain = ng.gain)
+                    act_func = partial(sigmoid, bias=bias, gain=gain)
                 )
 
                 # output nodes go in both compute list and output list
                 # hidden nodes only go in compute list
-                if ng.layer.startswith('h'):
+                if layer.startswith('h'):
                     self.comp_nodes.append(node)
-                elif ng.layer.startswith('o'):
+                elif layer.startswith('o'):
                     self.comp_nodes.append(node)
                     self.out_nodes.append(node)
 
@@ -84,7 +85,8 @@ class NN:
             nodes[ng.historical_mark] = node
 
         for cg in genome.connection_genes():
-            nodes[cg.mark_to].add_input(nodes[cg.mark_from], cg.weight)
+            weight, = cg.params
+            nodes[cg.mark_to].add_input(nodes[cg.mark_from], weight)
 
         return self
 

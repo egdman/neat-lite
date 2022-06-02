@@ -9,46 +9,30 @@ class Gene:
 
     _metas = ('spec', 'historical_mark', 'non_removable')
 
-    def __init__(self, gene_spec, historical_mark=0, non_removable=False, **params):
+    def __init__(self, gene_spec, params, historical_mark, non_removable=False):
         self.spec = gene_spec
         self.historical_mark = historical_mark
         self.non_removable = non_removable
-
-        for key, value in params.items():
-            setattr(self, key, value)
-
-
-    def __getitem__(self, key):
-        return self.__dict__[key]
-
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-
-    def __contains__(self, key):
-        return key in self.__dict__
-
-
-    def get_params(self):
-        return {key: value for key, value in self.__dict__.items() if key not in self._metas}
+        self.params = params
 
 
     def get_type(self):
         return self.spec.type_name
 
 
+    def get_params_with_names(self):
+        return zip(self.spec.list_param_names(), self.params)
+
+
     def copy(self):
-        return copy(self)
+        c = copy(self)
+        c.params = copy(self.params)
+        return c
 
 
 class NeuronGene(Gene):
 
     _metas = Gene._metas
-
-    def __init__(self, gene_spec, historical_mark=0, non_removable=False, **params):
-        super(NeuronGene, self).__init__(gene_spec, historical_mark, non_removable, **params)
-
 
     def __str__(self):
         s = "node, mark: {}, type: {}".format(
@@ -66,8 +50,8 @@ class ConnectionGene(Gene):
 
     _metas = Gene._metas + ('mark_from', 'mark_to')
 
-    def __init__(self, gene_spec, mark_from, mark_to, historical_mark=0, non_removable=False, **params):
-        super(ConnectionGene, self).__init__(gene_spec, historical_mark, non_removable, **params)
+    def __init__(self, gene_spec, params, mark_from, mark_to, historical_mark, non_removable=False):
+        super(ConnectionGene, self).__init__(gene_spec, params, historical_mark, non_removable)
 
         self.mark_from = mark_from
         self.mark_to = mark_to

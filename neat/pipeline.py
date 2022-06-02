@@ -34,22 +34,22 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
             if gene is None:
                 continue
 
-            specs = iter(gene.spec.mutable_param_specs)
-            for param_spec in specs:
+            specs = enumerate(iter(gene.spec.mutable_param_specs))
+            for param_idx, param_spec in specs:
                 if random.random() < probability:
                     gene_copy = gene.copy()
+                    params = gene_copy.params
 
-                    current_value = gene[param_spec.name]
-                    new_value = param_spec.mutate_value(current_value)
-                    gene_copy[param_spec.name] = new_value
+                    current_value = params[param_idx]
+                    params[param_idx] = param_spec.mutate_value(current_value)
 
-                    for param_spec in specs:
+                    for param_idx, param_spec in specs:
                         if random.random() < probability:
-                            current_value = gene[param_spec.name]
-                            new_value = param_spec.mutate_value(current_value)
-                            gene_copy[param_spec.name] = new_value
+                            current_value = params[param_idx]
+                            params[param_idx] = param_spec.mutate_value(current_value)
 
                     genes_list[idx] = gene_copy
+                    # print(f"{tuple(gene.get_params_with_names())}\n{tuple(gene_copy.get_params_with_names())} ---")
                     break
 
     def _mutate_gene_params_always(genes_list):
@@ -57,20 +57,20 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
             if gene is None:
                 continue
 
-            specs = iter(gene.spec.mutable_param_specs)
-            for param_spec in specs:
+            specs = enumerate(iter(gene.spec.mutable_param_specs))
+            for param_idx, param_spec in specs:
                 gene_copy = gene.copy()
+                params = gene_copy.params
 
-                current_value = gene[param_spec.name]
-                new_value = param_spec.mutate_value(current_value)
-                gene_copy[param_spec.name] = new_value
+                current_value = params[param_idx]
+                params[param_idx] = param_spec.mutate_value(current_value)
 
-                for param_spec in specs:
-                    current_value = gene[param_spec.name]
-                    new_value = param_spec.mutate_value(current_value)
-                    gene_copy[param_spec.name] = new_value
+                for param_idx, param_spec in specs:
+                    current_value = params[param_idx]
+                    params[param_idx] = param_spec.mutate_value(current_value)
 
                 genes_list[idx] = gene_copy
+                # print(f"{tuple(gene.get_params_with_names())}\n{tuple(gene_copy.get_params_with_names())} ---")
                 break
 
     if neuron_param_mut_proba == 0:

@@ -127,9 +127,19 @@ class GeneSpec:
         self.mutable_param_specs = tuple(self.mutable_param_specs)
 
 
+    def list_param_names(self):
+        return [spec.name for spec in chain(self.mutable_param_specs, self.immutable_param_specs)]
+
+
     def generate_parameter_values(self):
         '''
         Returns a dictionary {parameter_name: generated_parameter_value}
         '''
-        return {spec.name: spec.generate_value() for spec in \
-            chain(self.immutable_param_specs, self.mutable_param_specs)}
+        return [spec.generate_value() for spec in chain(self.mutable_param_specs, self.immutable_param_specs)]
+
+
+    def generate_parameter_values_with_names(self):
+        '''
+        Returns a dictionary {parameter_name: generated_parameter_value}
+        '''
+        return zip(self.list_param_names(), self.generate_parameter_values())
