@@ -1,12 +1,5 @@
 import math
-from itertools import chain
 from functools import partial
-from copy import copy
-
-try:
-    from itertools import izip as zip
-except ImportError:
-    pass
 
 
 def sigmoid(x, bias, gain):
@@ -48,15 +41,10 @@ class ComputeNode(Node):
 
 
 class NN:
-
-
-    def __init__(self):
+    def __init__(self, genome):
         self.in_nodes = []
         self.comp_nodes = []
         self.out_nodes = []
-
-
-    def from_genome(self, genome):
 
         nodes = {}
 
@@ -87,8 +75,6 @@ class NN:
         for cg in genome.connection_genes():
             weight, = cg.params
             nodes[cg.mark_to].add_input(nodes[cg.mark_from], weight)
-
-        return self
 
 
     def reset(self):

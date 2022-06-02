@@ -103,13 +103,16 @@ def produce_new_generation(pipeline, genome_fitness_list):
 inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 
 def evaluate(genome):
-    nn = NN().from_genome(genome)
-    nn_outputs = []
-    for inp in inputs:
-        nn.reset() # reset network otherwise it will remember previous state
-        nn_outputs.append(nn.compute(inp)[0])
+    nn = NN(genome)
 
-    outp0, outp1, outp2, outp3 = nn_outputs
+    outp0 = nn.compute(inputs[0])[0]
+    nn.reset() # reset network otherwise it will remember previous state
+    outp1 = nn.compute(inputs[1])[0]
+    nn.reset()
+    outp2 = nn.compute(inputs[2])[0]
+    nn.reset()
+    outp3 = nn.compute(inputs[3])[0]
+
     fitness = abs(outp0 - outp1) * abs(outp0 - outp2) * abs(outp3 - outp1) * abs(outp3 - outp2)
     return fitness
 
@@ -286,7 +289,7 @@ print(f"neat time percentage = {100*total_neat_time[0] / total_time}")
 
 
 # print("Final test:")
-# final_nn = NN().from_genome(best_genome)
+# final_nn = NN(best_genome)
 
 # test_inputs = list(inputs) * 4
 # random.shuffle(test_inputs)
