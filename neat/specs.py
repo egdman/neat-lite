@@ -100,10 +100,7 @@ class ParamSpec:
 
 
     def mutate_value(self, current_value):
-        if self.mutator is None:
-            return current_value
-        else:
-            return self.mutator(self.min_value, current_value, self.max_value)
+        return self.mutator(self.min_value, current_value, self.max_value)
 
 
 class GeneSpec:
@@ -127,19 +124,9 @@ class GeneSpec:
         self.mutable_param_specs = tuple(self.mutable_param_specs)
 
 
-    def list_param_names(self):
-        return [spec.name for spec in chain(self.mutable_param_specs, self.immutable_param_specs)]
+    def iterate_param_names(self):
+        return (spec.name for spec in chain(self.mutable_param_specs, self.immutable_param_specs))
 
 
-    def generate_parameter_values(self):
-        '''
-        Returns a dictionary {parameter_name: generated_parameter_value}
-        '''
-        return [spec.generate_value() for spec in chain(self.mutable_param_specs, self.immutable_param_specs)]
-
-
-    def generate_parameter_values_with_names(self):
-        '''
-        Returns a dictionary {parameter_name: generated_parameter_value}
-        '''
-        return zip(self.list_param_names(), self.generate_parameter_values())
+    def parameter_values_generator(self):
+        return (spec.generate_value() for spec in chain(self.mutable_param_specs, self.immutable_param_specs))

@@ -16,7 +16,7 @@ def default_gene_factory(*gene_specs):
     def _generate():
         # select gene type at random
         gene_spec = random.choice(gene_specs)
-        return gene_spec, gene_spec.generate_parameter_values()
+        return gene_spec, list(gene_spec.parameter_values_generator())
     return _generate
 
 
@@ -49,7 +49,6 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
                             params[param_idx] = param_spec.mutate_value(current_value)
 
                     genes_list[idx] = gene_copy
-                    # print(f"{tuple(gene.get_params_with_names())}\n{tuple(gene_copy.get_params_with_names())} ---")
                     break
 
     def _mutate_gene_params_always(genes_list):
@@ -70,7 +69,6 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
                     params[param_idx] = param_spec.mutate_value(current_value)
 
                 genes_list[idx] = gene_copy
-                # print(f"{tuple(gene.get_params_with_names())}\n{tuple(gene_copy.get_params_with_names())} ---")
                 break
 
     if neuron_param_mut_proba == 0:

@@ -6,13 +6,11 @@ except ImportError:
     yaml_dump = None
 
 class Gene:
+    __slots__ = ('spec', 'historical_mark', 'params')
 
-    _metas = ('spec', 'historical_mark', 'non_removable')
-
-    def __init__(self, gene_spec, params, historical_mark, non_removable=False):
+    def __init__(self, gene_spec, params, historical_mark):
         self.spec = gene_spec
         self.historical_mark = historical_mark
-        self.non_removable = non_removable
         self.params = params
 
 
@@ -21,7 +19,7 @@ class Gene:
 
 
     def get_params_with_names(self):
-        return zip(self.spec.list_param_names(), self.params)
+        return zip(self.spec.iterate_param_names(), self.params)
 
 
     def copy(self):
@@ -30,28 +28,33 @@ class Gene:
         return c
 
 
-class NeuronGene(Gene):
+    def to_dict(self):
+        d = dict(
+            gene_type=self.get_type(),
+            historical_mark=self.historical_mark,
+        )
+        d.update(self.get_params_with_names())
+        return d
 
-    _metas = Gene._metas
+
+class NeuronGene(Gene):
+    __slots__ = ()
 
     def __str__(self):
         s = "node, mark: {}, type: {}".format(
             self.historical_mark,
             self.get_type(),
         )
-        if self.non_removable:
-            s = "{} norem".format(s)
         return s
 
 
 
 
 class ConnectionGene(Gene):
+    __slots__ = ('mark_from', 'mark_to')
 
-    _metas = Gene._metas + ('mark_from', 'mark_to')
-
-    def __init__(self, gene_spec, params, mark_from, mark_to, historical_mark, non_removable=False):
-        super(ConnectionGene, self).__init__(gene_spec, params, historical_mark, non_removable)
+    def __init__(self, gene_spec, params, mark_from, mark_to, historical_mark):
+        super(ConnectionGene, self).__init__(gene_spec, params, historical_mark)
 
         self.mark_from = mark_from
         self.mark_to = mark_to
@@ -64,9 +67,16 @@ class ConnectionGene(Gene):
             self.mark_from,
             self.mark_to,
         )
-        if self.non_removable:
-            s = "{} norem".format(s)
         return s
+
+
+    def to_dict(self):
+        d = dict(
+            mark_from=self.mark_from,
+            mark_to=self.mark_to,
+        )
+        d.update(super().to_dict())
+        return d
 
 
 class Genome:
@@ -205,12 +215,10 @@ class Genome:
 
 
     def __str__(self):
-        st = ''
-        st += 'neurons:\n'
-        for ng in self.neuron_genes(): st += str(ng.__dict__) + '\n'
-        st += 'connections:\n'
-        for cg in self.connection_genes():
-            st += str(cg.__dict__) + '\n'
+        st = "neurons:\n"
+        st += "\n".join((str(ng.to_dict()) for ng in self.neuron_genes()))
+        st += "\nconnections:\n"
+        st += "\n".join((str(cg.to_dict()) for cg in self.connection_genes()))
         return st
 
 
@@ -236,13 +244,8 @@ class Genome:
         if yaml_dump is None:
             raise NotImplementedError("PyYaml not installed")
 
-        def _serialize(gene):
-            s = copy(gene.__dict__)
-            s["gene_type"] = s.pop("spec").type_name
-            return s
-
-        neuron_genes = list(_serialize(g) for g in self.neuron_genes())
-        conn_genes = list(_serialize(g) for g in self.connection_genes())
+        neuron_genes = list(g.to_dict() for g in self.neuron_genes())
+        conn_genes = list(g.to_dict() for g in self.connection_genes())
         yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
         return yaml_dump(yaml_repr, default_flow_style=False)
 

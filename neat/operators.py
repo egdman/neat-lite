@@ -44,6 +44,7 @@ class Mutator:
         self.pure_input_types = pure_input_types
         self.pure_output_types = pure_output_types
         self.innovation_number = innovation_number
+        self._non_removable_hmarks = set()
 
 
     def add_random_connection(self, genome, max_attempts=100):
@@ -95,20 +96,20 @@ class Mutator:
     def _unprotected_connection_ids(self, genome):
         if len(genome._conn_genes) == genome._conn_num:
             return tuple(idx for idx, g in enumerate(genome._conn_genes) \
-                if not g.non_removable)
+                if g.historical_mark not in self._non_removable_hmarks)
         else:
             return tuple(idx for idx, g in enumerate(genome._conn_genes) \
-                if g is not None and not g.non_removable)
+                if g is not None and g.historical_mark not in self._non_removable_hmarks)
 
 
 
     def _unprotected_neuron_ids(self, genome):
         if len(genome._neuron_genes) == genome._neuron_num:
             return tuple(idx for idx, g in enumerate(genome._neuron_genes) \
-                if not g.non_removable)
+                if g.historical_mark not in self._non_removable_hmarks)
         else:
             return tuple(idx for idx, g in enumerate(genome._neuron_genes) \
-                if g is not None and not g.non_removable)
+                if g is not None and g.historical_mark not in self._non_removable_hmarks)
 
 
 
@@ -178,11 +179,12 @@ class Mutator:
         new_neuron_gene = NeuronGene(
                                 gene_spec = neuron_spec,
                                 params = neuron_params,
-                                historical_mark = self.innovation_number,
-                                non_removable = non_removable)
+                                historical_mark = self.innovation_number)
 
         self.innovation_number += 1
         genome.add_neuron_gene(new_neuron_gene)
+        if non_removable:
+            self._non_removable_hmarks.add(new_neuron_gene.historical_mark)
         return new_neuron_gene.historical_mark
 
 
@@ -193,11 +195,12 @@ class Mutator:
                                   params = connection_params,
                                   mark_from = mark_from,
                                   mark_to = mark_to,
-                                  historical_mark = self.innovation_number,
-                                  non_removable = non_removable)
+                                  historical_mark = self.innovation_number)
 
         self.innovation_number += 1
         genome.add_connection_gene(new_conn_gene)
+        if non_removable:
+            self._non_removable_hmarks.add(new_neuron_gene.historical_mark)
         return new_conn_gene.historical_mark
 
 
@@ -218,29 +221,31 @@ class Mutator:
                 neurons[conn_info.src].non_removable = True
                 neurons[conn_info.dst].non_removable = True
 
+        def _make_params(spec, provided_params):
+            gen = spec.parameter_values_generator()
+            for name in spec.iterate_param_names():
+                if name in provided_params:
+                    yield provided_params[name]
+                else:
+                    yield next(gen)
+
         # add neuron genes to genome using mutator
         neuron_map = {}
         for neuron_id, neuron_info in neurons.items():
-            neuron_params = [neuron_info.params[param_name] \
-                for param_name in neuron_info.spec.list_param_names()]
-
             hmark = self.add_neuron(
                 genome,
                 neuron_info.spec,
-                neuron_params,
+                list(_make_params(neuron_info.spec, neuron_info.params)),
                 non_removable=neuron_info.non_removable,
             )
             neuron_map[neuron_id] = hmark
 
         # add connection genes to genome using mutator
         for conn_info in connections:
-            conn_params = [conn_info.params[param_name] \
-                    for param_name in conn_info.spec.list_param_names()]
-
             self.add_connection(
                 genome,
                 conn_info.spec,
-                conn_params,
+                list(_make_params(conn_info.spec, conn_info.params)),
                 mark_from = neuron_map[conn_info.src],
                 mark_to = neuron_map[conn_info.dst],
                 non_removable=conn_info.non_removable,

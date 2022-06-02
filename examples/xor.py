@@ -201,13 +201,11 @@ def make_attempt(num_epochs, gens_per_epoch):
 
     ## CREATE INITIAL GENOME ##
     # we specify initial input and output neurons and protect them from removal
-    sigmoid_params = dict(sigmoid_neuron_spec.generate_parameter_values_with_names())
-    sigmoid_params['layer'] = 'output'
 
     init_genome = mutator.produce_genome(
         in1=neuron(input_neuron_spec, non_removable=True, layer='input'),
         in2=neuron(input_neuron_spec, non_removable=True, layer='input'),
-        out1=neuron(sigmoid_neuron_spec, non_removable=True, **sigmoid_params),
+        out1=neuron(sigmoid_neuron_spec, non_removable=True, layer='output'),
         connections=(
             # connection(connection_spec, src='in1', dst='out1'),
             # connection(connection_spec, src='in2', dst='out1')
