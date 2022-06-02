@@ -29,13 +29,11 @@ mutator = Mutator(
     connection_factory=default_gene_factory(connection_spec),
 )
 
-sigmoid_params = sigmoid_neuron_spec.generate_parameter_values()
-sigmoid_params['layer'] = 'output'
-
+# all omitted parameter values will be generated according to the spec
 genome = mutator.produce_genome(
     in1=neuron(input_neuron_spec, non_removable=True, layer='input'),
     in2=neuron(input_neuron_spec, non_removable=True, layer='input'),
-    out1=neuron(sigmoid_neuron_spec, non_removable=True, **sigmoid_params),
+    out1=neuron(sigmoid_neuron_spec, non_removable=True, layer='output'),
     connections=(
         connection(connection_spec, src='in1', dst='out1', weight=0.33433),
         connection(connection_spec, src='in2', dst='out1', weight=-0.77277),
