@@ -1,5 +1,3 @@
-from copy import copy, deepcopy
-
 try:
     from yaml import dump as yaml_dump
 except ImportError:
@@ -23,8 +21,10 @@ class Gene:
 
 
     def copy(self):
-        c = copy(self)
-        c.params = copy(self.params)
+        c = self.__new__(Gene)
+        c.spec = self.spec
+        c.historical_mark = self.historical_mark
+        c.params = [*self.params]
         return c
 
 
@@ -58,6 +58,16 @@ class ConnectionGene(Gene):
 
         self.mark_from = mark_from
         self.mark_to = mark_to
+
+
+    def copy(self):
+        c = self.__new__(ConnectionGene)
+        c.spec = self.spec
+        c.historical_mark = self.historical_mark
+        c.params = [*self.params]
+        c.mark_from = self.mark_from
+        c.mark_to = self.mark_to
+        return c
 
 
     def __str__(self):
@@ -98,12 +108,13 @@ class Genome:
 
 
     def copy(self):
-        g = Genome.__new__(Genome)
-        g._neuron_genes = self._neuron_genes[:]
-        g._conn_genes = self._conn_genes[:]
+        g = self.__new__(Genome)
+        g._neuron_genes = [*self.neuron_genes()]
+        g._conn_genes = [*self.connection_genes()]
         g._neuron_num = self._neuron_num
         g._conn_num = self._conn_num
-        g.connections_index = deepcopy(self.connections_index)
+        g.connections_index = {m0: set(downstream_set) \
+            for m0, downstream_set in self.connections_index.items()}
         return g
 
 
