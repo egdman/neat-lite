@@ -9,21 +9,6 @@ from itertools import chain
 import time
 from datetime import datetime, timezone
 
-try:
-    from itertools import izip as zip
-except ImportError:
-    pass
-
-try:
-    AnyError = StandardError
-except NameError:
-    AnyError = Exception
-
-try:
-    range = xrange
-except NameError:
-    pass
-
 here_dir = path.dirname(path.abspath(__file__))
 sys.path.append(path.join(here_dir, '..'))
 
@@ -126,19 +111,6 @@ def complexity(species_list):
 total_eval_time = [0]
 total_neat_time = [0]
 
-def next_gen_species(pipeline, current_gen):
-    t0 = time.perf_counter()
-    evaluated_gen = list((genome, evaluate(genome)) for genome in current_gen)
-    t1 = time.perf_counter()
-    total_eval_time[0] += t1 - t0
-
-    next_gen = list(produce_new_generation(pipeline, evaluated_gen))
-    t2 = time.perf_counter()
-    total_neat_time[0] += t2 - t1
-
-    best_genome, best_fitness = max(evaluated_gen, key=itemgetter(1))
-    return next_gen, best_genome, best_fitness
-
 
 class Attempt:
     def __init__(self):
@@ -147,11 +119,21 @@ class Attempt:
         self.best_genome = None
         self.target_reached = False
 
-    def next_gen_all_species(self, pipeline, current_gen):
+    def make_next_generation(self, pipeline, current_gen):
         self.evals_num += count_members(current_gen)
-        current_gen = [next_gen_species(pipeline, species) for species in current_gen]
-        _, self.best_genome, self.best_fitness = max(current_gen, key=itemgetter(2))
-        return list(map(itemgetter(0), current_gen))
+
+        t0 = time.perf_counter()
+        evaluated = [[(genome, evaluate(genome)) for genome in species] for species in current_gen]
+        t1 = time.perf_counter()
+        total_eval_time[0] += t1 - t0
+
+        next_gen = [list(produce_new_generation(pipeline, species)) for species in evaluated]
+        t2 = time.perf_counter()
+        total_neat_time[0] += t2 - t1
+
+        self.best_genome, self.best_fitness = max(chain(*evaluated), key=itemgetter(1))
+        return next_gen
+
 
     def get_stats(self, genomes):
         n_neurons, n_conns = complexity(genomes)
@@ -184,6 +166,12 @@ class Attempt:
 def copy_with_mutation(pipeline, source_genome):
     return pipeline.topology_augmentation_step(pipeline.parameters_mutation_step(source_genome.copy()))
 
+## CREATE MUTATOR ##
+mutator = Mutator(
+    neuron_factory=default_gene_factory(sigmoid_neuron_spec),
+    connection_factory=default_gene_factory(connection_spec),
+    pure_input_types=(input_neuron_spec,),
+)
 
 def make_attempt(num_epochs, gens_per_epoch):
     augmentation_proba = .9
@@ -191,13 +179,6 @@ def make_attempt(num_epochs, gens_per_epoch):
 
     augment_gens_per_epoch = int(.4 * gens_per_epoch)
     reduct_gens_per_epoch = gens_per_epoch - augment_gens_per_epoch
-
-    ## CREATE MUTATOR ##
-    mutator = Mutator(
-        neuron_factory=default_gene_factory(sigmoid_neuron_spec),
-        connection_factory=default_gene_factory(connection_spec),
-        pure_input_types=(input_neuron_spec,),
-    )
 
     ## CREATE THE REPRODUCTION PIPELINE ##
     pipeline = make_pipeline(mutator)
@@ -228,13 +209,13 @@ def make_attempt(num_epochs, gens_per_epoch):
         pipeline = make_pipeline(mutator, topology_augmentation_proba=augmentation_proba, topology_reduction_proba=0)
 
         for _ in range(augment_gens_per_epoch):
-            current_gen = attempt.next_gen_all_species(pipeline, current_gen)
+            current_gen = attempt.make_next_generation(pipeline, current_gen)
         # print("  AUG " + attempt.get_stats(current_gen))
 
         pipeline = make_pipeline(mutator, topology_augmentation_proba=0, topology_reduction_proba=reduction_proba)
 
         for _ in range(reduct_gens_per_epoch):
-            current_gen = attempt.next_gen_all_species(pipeline, current_gen)
+            current_gen = attempt.make_next_generation(pipeline, current_gen)
         # print("  RED " + attempt.get_stats(current_gen))
 
         if abs(attempt.best_fitness - 1) < 1e-6:
@@ -253,6 +234,7 @@ best_genome = None
 
 num_attempts = 10
 total_eval_num = 0
+success_count = 0
 start_timer = time.perf_counter()
 
 for attempt_id in range(num_attempts):
@@ -265,6 +247,7 @@ for attempt_id in range(num_attempts):
     attempt = make_attempt(num_epochs=num_epochs, gens_per_epoch=gens_per_epoch)
 
     if attempt.target_reached:
+        success_count += 1
         best_genome = attempt.best_genome
     total_eval_num += attempt.evals_num
     result = dict(
@@ -286,6 +269,11 @@ print(f"total neat time {total_neat_time[0]} ticks")
 print(f"eval time per 10000 evals: {10000*total_eval_time[0] / total_eval_num} ticks")
 print(f"neat time per 10000 evals: {10000*total_neat_time[0] / total_eval_num} ticks")
 print(f"neat time percentage = {100*total_neat_time[0] / total_time}")
+print(f"total number of innovations: {mutator.innovation_number}")
+print(f"success rate: {success_count} / {num_attempts}")
+
+time_per_success = total_time / success_count if success_count > 0 else "N/A"
+print(f"time per success: {time_per_success}")
 
 
 # print("Final test:")
@@ -308,5 +296,5 @@ else:
             genfile.write(best_genome.to_yaml())
         print(f"solution was written to file {filename}")
 
-    except AnyError:
+    except Exception:
         pass
