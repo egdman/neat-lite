@@ -13,8 +13,33 @@ def neuron(gene_spec: GeneSpec, non_removable=False, **params):
     n.non_removable = non_removable
     n.spec = gene_spec
     n.params = params
+    n.pure_upstream = False
+    n.pure_downstream = False
     return n
 
+def upstream_neuron(gene_spec: GeneSpec, non_removable=True, **params):
+    '''
+    Helper function to use with Mutator.produce_genome
+    '''
+    n = GeneDescription()
+    n.non_removable = non_removable
+    n.spec = gene_spec
+    n.params = params
+    n.pure_upstream = True
+    n.pure_downstream = False
+    return n
+
+def downstream_neuron(gene_spec: GeneSpec, non_removable=True, **params):
+    '''
+    Helper function to use with Mutator.produce_genome
+    '''
+    n = GeneDescription()
+    n.non_removable = non_removable
+    n.spec = gene_spec
+    n.params = params
+    n.pure_upstream = False
+    n.pure_downstream = True
+    return n
 
 def connection(gene_spec: GeneSpec, src, dst, non_removable=False, **params):
     '''
@@ -35,43 +60,49 @@ class Mutator:
         neuron_factory,
         connection_factory,
         innovation_number = 0, # starting innovation number
-        pure_input_types = tuple(), # list of input-only neuron types (can't attach loopback inputs)
-        pure_output_types = tuple() # list of output-only neuron types (can't attach loopback outputs)
         ):
 
         self.neuron_factory = neuron_factory
         self.connection_factory = connection_factory
-        self.pure_input_types = pure_input_types
-        self.pure_output_types = pure_output_types
         self.innovation_number = innovation_number
         self._non_removable_hmarks = set()
+        self._pure_upstream_hmarks = set()
+        self._pure_downstream_hmarks = set()
 
 
 
     def _find_free_connection_dense(self, genome):
-        n_neurons = genome.num_neuron_genes()
+        n_neurons = genome.num_neuron_genes() - len(self._pure_upstream_hmarks)
         src_marks = []
         cum_weights = []
         cum_weight = 0
 
         for g in genome.neuron_genes():
-            if g.spec not in self.pure_output_types:
-                downstream_set = genome.connections_index.get(g.historical_mark, ())
-                cum_weight += n_neurons - len(downstream_set)
+            if g.historical_mark in self._pure_downstream_hmarks:
+                continue
 
-            cum_weights.append(cum_weight)
-            src_marks.append(g.historical_mark)
+            downstream_set = genome.connections_index.get(g.historical_mark, ())
+            weight = n_neurons - len(downstream_set)
+            if weight > 0:
+                cum_weight += weight
+                cum_weights.append(cum_weight)
+                src_marks.append(g.historical_mark)
+
+        if len(src_marks) == 0:
+            # print(genome.connections_index)
+            return None, None, False
 
         m0, = random.choices(src_marks, k=1, cum_weights=cum_weights)
 
         dst_marks = (g.historical_mark for g in genome.neuron_genes() \
-            if g.spec not in self.pure_input_types)
+            if g.historical_mark not in self._pure_upstream_hmarks)
 
         downstream_set = genome.connections_index.get(m0, ())
         dst_marks = (m for m in dst_marks if m not in downstream_set)
 
         dst_marks = tuple(dst_marks)
         if len(dst_marks) == 0:
+            # print(f"m0={m0}: {genome.connections_index}")
             return None, None, False
 
         m1 = random.choice(dst_marks)
@@ -100,12 +131,12 @@ class Mutator:
 
             mark_from = neuron_from.historical_mark
             mark_to = neuron_to.historical_mark
-            are_valid = neuron_from.spec not in self.pure_output_types and \
-                        neuron_to.spec not in self.pure_input_types
+            are_valid = neuron_from.historical_mark not in self._pure_downstream_hmarks and \
+                        neuron_to.historical_mark not in self._pure_upstream_hmarks
             return mark_from, mark_to, are_valid
 
 
-        if genome.num_neuron_genes() > 8:
+        if genome.num_neuron_genes() > 4:
             mark_from, mark_to, are_valid = _get_random_neuron_pair()
             num_attempts = 0
 
@@ -219,7 +250,14 @@ class Mutator:
 
 
 
-    def add_neuron(self, genome, neuron_spec, neuron_params, non_removable=False):
+    def add_neuron(
+        self,
+        genome,
+        neuron_spec,
+        neuron_params,
+        non_removable=False,
+        pure_upstream=False,
+        pure_downstream=False):
         new_neuron_gene = NeuronGene(
                                 gene_spec = neuron_spec,
                                 params = neuron_params,
@@ -229,6 +267,10 @@ class Mutator:
         genome.add_neuron_gene(new_neuron_gene)
         if non_removable:
             self._non_removable_hmarks.add(new_neuron_gene.historical_mark)
+        if pure_upstream:
+            self._pure_upstream_hmarks.add(new_neuron_gene.historical_mark)
+        if pure_downstream:
+            self._pure_downstream_hmarks.add(new_neuron_gene.historical_mark)
         return new_neuron_gene.historical_mark
 
 
@@ -281,6 +323,8 @@ class Mutator:
                 neuron_info.spec,
                 list(_make_params(neuron_info.spec, neuron_info.params)),
                 non_removable=neuron_info.non_removable,
+                pure_upstream=neuron_info.pure_upstream,
+                pure_downstream=neuron_info.pure_downstream,
             )
             neuron_map[neuron_id] = hmark
 

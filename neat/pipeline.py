@@ -3,9 +3,14 @@ import heapq
 from operator import itemgetter
 from functools import partial
 
+from collections import deque
+from time import perf_counter
+
 from .genes import Genome
 from .operators import crossover
 
+
+ADD_RANDOM_CONNECTION_STATS = [0, 0]
 
 def validate_genome(genome, error_msg):
     if not genome.check_validity():
@@ -137,11 +142,15 @@ def topology_augmentation(mutator, probas):
     def _augment_always(genome):
         # if no connections, add a connection
         if genome.num_connection_genes() == 0:
-            mutator.add_random_connection(genome)
+            ADD_RANDOM_CONNECTION_STATS[1] += 1
+            if mutator.add_random_connection(genome):
+                ADD_RANDOM_CONNECTION_STATS[0] += 1
 
         # otherwise add connection or neuron with equal probability
         elif random.random() < 0.5:
-            mutator.add_random_connection(genome)
+            ADD_RANDOM_CONNECTION_STATS[1] += 1
+            if mutator.add_random_connection(genome):
+                ADD_RANDOM_CONNECTION_STATS[0] += 1
         else:
             mutator.add_random_neuron(genome)
         return True
@@ -151,11 +160,15 @@ def topology_augmentation(mutator, probas):
         if rv < probability:
             # if no connections, add a connection
             if genome.num_connection_genes() == 0:
-                mutator.add_random_connection(genome)
+                ADD_RANDOM_CONNECTION_STATS[1] += 1
+                if mutator.add_random_connection(genome):
+                    ADD_RANDOM_CONNECTION_STATS[0] += 1
 
             # otherwise add connection or neuron with equal probability
             elif rv < 0.5 * probability:
-                mutator.add_random_connection(genome)
+                ADD_RANDOM_CONNECTION_STATS[1] += 1
+                if mutator.add_random_connection(genome):
+                    ADD_RANDOM_CONNECTION_STATS[0] += 1
             else:
                 mutator.add_random_neuron(genome)
             return True
@@ -223,6 +236,8 @@ def _check_setting(setting_name, setting_value):
         raise InvalidConfigError("please provide value for {}".format(setting_name))
 
 
+TIMING = [0]*25
+
 class Pipeline:
     def __init__(self,
         topology_mutator=None,
@@ -273,17 +288,42 @@ class Pipeline:
                 _check_setting("topology_reduction_proba", topology_reduction_proba)
                 self.topology_reduction_step = topology_reduction(topology_mutator, topology_reduction_proba)
 
+        self._q = ()
+        self._inp = ()
+
 
     def produce_new_genome(self, genome_and_fitness_list) -> Genome:
         if self.custom_reproduction_pipeline is None:
-            value = self.selection_step(genome_and_fitness_list)
-            value = self.crossover_step(value)
-            value = self.parameters_mutation_step(value)
-            value = self.topology_augmentation_step(value)
-            value = self.topology_reduction_step(value)
-            return value
+            if genome_and_fitness_list is not self._inp or len(self._q) == 0:
+                self._inp = genome_and_fitness_list
+
+                t = [perf_counter()]
+                self._q = [self.selection_step(genome_and_fitness_list) for _ in range(len(genome_and_fitness_list))]
+                # self._q = [self.selection_step(genome_and_fitness_list)]
+                t.append(perf_counter())
+                self._q = [self.crossover_step(value) for value in self._q]
+                t.append(perf_counter())
+                self._q = [self.parameters_mutation_step(value) for value in self._q]
+                t.append(perf_counter())
+                self._q = [self.topology_augmentation_step(value) for value in self._q]
+                t.append(perf_counter())
+                self._q = deque(self.topology_reduction_step(value) for value in self._q)
+                t.append(perf_counter())
+
+                for idx in range(1, len(t)):
+                    TIMING[idx - 1] += t[idx] - t[idx - 1]
+
+            return self._q.popleft()
+
         else:
             value = genome_and_fitness_list
             for step in self.custom_reproduction_pipeline:
                 value = step(value)
             return value
+
+
+def get_TIMING():
+    return TIMING
+
+def get_ARC_STATS():
+    return ADD_RANDOM_CONNECTION_STATS
