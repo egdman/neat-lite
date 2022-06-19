@@ -47,50 +47,65 @@ class Mutator:
         self._non_removable_hmarks = set()
 
 
-    def add_random_connection(self, genome, max_attempts=100):
-        """
-        Pick two neurons A and B at random. Make sure that connection AB does not exist.
-        If that's the case, add new connection whose type is randomly selected from the set
-        of allowed types and whose parameters are initialized according to spec for that type.
+    def _iter_all_unconnected_pairs(self, genome):
+        for n0 in genome.neuron_genes():
+            if n0.spec in self.pure_output_types:
+                continue
 
+            downstream_set = genome.connections_index.get(n0.historical_mark, ())
+            for n1 in genome.neuron_genes():
+                if n1.spec not in self.pure_input_types and \
+                    n1.historical_mark not in downstream_set:
+                    yield n0, n1
+
+
+    def add_random_connection(self, genome, max_attempts=50):
+        """
+        Pick two neurons n0 and n1 at random. Check that connection n0->n1 does not exist.
+        If that's the case, add a new connection from n0 to n1.
         Otherwise pick two neurons again and repeat until suitable pair is found or we run out of attempts.
+        If all attempts failed, the network is most likely dense, therefore use the dense selection process.
         """
+        def _connect(n0, n1):
+            new_connection_spec, new_connection_params = self.connection_factory()
+            self.add_connection(
+                genome,
+                new_connection_spec,
+                new_connection_params,
+                n0.historical_mark,
+                n1.historical_mark)
 
-        # TODO: rewrite this function better, get rid of attempts
+        neuron_genes = genome._neuron_genes
 
-        def _get_pair_neurons():
-            neuron_from = random.choice(genome._neuron_genes)
-            if neuron_from is None:
-                return None, None, False
+        n_attempt = 0
+        while n_attempt < max_attempts:
+            n_attempt += 1
 
-            neuron_to = random.choice(genome._neuron_genes)
-            if neuron_to is None:
-                return None, None, False
+            n0 = random.choice(neuron_genes)
+            while n0 is None:
+                n0 = random.choice(neuron_genes)
 
-            mark_from = neuron_from.historical_mark
-            mark_to = neuron_to.historical_mark
-            are_valid = neuron_from.spec not in self.pure_output_types and \
-                        neuron_to.spec not in self.pure_input_types
-            return mark_from, mark_to, are_valid
+            n1 = random.choice(neuron_genes)
+            while n1 is None:
+                n1 = random.choice(neuron_genes)
 
-        mark_from, mark_to, are_valid = _get_pair_neurons()
-        num_attempts = 0
+            if n0.spec in self.pure_output_types:
+                continue
+            if n1.spec in self.pure_input_types:
+                continue
+            if genome.has_connection(n0.historical_mark, n1.historical_mark):
+                continue
 
-        while not are_valid or genome.has_connection(mark_from, mark_to):
-            mark_from, mark_to, are_valid = _get_pair_neurons()
-            num_attempts += 1
-            if num_attempts >= max_attempts: return False
+            _connect(n0, n1)
+            return True
 
-        new_connection_spec, new_connection_params = self.connection_factory()
-        self.add_connection(
-            genome,
-            new_connection_spec,
-            new_connection_params,
-            mark_from,
-            mark_to)
+        pairs = tuple(self._iter_all_unconnected_pairs(genome))
+        if len(pairs) == 0:
+            return False
 
+        n0, n1 = random.choice(pairs)
+        _connect(n0, n1)
         return True
-
 
 
     def _unprotected_connection_ids(self, genome):
