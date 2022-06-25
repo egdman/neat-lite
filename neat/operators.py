@@ -1,6 +1,6 @@
 import random
 from .specs import GeneSpec
-from .genes import NeuronGene, ConnectionGene, Genome
+from .genes import Gene, ConnectionGene, Genome
 
 class GeneDescription: pass
 
@@ -132,7 +132,7 @@ class Mutator:
 
 
     def add_neuron(self, genome, neuron_spec, neuron_params, non_removable=False):
-        new_neuron_gene = NeuronGene(
+        new_neuron_gene = Gene(
             gene_spec=neuron_spec,
             params=neuron_params,
             historical_mark=self.innovation_number)

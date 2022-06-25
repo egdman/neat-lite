@@ -47,11 +47,6 @@ class Gene:
         return s
 
 
-class NeuronGene(Gene):
-    __slots__ = ()
-
-
-
 class ConnectionGene(Gene):
     __slots__ = ('mark_from', 'mark_to')
 
@@ -360,7 +355,7 @@ class Genome:
 
     #     for y_neuron in y_neurons:
     #         # y_neuron.update(y_neuron.pop("params"))
-    #         self.add_neuron_gene(NeuronGene(**y_neuron))
+    #         self.add_neuron_gene(Gene(**y_neuron))
 
     #     for y_connection in y_connections:
     #         # y_connection.update(y_connection.pop("params"))
