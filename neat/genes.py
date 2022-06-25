@@ -39,9 +39,6 @@ class Gene:
         return d
 
 
-class NeuronGene(Gene):
-    __slots__ = ()
-
     def __str__(self):
         s = "node, mark: {}, type: {}".format(
             self.historical_mark,
@@ -49,6 +46,9 @@ class NeuronGene(Gene):
         )
         return s
 
+
+class NeuronGene(Gene):
+    __slots__ = ()
 
 
 
@@ -296,7 +296,7 @@ class Genome:
                     modified = True
                     connections.set_empty(idx)
 
-            elif del_neuron.spec is dst_spec:
+            if del_neuron.spec is dst_spec:
                 for idx in _enumerate_if(connections, lambda g: g.mark_to == del_mark):
                     modified = True
                     connections.set_empty(idx)
