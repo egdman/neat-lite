@@ -29,14 +29,37 @@ def two_best_in_sample(sample_size):
 
 
 def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
-    def _mutate_gene_params(genes_list, probability):
-        for idx, gene in enumerate(genes_list):
-            if gene is None:
-                continue
+    def _mutate_gene_params(genes_dict, probability):
+        for genes_list in genes_dict.values():
+            for idx, gene in enumerate(genes_list):
+                if gene is None:
+                    continue
 
-            specs = enumerate(iter(gene.spec.mutable_param_specs))
-            for param_idx, param_spec in specs:
-                if random.random() < probability:
+                specs = enumerate(iter(gene.spec.mutable_param_specs))
+                for param_idx, param_spec in specs:
+                    if random.random() < probability:
+                        gene_copy = gene.copy()
+                        params = gene_copy.params
+
+                        current_value = params[param_idx]
+                        params[param_idx] = param_spec.mutate_value(current_value)
+
+                        for param_idx, param_spec in specs:
+                            if random.random() < probability:
+                                current_value = params[param_idx]
+                                params[param_idx] = param_spec.mutate_value(current_value)
+
+                        genes_list[idx] = gene_copy
+                        break
+
+    def _mutate_gene_params_always(genes_dict):
+        for genes_list in genes_dict.values():
+            for idx, gene in enumerate(genes_list):
+                if gene is None:
+                    continue
+
+                specs = enumerate(iter(gene.spec.mutable_param_specs))
+                for param_idx, param_spec in specs:
                     gene_copy = gene.copy()
                     params = gene_copy.params
 
@@ -44,32 +67,11 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
                     params[param_idx] = param_spec.mutate_value(current_value)
 
                     for param_idx, param_spec in specs:
-                        if random.random() < probability:
-                            current_value = params[param_idx]
-                            params[param_idx] = param_spec.mutate_value(current_value)
+                        current_value = params[param_idx]
+                        params[param_idx] = param_spec.mutate_value(current_value)
 
                     genes_list[idx] = gene_copy
                     break
-
-    def _mutate_gene_params_always(genes_list):
-        for idx, gene in enumerate(genes_list):
-            if gene is None:
-                continue
-
-            specs = enumerate(iter(gene.spec.mutable_param_specs))
-            for param_idx, param_spec in specs:
-                gene_copy = gene.copy()
-                params = gene_copy.params
-
-                current_value = params[param_idx]
-                params[param_idx] = param_spec.mutate_value(current_value)
-
-                for param_idx, param_spec in specs:
-                    current_value = params[param_idx]
-                    params[param_idx] = param_spec.mutate_value(current_value)
-
-                genes_list[idx] = gene_copy
-                break
 
     if neuron_param_mut_proba == 0:
         if connection_param_mut_proba == 0:
@@ -78,47 +80,47 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
 
         elif connection_param_mut_proba == 1:
             def _parameters_mutation(genome):
-                _mutate_gene_params_always(genome._conn_genes)
+                _mutate_gene_params_always(genome.connections_dict())
                 return genome
 
         else:
             def _parameters_mutation(genome):
-                _mutate_gene_params(genome._conn_genes, connection_param_mut_proba)
+                _mutate_gene_params(genome.connections_dict(), connection_param_mut_proba)
                 return genome
 
     elif neuron_param_mut_proba == 1:
         if connection_param_mut_proba == 0:
             def _parameters_mutation(genome):
-                _mutate_gene_params_always(genome._neuron_genes)
+                _mutate_gene_params_always(genome.neurons_dict())
                 return genome
 
         elif connection_param_mut_proba == 1:
             def _parameters_mutation(genome):
-                _mutate_gene_params_always(genome._neuron_genes)
-                _mutate_gene_params_always(genome._conn_genes)
+                _mutate_gene_params_always(genome.neurons_dict())
+                _mutate_gene_params_always(genome.connections_dict())
                 return genome
 
         else:
             def _parameters_mutation(genome):
-                _mutate_gene_params_always(genome._neuron_genes)
-                _mutate_gene_params(genome._conn_genes, connection_param_mut_proba)
+                _mutate_gene_params_always(genome.neurons_dict())
+                _mutate_gene_params(genome.connections_dict(), connection_param_mut_proba)
                 return genome
     else:
         if connection_param_mut_proba == 0:
             def _parameters_mutation(genome):
-                _mutate_gene_params(genome._neuron_genes, neuron_param_mut_proba)
+                _mutate_gene_params(genome.neurons_dict(), neuron_param_mut_proba)
                 return genome
 
         elif connection_param_mut_proba == 1:
             def _parameters_mutation(genome):
-                _mutate_gene_params(genome._neuron_genes, neuron_param_mut_proba)
-                _mutate_gene_params_always(genome._conn_genes)
+                _mutate_gene_params(genome.neurons_dict(), neuron_param_mut_proba)
+                _mutate_gene_params_always(genome.connections_dict())
                 return genome
 
         else:
             def _parameters_mutation(genome):
-                _mutate_gene_params(genome._neuron_genes, neuron_param_mut_proba)
-                _mutate_gene_params(genome._conn_genes, connection_param_mut_proba)
+                _mutate_gene_params(genome.neurons_dict(), neuron_param_mut_proba)
+                _mutate_gene_params(genome.connections_dict(), connection_param_mut_proba)
                 return genome
     return _parameters_mutation
 
@@ -135,12 +137,7 @@ def _to_tuple_and_trunc(tupl):
 
 def topology_augmentation(mutator, probas):
     def _augment_always(genome):
-        # if no connections, add a connection
-        if genome.num_connection_genes() == 0:
-            mutator.add_random_connection(genome)
-
-        # otherwise add connection or neuron with equal probability
-        elif random.random() < 0.5:
+        if random.random() < 0.5:
             mutator.add_random_connection(genome)
         else:
             mutator.add_random_neuron(genome)
@@ -149,12 +146,7 @@ def topology_augmentation(mutator, probas):
     def _augment(genome, probability):
         rv = random.random()
         if rv < probability:
-            # if no connections, add a connection
-            if genome.num_connection_genes() == 0:
-                mutator.add_random_connection(genome)
-
-            # otherwise add connection or neuron with equal probability
-            elif rv < 0.5 * probability:
+            if rv < 0.5 * probability:
                 mutator.add_random_connection(genome)
             else:
                 mutator.add_random_neuron(genome)

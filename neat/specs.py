@@ -124,6 +124,14 @@ class GeneSpec:
         self.mutable_param_specs = tuple(self.mutable_param_specs)
 
 
+    def copy_with_name(self, type_name):
+        c = self.__new__(GeneSpec)
+        c.type_name = type_name
+        c.immutable_param_specs = self.immutable_param_specs
+        c.mutable_param_specs = self.mutable_param_specs
+        return c
+
+
     def iterate_param_names(self):
         return (spec.name for spec in chain(self.mutable_param_specs, self.immutable_param_specs))
 

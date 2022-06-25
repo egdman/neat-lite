@@ -30,33 +30,17 @@ def connection(gene_spec: GeneSpec, src, dst, non_removable=False, **params):
 
 
 class Mutator:
-
     def __init__(self,
         neuron_factory,
         connection_factory,
-        innovation_number = 0, # starting innovation number
-        pure_input_types = tuple(), # list of input-only neuron types (can't attach loopback inputs)
-        pure_output_types = tuple() # list of output-only neuron types (can't attach loopback outputs)
-        ):
+        channels,
+        innovation_number=0):
 
+        self.innovation_number = innovation_number
         self.neuron_factory = neuron_factory
         self.connection_factory = connection_factory
-        self.pure_input_types = pure_input_types
-        self.pure_output_types = pure_output_types
-        self.innovation_number = innovation_number
+        self._channels = channels
         self._non_removable_hmarks = set()
-
-
-    def _iter_all_unconnected_pairs(self, genome):
-        for n0 in genome.neuron_genes():
-            if n0.spec in self.pure_output_types:
-                continue
-
-            downstream_set = genome.connections_index.get(n0.historical_mark, ())
-            for n1 in genome.neuron_genes():
-                if n1.spec not in self.pure_input_types and \
-                    n1.historical_mark not in downstream_set:
-                    yield n0, n1
 
 
     def add_random_connection(self, genome, max_attempts=50):
@@ -64,159 +48,116 @@ class Mutator:
         Pick two neurons n0 and n1 at random. Check that connection n0->n1 does not exist.
         If that's the case, add a new connection from n0 to n1.
         Otherwise pick two neurons again and repeat until suitable pair is found or we run out of attempts.
-        If all attempts failed, the network is most likely dense, therefore use the dense selection process.
         """
-        def _connect(n0, n1):
+
+        """
+        TODO:
+        If all attempts failed, the channel is most likely dense, therefore use the dense selection process.
+        """
+
+        def _connect(n0, n1, channel):
             new_connection_spec, new_connection_params = self.connection_factory()
             self.add_connection(
                 genome,
                 new_connection_spec,
                 new_connection_params,
                 n0.historical_mark,
-                n1.historical_mark)
+                n1.historical_mark,
+                channel)
 
-        neuron_genes = genome._neuron_genes
+        channel_weights = []
+        acc_weight = 0
+        for channel in self._channels:
+            acc_weight += genome.calc_channel_capacity(channel)
+            channel_weights.append(acc_weight)
+
+        # TODO: see if can implement weighted random choice more efficiently using bisect
+        channel, = random.choices(self._channels, k=1, cum_weights=channel_weights)
+        src_type, dst_type = channel
+        src_neurons = genome.neurons_dict()[src_type]
+        dst_neurons = genome.neurons_dict()[dst_type]
 
         n_attempt = 0
         while n_attempt < max_attempts:
             n_attempt += 1
 
-            n0 = random.choice(neuron_genes)
+            n0 = random.choice(src_neurons)
             while n0 is None:
-                n0 = random.choice(neuron_genes)
+                n0 = random.choice(src_neurons)
 
-            n1 = random.choice(neuron_genes)
+            n1 = random.choice(dst_neurons)
             while n1 is None:
-                n1 = random.choice(neuron_genes)
+                n1 = random.choice(dst_neurons)
 
-            if n0.spec in self.pure_output_types:
-                continue
-            if n1.spec in self.pure_input_types:
-                continue
             if genome.has_connection(n0.historical_mark, n1.historical_mark):
                 continue
 
-            _connect(n0, n1)
+            _connect(n0, n1, channel)
             return True
-
-        pairs = tuple(self._iter_all_unconnected_pairs(genome))
-        if len(pairs) == 0:
-            return False
-
-        n0, n1 = random.choice(pairs)
-        _connect(n0, n1)
-        return True
-
-
-    def _unprotected_connection_ids(self, genome):
-        if len(genome._conn_genes) == genome._conn_num:
-            return tuple(idx for idx, g in enumerate(genome._conn_genes) \
-                if g.historical_mark not in self._non_removable_hmarks)
-        else:
-            return tuple(idx for idx, g in enumerate(genome._conn_genes) \
-                if g is not None and g.historical_mark not in self._non_removable_hmarks)
-
+        return False
 
 
     def _unprotected_neuron_ids(self, genome):
-        if len(genome._neuron_genes) == genome._neuron_num:
-            return tuple(idx for idx, g in enumerate(genome._neuron_genes) \
-                if g.historical_mark not in self._non_removable_hmarks)
-        else:
-            return tuple(idx for idx, g in enumerate(genome._neuron_genes) \
-                if g is not None and g.historical_mark not in self._non_removable_hmarks)
+        for spec, gs in genome.neurons_dict().items():
+            for idx, g in enumerate(gs):
+                if g is not None and g.historical_mark not in self._non_removable_hmarks:
+                    yield spec, idx
 
 
+    def _unprotected_connection_ids(self, genome):
+        for channel, gs in genome.connections_dict().items():
+            for idx, g in enumerate(gs):
+                if g is not None and g.historical_mark not in self._non_removable_hmarks:
+                    yield channel, idx
 
 
     def add_random_neuron(self, genome):
-        """
-        Pick a connection at random from neuron A to neuron B.
-        And add a neuron C in between A and B.
-        Old connection AB gets deleted.
-        Two new connections AC and CB are added.
-        Connection AC will be a copy of AB, but with a new h-mark.
-        Connection CB will be newly generated.
-        """
-
-        unprotected_conn_ids = self._unprotected_connection_ids(genome)
-        if len(unprotected_conn_ids) == 0: return
-
-        connection_to_split_id = random.choice(unprotected_conn_ids)
-        connection_to_split = genome._conn_genes[connection_to_split_id]
-        while connection_to_split is None:
-            connection_to_split_id = random.choice(unprotected_conn_ids)
-            connection_to_split = genome._conn_genes[connection_to_split_id]
-
-        # delete the old connection from the genome
-        genome.remove_connection_gene(connection_to_split_id)
-
-        # insert new neuron
         new_neuron_spec, new_neuron_params = self.neuron_factory()
-        mark_middle = self.add_neuron(genome, new_neuron_spec, new_neuron_params)
-
-        self.add_connection(
-            genome,
-            connection_to_split.spec,
-            connection_to_split.params,
-            connection_to_split.mark_from,
-            mark_middle)
-
-        new_connection_spec, new_connection_params = self.connection_factory()
-        self.add_connection(
-            genome,
-            new_connection_spec,
-            new_connection_params,
-            mark_middle,
-            connection_to_split.mark_to)
-
-
+        self.add_neuron(
+            genome, new_neuron_spec, new_neuron_params)
 
 
     def remove_random_connection(self, genome):
-        unprotected_conn_ids = self._unprotected_connection_ids(genome)
+        unprotected_conn_ids = tuple(self._unprotected_connection_ids(genome))
         if len(unprotected_conn_ids) == 0: return
-        gene_id = random.choice(unprotected_conn_ids)
-        genome.remove_connection_gene(gene_id)
-
+        channel, idx = random.choice(unprotected_conn_ids)
+        genome.remove_connection_gene(channel, idx)
 
 
     def remove_random_neuron(self, genome):
-        unprotected_neuron_ids = self._unprotected_neuron_ids(genome)
+        unprotected_neuron_ids = tuple(self._unprotected_neuron_ids(genome))
         if len(unprotected_neuron_ids) == 0: return
-        gene_id = random.choice(unprotected_neuron_ids)
-        genome.remove_neuron_gene(gene_id)
-
-
+        spec, idx = random.choice(unprotected_neuron_ids)
+        genome.remove_neuron_gene(spec, idx)
 
 
     def add_neuron(self, genome, neuron_spec, neuron_params, non_removable=False):
         new_neuron_gene = NeuronGene(
-                                gene_spec = neuron_spec,
-                                params = neuron_params,
-                                historical_mark = self.innovation_number)
+            gene_spec=neuron_spec,
+            params=neuron_params,
+            historical_mark=self.innovation_number)
 
         self.innovation_number += 1
         genome.add_neuron_gene(new_neuron_gene)
         if non_removable:
             self._non_removable_hmarks.add(new_neuron_gene.historical_mark)
-        return new_neuron_gene.historical_mark
+        return new_neuron_gene
 
 
 
-    def add_connection(self, genome, connection_spec, connection_params, mark_from, mark_to, non_removable=False):
+    def add_connection(self, genome, connection_spec, connection_params, mark_from, mark_to, channel, non_removable=False):
         new_conn_gene = ConnectionGene(
-                                  gene_spec = connection_spec,
-                                  params = connection_params,
-                                  mark_from = mark_from,
-                                  mark_to = mark_to,
-                                  historical_mark = self.innovation_number)
+          gene_spec=connection_spec,
+          params=connection_params,
+          mark_from=mark_from,
+          mark_to=mark_to,
+          historical_mark=self.innovation_number)
 
         self.innovation_number += 1
-        genome.add_connection_gene(new_conn_gene)
+        genome.add_connection_gene(new_conn_gene, channel)
         if non_removable:
             self._non_removable_hmarks.add(new_neuron_gene.historical_mark)
-        return new_conn_gene.historical_mark
+        return new_conn_gene
 
 
     def produce_genome(self, **genes) -> Genome:
@@ -225,7 +166,7 @@ class Mutator:
         """
         connections = genes.pop('connections', ())
         neurons = genes
-        genome = Genome()
+        genome = Genome((), (), ())
 
         # if we want to protect a connection from removal we also
         # want to protect its 2 adjacent neurons
@@ -247,22 +188,26 @@ class Mutator:
         # add neuron genes to genome using mutator
         neuron_map = {}
         for neuron_id, neuron_info in neurons.items():
-            hmark = self.add_neuron(
+            neuron_gene = self.add_neuron(
                 genome,
                 neuron_info.spec,
                 list(_make_params(neuron_info.spec, neuron_info.params)),
                 non_removable=neuron_info.non_removable,
             )
-            neuron_map[neuron_id] = hmark
+            neuron_map[neuron_id] = neuron_gene
 
         # add connection genes to genome using mutator
         for conn_info in connections:
+            n0 = neuron_map[conn_info.src]
+            n1 = neuron_map[conn_info.dst]
+
             self.add_connection(
                 genome,
                 conn_info.spec,
                 list(_make_params(conn_info.spec, conn_info.params)),
-                mark_from = neuron_map[conn_info.src],
-                mark_to = neuron_map[conn_info.dst],
+                mark_from=n0.historical_mark,
+                mark_to=n1.historical_mark,
+                channel=(n0.spec, n1.spec),
                 non_removable=conn_info.non_removable,
             )
 
@@ -274,36 +219,54 @@ def crossover(genome_primary, genome_secondary) -> Genome:
     Perform crossover of two genomes. The input genomes are kept unchanged.
     The first genome in the arguments will provide 100% of unpaired genes.
     '''
-    neuron_pairs = Genome.get_pairs(
-        genome_primary.neuron_genes(),
-        genome_secondary.neuron_genes())
 
+    # build list of neurons
     neuron_genes = []
-    for gene0, gene1 in neuron_pairs:
-        # if gene is paired, inherit one of the pair with 50/50 chance:
-        if gene0 is not None and gene1 is not None:
-            if random.random() < 0.5:
+
+    specs_union = set().union(
+        genome_primary.neurons_dict(),
+        genome_secondary.neurons_dict())
+
+    for spec in specs_union:
+        neuron_pairs = Genome.get_pairs(
+            genome_primary.neurons_with_spec(spec),
+            genome_secondary.neurons_with_spec(spec))
+
+        for gene0, gene1 in neuron_pairs:
+            # if gene is paired, inherit one of the pair with 50/50 chance:
+            if gene0 is not None and gene1 is not None:
+                if random.random() < 0.5:
+                    neuron_genes.append(gene0)
+                else:
+                    neuron_genes.append(gene1)
+
+            # inherit unpaired gene from the primary parent:
+            elif gene0 is not None:
                 neuron_genes.append(gene0)
-            else:
-                neuron_genes.append(gene1)
 
-        # inherit unpaired gene from the primary parent:
-        elif gene0 is not None:
-            neuron_genes.append(gene0)
-
-    connect_pairs = Genome.get_pairs(
-        genome_primary.connection_genes(),
-        genome_secondary.connection_genes())
-
+    # build list of connections
     connect_genes = []
-    for gene0, gene1 in connect_pairs:
-        if gene0 is not None and gene1 is not None:
-            if random.random() < 0.5:
+    channels = []
+
+    channels_union = set().union(
+        genome_primary.connections_dict(),
+        genome_secondary.connections_dict())
+
+    for channel in channels_union:
+        connect_pairs = Genome.get_pairs(
+            genome_primary.connections_in_channel(channel),
+            genome_secondary.connections_in_channel(channel))
+
+        for gene0, gene1 in connect_pairs:
+            if gene0 is not None and gene1 is not None:
+                channels.append(channel)
+                if random.random() < 0.5:
+                    connect_genes.append(gene0)
+                else:
+                    connect_genes.append(gene1)
+
+            elif gene0 is not None:
+                channels.append(channel)
                 connect_genes.append(gene0)
-            else:
-                connect_genes.append(gene1)
 
-        elif gene0 is not None:
-            connect_genes.append(gene0)
-
-    return Genome(neuron_genes, connect_genes)
+    return Genome(neuron_genes, connect_genes, channels)

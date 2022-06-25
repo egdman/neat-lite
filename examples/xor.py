@@ -75,7 +75,7 @@ connection_spec = GeneSpec(
 def produce_new_generation(pipeline, genome_fitness_list):
     for _ in range(len(genome_fitness_list) - elite_num):
         g = pipeline.produce_new_genome(genome_fitness_list)
-        # validate_genome(g, 'invalid genome')
+        validate_genome(g, 'invalid genome')
         yield g
 
     # bringing the best genomes into next generation:
@@ -103,7 +103,7 @@ def evaluate(genome):
 
 
 def complexity(species_list):
-    n = (ge.num_neuron_genes() for ge in chain(*species_list))
+    n = (sum(1 for _ in ge.neuron_genes()) for ge in chain(*species_list))
     c = (ge.num_connection_genes() for ge in chain(*species_list))
     return sum(n), sum(c)
 
@@ -139,7 +139,8 @@ class Attempt:
         n_neurons, n_conns = complexity(genomes)
         return ("evals: {}, best genome has: {}N, {}C, complexity: {}N, {}C, best fitness = {}"
             .format(self.evals_num,
-                self.best_genome.num_neuron_genes(), self.best_genome.num_connection_genes(),
+                sum(1 for _ in self.best_genome.neuron_genes()),
+                self.best_genome.num_connection_genes(),
                 n_neurons, n_conns, self.best_fitness))
 
 
@@ -170,7 +171,9 @@ def copy_with_mutation(pipeline, source_genome):
 mutator = Mutator(
     neuron_factory=default_gene_factory(sigmoid_neuron_spec),
     connection_factory=default_gene_factory(connection_spec),
-    pure_input_types=(input_neuron_spec,),
+    channels=(
+        (input_neuron_spec, sigmoid_neuron_spec),
+        (sigmoid_neuron_spec, sigmoid_neuron_spec)),
 )
 
 def make_attempt(num_epochs, gens_per_epoch):
@@ -232,13 +235,15 @@ def timestamp():
 ## RUN MULTIPLE ATTEMPTS TO CREATE A XOR NETWORK ##
 best_genome = None
 
-num_attempts = 10
+num_attempts = 50
 total_eval_num = 0
 success_count = 0
 start_timer = time.perf_counter()
 
 for attempt_id in range(num_attempts):
     # attempt_id += 100#20400
+
+    # attempt_id+=1000
 
     num_epochs = 20
     gens_per_epoch = 250
