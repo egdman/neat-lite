@@ -166,7 +166,7 @@ class Mutator:
         """
         connections = genes.pop('connections', ())
         neurons = genes
-        genome = Genome((), (), ())
+        genome = Genome(())
 
         # if we want to protect a connection from removal we also
         # want to protect its 2 adjacent neurons
@@ -219,46 +219,32 @@ def crossover(genome_primary, genome_secondary) -> Genome:
     Perform crossover of two genomes. The input genomes are kept unchanged.
     The first genome in the arguments will provide 100% of unpaired genes.
     '''
+    def _cross_genes(gene_pairs):
+        for gene_prim, gene_sec in gene_pairs:
+            # inherit one of paired genes with 50/50 chance,
+            # and inherit unpaired genes only from the primary parent.
+            if gene_prim is None:
+                continue
+            elif gene_sec is None or random.random() < .5:
+                yield gene_prim
+            else:
+                yield gene_sec
 
-    # build list of neurons
-    neuron_genes = []
+    def _cross_neurons():
+        for spec, primary_neurons in genome_primary.neurons_dict().items():
+            neuron_pairs = Genome.get_pairs(
+                primary_neurons.iter_non_empty(),
+                genome_secondary.neurons_with_spec(spec))
 
-    for spec, primary_neurons in genome_primary.neurons_dict().items():
-        neuron_pairs = Genome.get_pairs(
-            primary_neurons.iter_non_empty(),
-            genome_secondary.neurons_with_spec(spec))
+            yield from _cross_genes(neuron_pairs)
 
-        for gene0, gene1 in neuron_pairs:
-            # if gene is paired, inherit one of the pair with 50/50 chance:
-            if gene0 is not None and gene1 is not None:
-                if random.random() < 0.5:
-                    neuron_genes.append(gene0)
-                else:
-                    neuron_genes.append(gene1)
-
-            # inherit unpaired gene from the primary parent:
-            elif gene0 is not None:
-                neuron_genes.append(gene0)
-
-    # build list of connections
-    connect_genes = []
-    channels = []
+    new_genome = Genome(_cross_neurons())
 
     for channel, primary_connections in genome_primary.connections_dict().items():
         connect_pairs = Genome.get_pairs(
             primary_connections.iter_non_empty(),
             genome_secondary.connections_in_channel(channel))
 
-        for gene0, gene1 in connect_pairs:
-            if gene0 is not None and gene1 is not None:
-                channels.append(channel)
-                if random.random() < 0.5:
-                    connect_genes.append(gene0)
-                else:
-                    connect_genes.append(gene1)
+        new_genome.add_channel(channel, _cross_genes(connect_pairs))
 
-            elif gene0 is not None:
-                channels.append(channel)
-                connect_genes.append(gene0)
-
-    return Genome(neuron_genes, connect_genes, channels)
+    return new_genome

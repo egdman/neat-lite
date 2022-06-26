@@ -126,33 +126,16 @@ class ListWithEmpty:
 
 
 class Genome:
-    def __init__(self, neuron_genes, connection_genes, channels):
+    def __init__(self, neuron_genes):
         '''
-        neuron_genes and connection_genes are expected
-        to be sorted by their .spec attribute.
+        neuron_genes sequence is expected to be sorted by the .spec attribute.
         '''
-        def _2nd(tuples):
-            return (item for _, item in tuples)
-
         self._neuron_genes = {neuron_spec: ListWithEmpty(neurons)
             for neuron_spec, neurons
             in groupby(neuron_genes, key=lambda g: g.spec)
         }
-        self._conn_genes = {channel: ListWithEmpty(_2nd(connections))
-            for channel, connections
-            in groupby(zip(channels, connection_genes), key=lambda item: item[0])
-        }
-
+        self._conn_genes = dict()
         self.connections_index = dict()
-        for gs in self._conn_genes.values():
-            for g in gs:
-                m0 = g.mark_from
-                m1 = g.mark_to
-                downstream_set = self.connections_index.get(m0, None)
-                if downstream_set is None:
-                    self.connections_index[m0] = {m1}
-                else:
-                    downstream_set.add(m1)
 
 
     def copy(self):
@@ -165,9 +148,23 @@ class Genome:
             for channel, connections
             in self._conn_genes.items()
         }
-        g.connections_index = {m0: set(downstream_set) \
-            for m0, downstream_set in self.connections_index.items()}
+        g.connections_index = {m0: set(downstream_set)
+            for m0, downstream_set in self.connections_index.items()
+        }
         return g
+
+
+    def add_channel(self, channel, connection_genes):
+        gs = ListWithEmpty(connection_genes)
+        self._conn_genes[channel] = gs
+        for g in gs:
+            m0 = g.mark_from
+            m1 = g.mark_to
+            downstream_set = self.connections_index.get(m0, None)
+            if downstream_set is None:
+                self.connections_index[m0] = {m1}
+            else:
+                downstream_set.add(m1)
 
 
     def calc_channel_capacity(self, channel):
