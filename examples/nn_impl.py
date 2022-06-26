@@ -24,9 +24,6 @@ class Node:
         self.inputs.append((input_node, weight))
 
 
-class InputNode(Node): pass
-
-
 class ComputeNode(Node):
     def __init__(self, act_func):
         super(ComputeNode, self).__init__()
@@ -49,24 +46,27 @@ class NN:
         nodes = {}
 
         for ng in genome.neuron_genes():
-            if ng.get_type() == 'sigmoid':
-                bias, gain, layer = ng.params
+            if ng.get_type().startswith('sigm'):
+                bias, gain = ng.params
 
                 node = ComputeNode(
                     act_func = partial(sigmoid, bias=bias, gain=gain)
                 )
 
+                layer = ng.get_type()[-1]
+
                 # output nodes go in both compute list and output list
                 # hidden nodes only go in compute list
-                if layer.startswith('h'):
+                if layer == 'h':
                     self.comp_nodes.append(node)
-                elif layer.startswith('o'):
+                elif layer == 'o':
                     self.comp_nodes.append(node)
                     self.out_nodes.append(node)
-
-            elif ng.get_type() == 'input':
-                node = InputNode()
-                self.in_nodes.append(node)
+                elif layer == 'i':
+                    self.comp_nodes.append(node)
+                    self.in_nodes.append(node)
+                else:
+                    raise RuntimeError("unknown gene type '{}'".format(ng.get_type()))
             else:
                 raise RuntimeError("unknown gene type '{}'".format(ng.get_type()))
 
