@@ -415,7 +415,10 @@ class Genome:
 
 
     @staticmethod
-    def get_pairs(genes_sorted1, genes_sorted2):
+    def align_genes(genes_sorted1, genes_sorted2):
+        """
+        Both gene sequences must be sorted by historical mark.
+        """
         left_genes = iter(genes_sorted1)
         right_genes = iter(genes_sorted2)
 

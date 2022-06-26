@@ -117,6 +117,7 @@ class Mutator:
             genome, new_neuron_spec, new_neuron_params)
 
 
+
     def remove_random_connection(self, genome):
         unprotected_conn_ids = tuple(self._unprotected_connection_ids(genome))
         if len(unprotected_conn_ids) == 0: return
@@ -232,7 +233,7 @@ def crossover(genome_primary, genome_secondary) -> Genome:
 
     def _cross_neurons():
         for spec, primary_neurons in genome_primary.neurons_dict().items():
-            neuron_pairs = Genome.get_pairs(
+            neuron_pairs = Genome.align_genes(
                 primary_neurons.iter_non_empty(),
                 genome_secondary.neurons_with_spec(spec))
 
@@ -241,7 +242,7 @@ def crossover(genome_primary, genome_secondary) -> Genome:
     new_genome = Genome(_cross_neurons())
 
     for channel, primary_connections in genome_primary.connections_dict().items():
-        connect_pairs = Genome.get_pairs(
+        connect_pairs = Genome.align_genes(
             primary_connections.iter_non_empty(),
             genome_secondary.connections_in_channel(channel))
 
