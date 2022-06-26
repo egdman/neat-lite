@@ -219,22 +219,13 @@ def crossover(genome_primary, genome_secondary) -> Genome:
     Perform crossover of two genomes. The input genomes are kept unchanged.
     The first genome in the arguments will provide 100% of unpaired genes.
     '''
-    def _keys_union(d1, d2):
-        ks = set(d1).union(d2)
-        return list(ks)
 
     # build list of neurons
     neuron_genes = []
 
-    specs_union = _keys_union(
-        genome_primary.neurons_dict(),
-        genome_secondary.neurons_dict())
-    # sorting is necessary for deterministic traversal of specs
-    specs_union.sort(key=lambda spec: spec.type_name)
-
-    for spec in specs_union:
+    for spec, primary_neurons in genome_primary.neurons_dict().items():
         neuron_pairs = Genome.get_pairs(
-            genome_primary.neurons_with_spec(spec),
+            primary_neurons.iter_non_empty(),
             genome_secondary.neurons_with_spec(spec))
 
         for gene0, gene1 in neuron_pairs:
@@ -253,15 +244,9 @@ def crossover(genome_primary, genome_secondary) -> Genome:
     connect_genes = []
     channels = []
 
-    channels_union = _keys_union(
-        genome_primary.connections_dict(),
-        genome_secondary.connections_dict())
-    # sorting is necessary for deterministic traversal of channels
-    channels_union.sort(key=lambda ch: (ch[0].type_name, ch[1].type_name))
-
-    for channel in channels_union:
+    for channel, primary_connections in genome_primary.connections_dict().items():
         connect_pairs = Genome.get_pairs(
-            genome_primary.connections_in_channel(channel),
+            primary_connections.iter_non_empty(),
             genome_secondary.connections_in_channel(channel))
 
         for gene0, gene1 in connect_pairs:
