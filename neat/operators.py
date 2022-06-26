@@ -71,6 +71,9 @@ class Mutator:
             acc_weight += genome.calc_channel_capacity(channel)
             channel_weights.append(acc_weight)
 
+        if acc_weight == 0:
+            return False
+
         # TODO: see if can implement weighted random choice more efficiently using bisect
         channel, = random.choices(self._channels, k=1, cum_weights=channel_weights)
         src_type, dst_type = channel

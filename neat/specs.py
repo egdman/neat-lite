@@ -132,6 +132,10 @@ class GeneSpec:
         return c
 
 
+    def __repr__(self):
+        return f"{self.type_name} spec"
+
+
     def iterate_param_names(self):
         return (spec.name for spec in chain(self.mutable_param_specs, self.immutable_param_specs))
 
