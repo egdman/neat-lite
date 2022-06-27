@@ -3,6 +3,8 @@ import heapq
 from operator import itemgetter
 from functools import partial
 
+from time import perf_counter
+
 from .genes import Genome
 from .operators import crossover
 
@@ -215,6 +217,8 @@ def _check_setting(setting_name, setting_value):
         raise InvalidConfigError("please provide value for {}".format(setting_name))
 
 
+_TIMING = [0]*10
+
 class Pipeline:
     def __init__(self,
         topology_mutator=None,
@@ -268,14 +272,29 @@ class Pipeline:
 
     def produce_new_genome(self, genome_and_fitness_list) -> Genome:
         if self.custom_reproduction_pipeline is None:
+            t0 = perf_counter()
             value = self.selection_step(genome_and_fitness_list)
+            t1 = perf_counter()
             value = self.crossover_step(value)
+            t2 = perf_counter()
             value = self.parameters_mutation_step(value)
+            t3 = perf_counter()
             value = self.topology_augmentation_step(value)
+            t4 = perf_counter()
             value = self.topology_reduction_step(value)
+            t5 = perf_counter()
+            _TIMING[0] += t1-t0
+            _TIMING[1] += t2-t1
+            _TIMING[2] += t3-t2
+            _TIMING[3] += t4-t3
+            _TIMING[4] += t5-t4
             return value
         else:
             value = genome_and_fitness_list
             for step in self.custom_reproduction_pipeline:
                 value = step(value)
             return value
+
+
+def get_TIMING():
+    return _TIMING
