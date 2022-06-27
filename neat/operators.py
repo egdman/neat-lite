@@ -77,8 +77,8 @@ class Mutator:
         # TODO: see if can implement weighted random choice more efficiently using bisect
         channel, = random.choices(self._channels, k=1, cum_weights=channel_weights)
         src_type, dst_type = channel
-        src_neurons = genome.neurons_dict()[src_type]
-        dst_neurons = genome.neurons_dict()[dst_type]
+        src_neurons = genome.layers()[src_type]
+        dst_neurons = genome.layers()[dst_type]
 
         n_attempt = 0
         while n_attempt < max_attempts:
@@ -108,6 +108,9 @@ class Mutator:
         if len(channels) == 0:
             return self.add_random_connection(genome)
 
+        new_n = self.add_neuron(
+            genome, new_neuron_spec, new_neuron_params)
+
         def _connect(n0, n1, channel):
             new_connection_spec, new_connection_params = self.connection_factory()
             self.add_connection(
@@ -117,9 +120,6 @@ class Mutator:
                 n0.historical_mark,
                 n1.historical_mark,
                 channel)
-
-        new_n = self.add_neuron(
-            genome, new_neuron_spec, new_neuron_params)
 
         channel_weights = []
         acc_weight = 0
@@ -133,7 +133,7 @@ class Mutator:
         # TODO: see if can implement weighted random choice more efficiently using bisect
         channel, = random.choices(channels, k=1, cum_weights=channel_weights)
         src_type, dst_type = channel
-        src_neurons = genome.neurons_dict()[src_type]
+        src_neurons = genome.layers()[src_type]
 
         if src_type is dst_type or new_neuron_spec is dst_type:
             n0 = random.choice(src_neurons)
@@ -142,7 +142,7 @@ class Mutator:
 
             _connect(n0, new_n, channel)
         else:
-            dst_neurons = genome.neurons_dict()[dst_type]
+            dst_neurons = genome.layers()[dst_type]
 
             n1 = random.choice(dst_neurons)
             while n1 is None:
@@ -154,14 +154,14 @@ class Mutator:
 
 
     def _unprotected_neuron_ids(self, genome):
-        for spec, gs in genome.neurons_dict().items():
+        for spec, gs in genome.layers().items():
             for idx, g in enumerate(gs):
                 if g is not None and g.historical_mark not in self._non_removable_hmarks:
                     yield spec, idx
 
 
     def _unprotected_connection_ids(self, genome):
-        for channel, gs in genome.connections_dict().items():
+        for channel, gs in genome.channels().items():
             for idx, g in enumerate(gs):
                 if g is not None and g.historical_mark not in self._non_removable_hmarks:
                     yield channel, idx
@@ -192,7 +192,6 @@ class Mutator:
         if non_removable:
             self._non_removable_hmarks.add(new_neuron_gene.historical_mark)
         return new_neuron_gene
-
 
 
     def add_connection(self, genome, connection_spec, connection_params, mark_from, mark_to, channel, non_removable=False):
@@ -282,17 +281,17 @@ def crossover(genome_primary, genome_secondary) -> Genome:
 
     new_genome = Genome()
 
-    for spec, primary_neurons in genome_primary.neurons_dict().items():
+    for layer, primary_neurons in genome_primary.layers().items():
         neuron_pairs = Genome.align_genes(
             primary_neurons.iter_non_empty(),
-            genome_secondary.neurons_with_spec(spec))
+            genome_secondary.iterate_layer(layer))
 
-        new_genome.add_layer(spec, _cross_genes(neuron_pairs))
+        new_genome.add_layer(layer, _cross_genes(neuron_pairs))
 
-    for channel, primary_connections in genome_primary.connections_dict().items():
+    for channel, primary_connections in genome_primary.channels().items():
         connect_pairs = Genome.align_genes(
             primary_connections.iter_non_empty(),
-            genome_secondary.connections_in_channel(channel))
+            genome_secondary.iterate_channel(channel))
 
         new_genome.add_channel(channel, _cross_genes(connect_pairs))
 

@@ -1,4 +1,4 @@
-from itertools import chain, groupby
+from itertools import chain
 
 try:
     from yaml import dump as yaml_dump
@@ -127,52 +127,56 @@ class ListWithEmpty:
 
 class Genome:
     def __init__(self):
-        self._neuron_genes = dict()
-        self._conn_genes = dict()
-        self.connections_index = dict()
+        self._layers = {}
+        self._channels = {}
+        self._connections_index = {}
 
 
     def copy(self):
         g = self.__new__(Genome)
-        g._neuron_genes = {neuron_spec: neurons.copy_non_empty()
-            for neuron_spec, neurons
-            in self._neuron_genes.items()
+        g._layers = {neuron_spec: neurons.copy_non_empty()
+            for neuron_spec, neurons in self._layers.items()
         }
-        g._conn_genes = {channel: connections.copy_non_empty()
-            for channel, connections
-            in self._conn_genes.items()
+        g._channels = {channel: connections.copy_non_empty()
+            for channel, connections in self._channels.items()
         }
-        g.connections_index = {m0: set(downstream_set)
-            for m0, downstream_set in self.connections_index.items()
+        g._connections_index = {mark: set(downstream_set)
+            for mark, downstream_set in self._connections_index.items()
         }
         return g
 
 
+    def layers(self):
+        return self._layers
+
+
+    def channels(self):
+        return self._channels
+
+
     def add_layer(self, spec, neuron_genes):
-        self._neuron_genes[spec] = ListWithEmpty(neuron_genes)
+        self._layers[spec] = ListWithEmpty(neuron_genes)
 
 
     def add_channel(self, channel, connection_genes):
         gs = ListWithEmpty(connection_genes)
-        self._conn_genes[channel] = gs
+        self._channels[channel] = gs
         for g in gs:
-            m0 = g.mark_from
-            m1 = g.mark_to
-            downstream_set = self.connections_index.get(m0, None)
+            downstream_set = self._connections_index.get(g.mark_from, None)
             if downstream_set is None:
-                self.connections_index[m0] = {m1}
+                self._connections_index[g.mark_from] = {g.mark_to}
             else:
-                downstream_set.add(m1)
+                downstream_set.add(g.mark_to)
 
 
     def calc_channel_capacity(self, channel):
-        src_spec, dst_spec = channel
+        src_layer, dst_layer = channel
 
-        src_genes = self._neuron_genes.get(src_spec, None)
+        src_genes = self._layers.get(src_layer, None)
         if src_genes is None:
             return 0
 
-        dst_genes = self._neuron_genes.get(dst_spec, None)
+        dst_genes = self._layers.get(dst_layer, None)
         if dst_genes is None:
             return 0
 
@@ -180,19 +184,23 @@ class Genome:
         capacity = src_genes.non_empty_count()*dst_genes.non_empty_count()
 
         # however some of them might already exist
-        connections = self._conn_genes.get((src_spec, dst_spec), None)
+        connections = self._channels.get(channel, None)
         if connections is None:
             return capacity
 
         return capacity - connections.non_empty_count()
 
 
-    def connection_genes(self):
-        return chain(*(gs.iter_non_empty() for gs in self._conn_genes.values()))
+    def iterate_layer(self, spec):
+        gs = self._layers.get(spec, None)
+        if gs is None:
+            return ()
+        else:
+            return gs.iter_non_empty()
 
 
-    def connections_in_channel(self, channel):
-        cs = self._conn_genes.get(channel, None)
+    def iterate_channel(self, channel):
+        cs = self._channels.get(channel, None)
         if cs is None:
             return ()
         else:
@@ -200,75 +208,63 @@ class Genome:
 
 
     def has_connection(self, mark_from, mark_to):
-        downstream_set = self.connections_index.get(mark_from, ())
+        downstream_set = self._connections_index.get(mark_from, ())
         return mark_to in downstream_set
 
 
-    def connections_dict(self):
-        return self._conn_genes
-
-
     def neuron_genes(self):
-        return chain(*(gs.iter_non_empty() for gs in self._neuron_genes.values()))
+        return chain(*(gs.iter_non_empty() for gs in self._layers.values()))
 
 
-    def neurons_dict(self):
-        return self._neuron_genes
-
-
-    def neurons_with_spec(self, spec):
-        gs = self._neuron_genes.get(spec, None)
-        if gs is None:
-            return ()
-        else:
-            return gs.iter_non_empty()
+    def connection_genes(self):
+        return chain(*(gs.iter_non_empty() for gs in self._channels.values()))
 
 
     def add_neuron_gene(self, neuron_gene):
-        gs = self._neuron_genes.get(neuron_gene.spec, None)
+        gs = self._layers.get(neuron_gene.spec, None)
         if gs is None:
-            self._neuron_genes[neuron_gene.spec] = ListWithEmpty((neuron_gene,))
+            self._layers[neuron_gene.spec] = ListWithEmpty((neuron_gene,))
         else:
             gs.append(neuron_gene)
 
 
     def add_connection_gene(self, connection_gene, channel):
-        gs = self._conn_genes.get(channel, None)
+        gs = self._channels.get(channel, None)
         if gs is None:
-            self._conn_genes[channel] = ListWithEmpty((connection_gene,))
+            self._channels[channel] = ListWithEmpty((connection_gene,))
         else:
             gs.append(connection_gene)
 
         m0, m1 = connection_gene.mark_from, connection_gene.mark_to
-        downstream_set = self.connections_index.get(m0, None)
+        downstream_set = self._connections_index.get(m0, None)
         if downstream_set is None:
-            self.connections_index[m0] = {m1}
+            self._connections_index[m0] = {m1}
         else:
             downstream_set.add(m1)
 
 
     def remove_connection_gene(self, channel, index):
-        gs = self._conn_genes[channel]
+        gs = self._channels[channel]
         del_conn = gs[index]
         gs.set_empty(index)
 
         # collect garbage
         if len(gs) > 2 * gs.non_empty_count():
-            self._conn_genes[channel] = gs.copy_non_empty()
+            self._channels[channel] = gs.copy_non_empty()
 
-        downstream_set = self.connections_index[del_conn.mark_from]
+        downstream_set = self._connections_index[del_conn.mark_from]
         downstream_set.discard(del_conn.mark_to)
 
 
     def remove_neuron_gene(self, spec, index):
-        gs = self._neuron_genes[spec]
+        gs = self._layers[spec]
         del_neuron = gs[index]
         del_mark = del_neuron.historical_mark
         gs.set_empty(index)
 
         # collect garbage
         if len(gs) > 2 * gs.non_empty_count():
-            self._neuron_genes[spec] = gs.copy_non_empty()
+            self._layers[spec] = gs.copy_non_empty()
 
         # remove all attached connection genes
         def _enumerate_if(genes, pred):
@@ -277,16 +273,16 @@ class Genome:
 
         modified_channels = []
 
-        for channel, connections in self._conn_genes.items():
-            src_spec, dst_spec = channel
+        for channel, connections in self._channels.items():
+            src_layer, dst_layer = channel
             modified = False
 
-            if del_neuron.spec is src_spec:
+            if del_neuron.spec is src_layer:
                 for idx in _enumerate_if(connections, lambda g: g.mark_from == del_mark):
                     modified = True
                     connections.set_empty(idx)
 
-            if del_neuron.spec is dst_spec:
+            if del_neuron.spec is dst_layer:
                 for idx in _enumerate_if(connections, lambda g: g.mark_to == del_mark):
                     modified = True
                     connections.set_empty(idx)
@@ -296,24 +292,24 @@ class Genome:
 
         # collect garbage
         for channel in modified_channels:
-            gs = self._conn_genes[channel]
+            gs = self._channels[channel]
             if len(gs) > 2 * gs.non_empty_count():
-                self._conn_genes[channel] = gs.copy_non_empty()
+                self._channels[channel] = gs.copy_non_empty()
 
         # remove all downstream connections of the neuron
-        self.connections_index.pop(del_mark, None)
+        self._connections_index.pop(del_mark, None)
 
         # now remove all the upstream connections
-        for downstream_set in self.connections_index.values():
+        for downstream_set in self._connections_index.values():
             downstream_set.discard(del_mark)
 
 
     def check_validity(self):
         neuron_hmarks = set(g.historical_mark
-            for gs in self._neuron_genes.values()
+            for gs in self._layers.values()
             for g in gs.iter_non_empty())
 
-        neruon_num = sum(gs.non_empty_count() for gs in self._neuron_genes.values())
+        neruon_num = sum(gs.non_empty_count() for gs in self._layers.values())
 
         if neruon_num != len(neuron_hmarks):
             return False
@@ -342,8 +338,8 @@ class Genome:
 
 
     # def from_yaml(self, y_desc):
-    #     del self._neuron_genes[:]
-    #     del self._conn_genes[:]
+    #     del self._layers[:]
+    #     del self._channels[:]
 
     #     y_neurons = y_desc['neurons']
     #     y_connections = y_desc['connections']

@@ -82,47 +82,47 @@ def parameters_mutation(neuron_param_mut_proba, connection_param_mut_proba):
 
         elif connection_param_mut_proba == 1:
             def _parameters_mutation(genome):
-                _mutate_gene_params_always(genome.connections_dict())
+                _mutate_gene_params_always(genome.channels())
                 return genome
 
         else:
             def _parameters_mutation(genome):
-                _mutate_gene_params(genome.connections_dict(), connection_param_mut_proba)
+                _mutate_gene_params(genome.channels(), connection_param_mut_proba)
                 return genome
 
     elif neuron_param_mut_proba == 1:
         if connection_param_mut_proba == 0:
             def _parameters_mutation(genome):
-                _mutate_gene_params_always(genome.neurons_dict())
+                _mutate_gene_params_always(genome.layers())
                 return genome
 
         elif connection_param_mut_proba == 1:
             def _parameters_mutation(genome):
-                _mutate_gene_params_always(genome.neurons_dict())
-                _mutate_gene_params_always(genome.connections_dict())
+                _mutate_gene_params_always(genome.layers())
+                _mutate_gene_params_always(genome.channels())
                 return genome
 
         else:
             def _parameters_mutation(genome):
-                _mutate_gene_params_always(genome.neurons_dict())
-                _mutate_gene_params(genome.connections_dict(), connection_param_mut_proba)
+                _mutate_gene_params_always(genome.layers())
+                _mutate_gene_params(genome.channels(), connection_param_mut_proba)
                 return genome
     else:
         if connection_param_mut_proba == 0:
             def _parameters_mutation(genome):
-                _mutate_gene_params(genome.neurons_dict(), neuron_param_mut_proba)
+                _mutate_gene_params(genome.layers(), neuron_param_mut_proba)
                 return genome
 
         elif connection_param_mut_proba == 1:
             def _parameters_mutation(genome):
-                _mutate_gene_params(genome.neurons_dict(), neuron_param_mut_proba)
-                _mutate_gene_params_always(genome.connections_dict())
+                _mutate_gene_params(genome.layers(), neuron_param_mut_proba)
+                _mutate_gene_params_always(genome.channels())
                 return genome
 
         else:
             def _parameters_mutation(genome):
-                _mutate_gene_params(genome.neurons_dict(), neuron_param_mut_proba)
-                _mutate_gene_params(genome.connections_dict(), connection_param_mut_proba)
+                _mutate_gene_params(genome.layers(), neuron_param_mut_proba)
+                _mutate_gene_params(genome.channels(), connection_param_mut_proba)
                 return genome
     return _parameters_mutation
 
