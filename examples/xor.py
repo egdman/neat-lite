@@ -56,16 +56,14 @@ def count_members(species_list):
 neuron_sigma = 0.25  # mutation sigma value for neuron params
 conn_sigma = 10.     # mutation sigma value for connection params
 
-input_neuron_spec = GeneSpec(
-    'input',
-    PS('layer', gen.const('input')),
-)
-sigmoid_neuron_spec = GeneSpec(
-    'sigmoid',
-    PS('layer', gen.const('hidden')),
+sigmoid_params = (
     PS('bias', gen.uniform(), mut.gauss(neuron_sigma), bounds(-1., 1.)),
     PS('gain', gen.uniform(), mut.gauss(neuron_sigma), bounds(0., 1.)),
 )
+
+input_spec = GeneSpec('sigmoid-i', *sigmoid_params)
+hidden_spec = GeneSpec('sigmoid-h', *sigmoid_params)
+output_spec = GeneSpec('sigmoid-o', *sigmoid_params)
 connection_spec = GeneSpec(
     'connection',
     PS('weight', gen.gauss(0, conn_sigma), mut.gauss(conn_sigma)),
@@ -90,6 +88,7 @@ inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 def evaluate(genome):
     nn = NN(genome)
 
+    # print(genome)
     outp0 = nn.compute(inputs[0])[0]
     nn.reset() # reset network otherwise it will remember previous state
     outp1 = nn.compute(inputs[1])[0]
@@ -144,41 +143,25 @@ class Attempt:
                 n_neurons, n_conns, self.best_fitness))
 
 
-# init_genome = mutator.produce_genome(
-#     in1=neuron(input_neuron_spec, non_removable=True, layer='input'),
-#     in2=neuron(input_neuron_spec, non_removable=True, layer='input'),
-#     out1=neuron(sigmoid_neuron_spec, non_removable=True, gain=1, bias=-0.2, layer='output'),
-#     h11 = neuron(sigmoid_neuron_spec, gain=1, bias=-0.6, layer='hidden'),
-#     h11066=neuron(sigmoid_neuron_spec, gain=1, bias=-1, layer='hidden'),
-#     h11242=neuron(sigmoid_neuron_spec, gain=1, bias=1, layer='hidden'),
-#     connections=(
-#         connection(connection_spec, src='in1', dst='h11', weight=-125),
-#         connection(connection_spec, src='in1', dst='h11066', weight=-40),
-#         connection(connection_spec, src='in2', dst='h11', weight=-45),
-#         connection(connection_spec, src='in2', dst='out1', weight=35),
-#         connection(connection_spec, src='h11', dst='out1', weight=125),
-#         connection(connection_spec, src='h11066', dst='out1', weight=-50),
-#         connection(connection_spec, src='h11242', dst='out1', weight=-60),
-#     )
-# )
-
-
 ## CREATE INITIAL GENERATION ##
 def copy_with_mutation(pipeline, source_genome):
     return pipeline.topology_augmentation_step(pipeline.parameters_mutation_step(source_genome.copy()))
 
 ## CREATE MUTATOR ##
 mutator = Mutator(
-    neuron_factory=default_gene_factory(sigmoid_neuron_spec),
+    neuron_factory=default_gene_factory(hidden_spec),
     connection_factory=default_gene_factory(connection_spec),
     channels=(
-        (input_neuron_spec, sigmoid_neuron_spec),
-        (sigmoid_neuron_spec, sigmoid_neuron_spec)),
+        # (input_spec, output_spec),
+        (input_spec, hidden_spec),
+        # (hidden_spec, hidden_spec),
+        (hidden_spec, output_spec),
+    )
 )
 
 def make_attempt(num_epochs, gens_per_epoch):
-    augmentation_proba = .9
-    reduction_proba = .9
+    augmentation_proba = .8
+    reduction_proba = .8
 
     augment_gens_per_epoch = int(.4 * gens_per_epoch)
     reduct_gens_per_epoch = gens_per_epoch - augment_gens_per_epoch
@@ -190,9 +173,9 @@ def make_attempt(num_epochs, gens_per_epoch):
     # we specify initial input and output neurons and protect them from removal
 
     init_genome = mutator.produce_genome(
-        in1=neuron(input_neuron_spec, non_removable=True, layer='input'),
-        in2=neuron(input_neuron_spec, non_removable=True, layer='input'),
-        out1=neuron(sigmoid_neuron_spec, non_removable=True, layer='output'),
+        in1=neuron(input_spec, non_removable=True),
+        in2=neuron(input_spec, non_removable=True),
+        out1=neuron(output_spec, non_removable=True),
         connections=(
             # connection(connection_spec, src='in1', dst='out1'),
             # connection(connection_spec, src='in2', dst='out1')
