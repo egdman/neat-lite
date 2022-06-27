@@ -126,14 +126,8 @@ class ListWithEmpty:
 
 
 class Genome:
-    def __init__(self, neuron_genes):
-        '''
-        neuron_genes sequence is expected to be sorted by the .spec attribute.
-        '''
-        self._neuron_genes = {neuron_spec: ListWithEmpty(neurons)
-            for neuron_spec, neurons
-            in groupby(neuron_genes, key=lambda g: g.spec)
-        }
+    def __init__(self):
+        self._neuron_genes = dict()
         self._conn_genes = dict()
         self.connections_index = dict()
 
@@ -152,6 +146,10 @@ class Genome:
             for m0, downstream_set in self.connections_index.items()
         }
         return g
+
+
+    def add_layer(self, spec, neuron_genes):
+        self._neuron_genes[spec] = ListWithEmpty(neuron_genes)
 
 
     def add_channel(self, channel, connection_genes):

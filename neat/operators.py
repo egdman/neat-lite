@@ -216,7 +216,7 @@ class Mutator:
         """
         connections = genes.pop('connections', ())
         neurons = genes
-        genome = Genome(())
+        genome = Genome()
 
         # if we want to protect a connection from removal we also
         # want to protect its 2 adjacent neurons
@@ -280,15 +280,14 @@ def crossover(genome_primary, genome_secondary) -> Genome:
             else:
                 yield gene_sec
 
-    def _cross_neurons():
-        for spec, primary_neurons in genome_primary.neurons_dict().items():
-            neuron_pairs = Genome.align_genes(
-                primary_neurons.iter_non_empty(),
-                genome_secondary.neurons_with_spec(spec))
+    new_genome = Genome()
 
-            yield from _cross_genes(neuron_pairs)
+    for spec, primary_neurons in genome_primary.neurons_dict().items():
+        neuron_pairs = Genome.align_genes(
+            primary_neurons.iter_non_empty(),
+            genome_secondary.neurons_with_spec(spec))
 
-    new_genome = Genome(_cross_neurons())
+        new_genome.add_layer(spec, _cross_genes(neuron_pairs))
 
     for channel, primary_connections in genome_primary.connections_dict().items():
         connect_pairs = Genome.align_genes(
