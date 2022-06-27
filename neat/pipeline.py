@@ -270,7 +270,7 @@ class Pipeline:
                 self.topology_reduction_step = topology_reduction(topology_mutator, topology_reduction_proba)
 
 
-    def produce_new_genome(self, genome_and_fitness_list) -> Genome:
+    def __call__(self, genome_and_fitness_list) -> Genome:
         if self.custom_reproduction_pipeline is None:
             t0 = perf_counter()
             value = self.selection_step(genome_and_fitness_list)

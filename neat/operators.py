@@ -135,7 +135,7 @@ class Mutator:
         src_type, dst_type = channel
         src_neurons = genome.layers()[src_type]
 
-        if src_type is dst_type or new_neuron_spec is dst_type:
+        if new_neuron_spec is dst_type or src_type is dst_type:
             n0 = random.choice(src_neurons)
             while n0 is None:
                 n0 = random.choice(src_neurons)
@@ -154,10 +154,10 @@ class Mutator:
 
 
     def _unprotected_neuron_ids(self, genome):
-        for spec, gs in genome.layers().items():
+        for layer, gs in genome.layers().items():
             for idx, g in enumerate(gs):
                 if g is not None and g.historical_mark not in self._non_removable_hmarks:
-                    yield spec, idx
+                    yield layer, idx
 
 
     def _unprotected_connection_ids(self, genome):
@@ -177,8 +177,8 @@ class Mutator:
     def remove_random_neuron(self, genome):
         unprotected_neuron_ids = tuple(self._unprotected_neuron_ids(genome))
         if len(unprotected_neuron_ids) == 0: return
-        spec, idx = random.choice(unprotected_neuron_ids)
-        genome.remove_neuron_gene(spec, idx)
+        layer, idx = random.choice(unprotected_neuron_ids)
+        genome.remove_neuron_gene(layer, idx)
 
 
     def add_neuron(self, genome, neuron_spec, neuron_params, non_removable=False):
