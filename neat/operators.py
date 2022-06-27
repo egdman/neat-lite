@@ -100,6 +100,59 @@ class Mutator:
         return False
 
 
+    def add_random_neuron(self, genome):
+        new_neuron_spec, new_neuron_params = self.neuron_factory()
+
+        # find channels for this spec:
+        channels = tuple(ch for ch in self._channels if new_neuron_spec in ch)
+        if len(channels) == 0:
+            return self.add_random_connection(genome)
+
+        def _connect(n0, n1, channel):
+            new_connection_spec, new_connection_params = self.connection_factory()
+            self.add_connection(
+                genome,
+                new_connection_spec,
+                new_connection_params,
+                n0.historical_mark,
+                n1.historical_mark,
+                channel)
+
+        new_n = self.add_neuron(
+            genome, new_neuron_spec, new_neuron_params)
+
+        channel_weights = []
+        acc_weight = 0
+        for channel in channels:
+            acc_weight += genome.calc_channel_capacity(channel)
+            channel_weights.append(acc_weight)
+
+        if acc_weight == 0:
+            return False
+
+        # TODO: see if can implement weighted random choice more efficiently using bisect
+        channel, = random.choices(channels, k=1, cum_weights=channel_weights)
+        src_type, dst_type = channel
+        src_neurons = genome.neurons_dict()[src_type]
+
+        if src_type is dst_type or new_neuron_spec is dst_type:
+            n0 = random.choice(src_neurons)
+            while n0 is None:
+                n0 = random.choice(src_neurons)
+
+            _connect(n0, new_n, channel)
+        else:
+            dst_neurons = genome.neurons_dict()[dst_type]
+
+            n1 = random.choice(dst_neurons)
+            while n1 is None:
+                n1 = random.choice(dst_neurons)
+
+            _connect(new_n, n1, channel)
+
+        return True
+
+
     def _unprotected_neuron_ids(self, genome):
         for spec, gs in genome.neurons_dict().items():
             for idx, g in enumerate(gs):
@@ -112,13 +165,6 @@ class Mutator:
             for idx, g in enumerate(gs):
                 if g is not None and g.historical_mark not in self._non_removable_hmarks:
                     yield channel, idx
-
-
-    def add_random_neuron(self, genome):
-        new_neuron_spec, new_neuron_params = self.neuron_factory()
-        self.add_neuron(
-            genome, new_neuron_spec, new_neuron_params)
-
 
 
     def remove_random_connection(self, genome):
