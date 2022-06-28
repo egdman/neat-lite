@@ -16,7 +16,7 @@ from neat import (Mutator, Pipeline, GeneSpec, ParamSpec as PS, validate_genome,
     gen, mut, bounds,
     neuron, connection, default_gene_factory)
 
-from nn_impl import NN
+from nn_impl import FeedForwardBuilder
 
 
 #### CONFIG #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
@@ -63,6 +63,7 @@ sigmoid_params = (
 
 input_spec = GeneSpec('sigmoid-i', *sigmoid_params)
 hidden_spec = GeneSpec('sigmoid-h', *sigmoid_params)
+hidden_spec_1 = GeneSpec('sigmoid-1h', *sigmoid_params)
 output_spec = GeneSpec('sigmoid-o', *sigmoid_params)
 connection_spec = GeneSpec(
     'connection',
@@ -72,9 +73,9 @@ connection_spec = GeneSpec(
 
 def produce_new_generation(pipeline, genome_fitness_list):
     for _ in range(len(genome_fitness_list) - elite_num):
-        g = pipeline(genome_fitness_list)
-        validate_genome(g, 'invalid genome')
-        yield g
+        genome = pipeline(genome_fitness_list)
+        validate_genome(genome, 'invalid genome')
+        yield genome
 
     # bringing the best genomes into next generation:
     best_genomes = heapq.nlargest(elite_num, genome_fitness_list, key=itemgetter(1))
@@ -86,16 +87,12 @@ def produce_new_generation(pipeline, genome_fitness_list):
 inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 
 def evaluate(genome):
-    nn = NN(genome)
+    nn = nn_builder(genome)
 
-    # print(genome)
-    outp0 = nn.compute(inputs[0])[0]
-    nn.reset() # reset network otherwise it will remember previous state
-    outp1 = nn.compute(inputs[1])[0]
-    nn.reset()
-    outp2 = nn.compute(inputs[2])[0]
-    nn.reset()
-    outp3 = nn.compute(inputs[3])[0]
+    outp0, = nn.compute(inputs[0])
+    outp1, = nn.compute(inputs[1])
+    outp2, = nn.compute(inputs[2])
+    outp3, = nn.compute(inputs[3])
 
     fitness = abs(outp0 - outp1) * abs(outp0 - outp2) * abs(outp3 - outp1) * abs(outp3 - outp2)
     return fitness
@@ -103,7 +100,7 @@ def evaluate(genome):
 
 def complexity(species_list):
     n = (sum(1 for _ in ge.neuron_genes()) for ge in chain(*species_list))
-    c = (ge.num_connection_genes() for ge in chain(*species_list))
+    c = (sum(1 for _ in ge.connection_genes()) for ge in chain(*species_list))
     return sum(n), sum(c)
 
 
@@ -139,7 +136,7 @@ class Attempt:
         return ("evals: {}, best genome has: {}N, {}C, complexity: {}N, {}C, best fitness = {}"
             .format(self.evals_num,
                 sum(1 for _ in self.best_genome.neuron_genes()),
-                self.best_genome.num_connection_genes(),
+                sum(1 for _ in self.best_genome.connection_genes()),
                 n_neurons, n_conns, self.best_fitness))
 
 
@@ -148,20 +145,33 @@ def copy_with_mutation(pipeline, source_genome):
     return pipeline.topology_augmentation_step(pipeline.parameters_mutation_step(source_genome.copy()))
 
 ## CREATE MUTATOR ##
+
+channels = (
+    (input_spec, output_spec),
+    (input_spec, hidden_spec),
+    (input_spec, hidden_spec_1),
+    (hidden_spec, output_spec),
+    (hidden_spec_1, output_spec),
+    (hidden_spec, hidden_spec_1),
+)
+
+channels = (
+    (input_spec, hidden_spec),
+    (hidden_spec, output_spec),
+)
+
+
+nn_builder = FeedForwardBuilder(channels)
+
 mutator = Mutator(
     neuron_factory=default_gene_factory(hidden_spec),
     connection_factory=default_gene_factory(connection_spec),
-    channels=(
-        # (input_spec, output_spec),
-        (input_spec, hidden_spec),
-        # (hidden_spec, hidden_spec),
-        (hidden_spec, output_spec),
-    )
+    channels=channels,
 )
 
 def make_attempt(num_epochs, gens_per_epoch):
-    augmentation_proba = .8
-    reduction_proba = .8
+    augmentation_proba = .9
+    reduction_proba = .9
 
     augment_gens_per_epoch = int(.4 * gens_per_epoch)
     reduct_gens_per_epoch = gens_per_epoch - augment_gens_per_epoch
@@ -218,7 +228,7 @@ def timestamp():
 ## RUN MULTIPLE ATTEMPTS TO CREATE A XOR NETWORK ##
 best_genome = None
 
-num_attempts = 50
+num_attempts = 10
 total_eval_num = 0
 success_count = 0
 start_timer = time.perf_counter()

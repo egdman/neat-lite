@@ -1,5 +1,6 @@
 import math
 from functools import partial
+from itertools import chain
 
 
 def sigmoid(x, bias, gain):
@@ -8,91 +9,104 @@ def sigmoid(x, bias, gain):
 
 
 class Node:
-    def __init__(self):
-        self.value = 0
-        self._new_value = 0
-        self.inputs = []
-
-    def reset(self, value):
-        self.value = value
-        self._new_value = value
-
-    def flip(self):
-        self.value = self._new_value
-
-    def add_input(self, input_node, weight):
-        self.inputs.append((input_node, weight))
-
-
-class ComputeNode(Node):
     def __init__(self, act_func):
-        super(ComputeNode, self).__init__()
         self.act_func = act_func
+        self.upstream = []
+        self.value = 0
 
-    def compute(self):
-        in_value = 0
-        for inp, weight in self.inputs:
-            in_value += inp.value * weight
+    def add_upstream_node(self, input_node, weight):
+        self.upstream.append((input_node, weight))
 
-        self._new_value = self.act_func(in_value)
+    def update_from_value(self, value):
+        self.value = self.act_func(value)
+
+    def update(self):
+        in_value = sum((up.value * weight for up, weight in self.upstream))
+        self.value = self.act_func(in_value)
 
 
 class NN:
-    def __init__(self, genome):
-        self.in_nodes = []
-        self.comp_nodes = []
-        self.out_nodes = []
+    def __init__(self, layers):
+        self.layers = layers
 
-        nodes = {}
-
-        for ng in genome.neuron_genes():
-            if ng.get_type().startswith('sigm'):
-                bias, gain = ng.params
-
-                node = ComputeNode(
-                    act_func = partial(sigmoid, bias=bias, gain=gain)
-                )
-
-                layer = ng.get_type()[-1]
-
-                # output nodes go in both compute list and output list
-                # hidden nodes only go in compute list
-                if layer == 'h':
-                    self.comp_nodes.append(node)
-                elif layer == 'o':
-                    self.comp_nodes.append(node)
-                    self.out_nodes.append(node)
-                elif layer == 'i':
-                    self.comp_nodes.append(node)
-                    self.in_nodes.append(node)
-                else:
-                    raise RuntimeError("unknown gene type '{}'".format(ng.get_type()))
-            else:
-                raise RuntimeError("unknown gene type '{}'".format(ng.get_type()))
-
-            nodes[ng.historical_mark] = node
-
-        for cg in genome.connection_genes():
-            weight, = cg.params
-            nodes[cg.mark_to].add_input(nodes[cg.mark_from], weight)
-
-
-    def reset(self):
-        # reset node values
-        for node in self.in_nodes:
-            node.reset(0)
-        for node in self.comp_nodes:
-            node.reset(0)
 
     def compute(self, inputs):
         # set inputs
-        for in_node, in_value in zip(self.in_nodes, inputs):
-            in_node.reset(in_value)
+        for node, in_value in zip(self.layers[0], inputs):
+            node.update_from_value(in_value)
 
-        # compute
-        for _ in range(2):
-            for node in self.comp_nodes: node.compute()
-            for node in self.comp_nodes: node.flip()
+        # calc all node output values
+        for layer in self.layers[1:]:
+            for node in layer:
+                node.update()
 
-        # get outputs
-        return list(out_node.value for out_node in self.out_nodes)
+        # collect outputs
+        return tuple(node.value for node in self.layers[-1])
+
+
+def _pop_layer(graph):
+    l, g = [], []
+
+    outputs = tuple(o for _, o in graph)
+    for i, o in graph:
+        if i in outputs:
+            g.append((i, o))
+        else:
+            l.append((i, o))
+    return tuple(l), g
+
+
+class FeedForwardBuilder:
+    def __init__(self, graph):
+        layer, graph = _pop_layer(graph)
+
+        layers = []
+        while len(layer) > 0:
+            layers.append(layer)
+            layer, graph = _pop_layer(graph)
+
+        if len(graph) > 0:
+            raise RuntimeError("graph cannot be converted to a feed-forward network")
+
+        self.compute_order = {}
+
+        for i, _ in layers[0]:
+            self.compute_order[i.type_id] = 0
+        for idx, layer in enumerate(layers):
+            for _, o in layer:
+                self.compute_order[o.type_id] = idx + 1
+
+
+    def __call__(self, genome):
+        nodes_map = {}
+
+        def _make_node(gene, gene_type):
+            if gene_type.type_id.startswith('sigm'):
+                bias, gain = gene.params
+
+                node = Node(
+                    act_func=partial(sigmoid, bias=bias, gain=gain),
+                )
+                nodes_map[gene.historical_mark] = node
+                return node
+            else:
+                raise RuntimeError("unknown activation for type '{}'".format(gene_type))
+
+        stack = [[]]
+
+        for layer, neurons in genome.layers().items():
+            if layer.type_id not in self.compute_order:
+                raise RuntimeError(f"layer {layer.type_id} is not recognized by the neural network builder")
+
+            idx = self.compute_order[layer.type_id]
+            if idx >= len(stack):
+                stack.extend(([] for _ in range(len(stack), idx + 1)))
+
+            stack[idx].extend((_make_node(gene, layer) for gene in neurons.iter_non_empty()))
+
+
+        for cg in genome.connection_genes():
+            weight, = cg.params
+            nodes_map[cg.mark_to].add_upstream_node(nodes_map[cg.mark_from], weight)
+
+        return NN(stack)
