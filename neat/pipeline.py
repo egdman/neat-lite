@@ -15,6 +15,9 @@ def validate_genome(genome, error_msg):
 
 
 def default_gene_factory(*gene_specs):
+    if len(gene_specs) == 0:
+        return None
+
     def _generate():
         # select gene type at random
         gene_spec = random.choice(gene_specs)

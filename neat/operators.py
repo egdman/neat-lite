@@ -101,6 +101,9 @@ class Mutator:
 
 
     def add_random_neuron(self, genome):
+        if self.neuron_factory is None:
+            return self.add_random_connection(genome)
+
         new_neuron_spec, new_neuron_params = self.neuron_factory()
 
         # find channels for this spec:
@@ -205,7 +208,7 @@ class Mutator:
         self.innovation_number += 1
         genome.add_connection_gene(new_conn_gene, channel)
         if non_removable:
-            self._non_removable_hmarks.add(new_neuron_gene.historical_mark)
+            self._non_removable_hmarks.add(new_conn_gene.historical_mark)
         return new_conn_gene
 
 
