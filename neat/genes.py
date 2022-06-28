@@ -129,7 +129,7 @@ class Genome:
     def __init__(self):
         self._layers = {}
         self._channels = {}
-        self._connections_index = {}
+        self._connections_index = set()
 
 
     def copy(self):
@@ -140,9 +140,7 @@ class Genome:
         g._channels = {channel: connections.copy_non_empty()
             for channel, connections in self._channels.items()
         }
-        g._connections_index = {mark: set(downstream_set)
-            for mark, downstream_set in self._connections_index.items()
-        }
+        g._connections_index = set(self._connections_index)
         return g
 
 
@@ -162,11 +160,7 @@ class Genome:
         gs = ListWithEmpty(connection_genes)
         self._channels[channel] = gs
         for g in gs:
-            downstream_set = self._connections_index.get(g.mark_from, None)
-            if downstream_set is None:
-                self._connections_index[g.mark_from] = {g.mark_to}
-            else:
-                downstream_set.add(g.mark_to)
+            self._connections_index.add((g.mark_from, g.mark_to))
 
 
     def calc_channel_capacity(self, channel):
@@ -208,8 +202,7 @@ class Genome:
 
 
     def has_connection(self, mark_from, mark_to):
-        downstream_set = self._connections_index.get(mark_from, ())
-        return mark_to in downstream_set
+        return (mark_from, mark_to) in self._connections_index
 
 
     def neuron_genes(self):
@@ -235,12 +228,7 @@ class Genome:
         else:
             gs.append(connection_gene)
 
-        m0, m1 = connection_gene.mark_from, connection_gene.mark_to
-        downstream_set = self._connections_index.get(m0, None)
-        if downstream_set is None:
-            self._connections_index[m0] = {m1}
-        else:
-            downstream_set.add(m1)
+        self._connections_index.add((connection_gene.mark_from, connection_gene.mark_to))
 
 
     def remove_connection_gene(self, channel, index):
@@ -252,8 +240,7 @@ class Genome:
         if len(gs) > 2 * gs.non_empty_count():
             self._channels[channel] = gs.copy_non_empty()
 
-        downstream_set = self._connections_index[del_conn.mark_from]
-        downstream_set.discard(del_conn.mark_to)
+        self._connections_index.remove((del_conn.mark_from, del_conn.mark_to))
 
 
     def remove_neuron_gene(self, spec, index):
@@ -268,7 +255,7 @@ class Genome:
 
         # remove all attached connection genes
         def _enumerate_if(genes, pred):
-            return (idx for idx, g in enumerate(genes)
+            return ((idx, g) for idx, g in enumerate(genes)
                 if g is not None and pred(g))
 
         modified_channels = []
@@ -278,30 +265,24 @@ class Genome:
             modified = False
 
             if del_neuron.spec is src_layer:
-                for idx in _enumerate_if(connections, lambda g: g.mark_from == del_mark):
+                for idx, g in _enumerate_if(connections, lambda g: g.mark_from == del_mark):
                     modified = True
+                    self._connections_index.remove((g.mark_from, g.mark_to))
                     connections.set_empty(idx)
 
             if del_neuron.spec is dst_layer:
-                for idx in _enumerate_if(connections, lambda g: g.mark_to == del_mark):
+                for idx, g in _enumerate_if(connections, lambda g: g.mark_to == del_mark):
                     modified = True
+                    self._connections_index.remove((g.mark_from, g.mark_to))
                     connections.set_empty(idx)
 
             if modified:
-                modified_channels.append(channel)
+                modified_channels.append((channel, connections))
 
         # collect garbage
-        for channel in modified_channels:
-            gs = self._channels[channel]
+        for channel, gs in modified_channels:
             if len(gs) > 2 * gs.non_empty_count():
                 self._channels[channel] = gs.copy_non_empty()
-
-        # remove all downstream connections of the neuron
-        self._connections_index.pop(del_mark, None)
-
-        # now remove all the upstream connections
-        for downstream_set in self._connections_index.values():
-            downstream_set.discard(del_mark)
 
 
     def check_validity(self):
