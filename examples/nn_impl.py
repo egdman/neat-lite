@@ -110,3 +110,37 @@ class FeedForwardBuilder:
             nodes_map[cg.mark_to].add_upstream_node(nodes_map[cg.mark_from], weight)
 
         return NN(stack)
+
+
+    def from_yaml(self, y_genome):
+        nodes_map = {}
+
+        def _make_node(y_neuron, type_name):
+            if type_name.startswith("sigm"):
+                node = Node(
+                    act_func=partial(sigmoid, bias=y_neuron["bias"], gain=y_neuron["gain"]),
+                )
+                nodes_map[y_neuron["historical_mark"]] = node
+                return node
+            else:
+                raise RuntimeError("unknown activation for type '{}'".format(type_name))
+
+        stack = [[]]
+
+        for y_neuron in y_genome['neurons']:
+            layer = y_neuron["gene_type"]
+
+            if layer not in self.compute_order:
+                raise RuntimeError(f"layer {layer} is not recognized by the neural network builder")
+
+            idx = self.compute_order[layer]
+            if idx >= len(stack):
+                stack.extend(([] for _ in range(len(stack), idx + 1)))
+
+            stack[idx].append(_make_node(y_neuron, layer))
+
+        for y_connection in y_genome['connections']:
+            nodes_map[y_connection["mark_to"]].add_upstream_node(
+                nodes_map[y_connection["mark_from"]], y_connection["weight"])
+
+        return NN(stack)
