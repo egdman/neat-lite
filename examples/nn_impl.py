@@ -44,20 +44,20 @@ class NN:
         return tuple(node.value for node in self.layers[-1])
 
 
+def _pop_layer(graph):
+    l, g = [], []
+
+    outputs = tuple(o for _, o in graph)
+    for i, o in graph:
+        if i in outputs:
+            g.append((i, o))
+        else:
+            l.append((i, o))
+    return tuple(l), g
+
 
 class FeedForwardBuilder:
     def __init__(self, graph):
-        def _pop_layer(_graph):
-            l, g = [], []
-
-            outputs = tuple(o for _, o in graph)
-            for i, o in _graph:
-                if i in outputs:
-                    g.append((i, o))
-                else:
-                    l.append((i, o))
-            return tuple(l), g
-
         layer, graph = _pop_layer(graph)
 
         layers = []
@@ -71,10 +71,10 @@ class FeedForwardBuilder:
         self.compute_order = {}
 
         for i, _ in layers[0]:
-            self.compute_order[i] = 0
+            self.compute_order[i.type_name] = 0
         for idx, layer in enumerate(layers):
             for _, o in layer:
-                self.compute_order[o] = idx + 1
+                self.compute_order[o.type_name] = idx + 1
 
 
     def __call__(self, genome):
@@ -95,10 +95,10 @@ class FeedForwardBuilder:
         stack = [[]]
 
         for layer, neurons in genome.layers().items():
-            if layer not in self.compute_order:
-                raise RuntimeError(f"layer {layer} is not recognized by the neural network builder")
+            if layer.type_name not in self.compute_order:
+                raise RuntimeError(f"layer {layer.type_name} is not recognized by the neural network builder")
 
-            idx = self.compute_order[layer]
+            idx = self.compute_order[layer.type_name]
             if idx >= len(stack):
                 stack.extend(([] for _ in range(len(stack), idx + 1)))
 
@@ -108,5 +108,39 @@ class FeedForwardBuilder:
         for cg in genome.connection_genes():
             weight, = cg.params
             nodes_map[cg.mark_to].add_upstream_node(nodes_map[cg.mark_from], weight)
+
+        return NN(stack)
+
+
+    def from_yaml(self, y_genome):
+        nodes_map = {}
+
+        def _make_node(y_neuron, type_name):
+            if type_name.startswith("sigm"):
+                node = Node(
+                    act_func=partial(sigmoid, bias=y_neuron["bias"], gain=y_neuron["gain"]),
+                )
+                nodes_map[y_neuron["historical_mark"]] = node
+                return node
+            else:
+                raise RuntimeError("unknown activation for type '{}'".format(type_name))
+
+        stack = [[]]
+
+        for y_neuron in y_genome['neurons']:
+            layer = y_neuron["gene_type"]
+
+            if layer not in self.compute_order:
+                raise RuntimeError(f"layer {layer} is not recognized by the neural network builder")
+
+            idx = self.compute_order[layer]
+            if idx >= len(stack):
+                stack.extend(([] for _ in range(len(stack), idx + 1)))
+
+            stack[idx].append(_make_node(y_neuron, layer))
+
+        for y_connection in y_genome['connections']:
+            nodes_map[y_connection["mark_to"]].add_upstream_node(
+                nodes_map[y_connection["mark_from"]], y_connection["weight"])
 
         return NN(stack)
