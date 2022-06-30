@@ -39,7 +39,7 @@ class Mutator:
         self.innovation_number = innovation_number
         self.neuron_factory = neuron_factory
         self.connection_factory = connection_factory
-        self._channels = channels
+        self._channels = tuple(channels)
         self._non_removable_hmarks = set()
 
 
