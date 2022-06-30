@@ -326,32 +326,16 @@ class Genome:
         return st
 
 
-    # def from_yaml(self, y_desc):
-    #     del self._layers[:]
-    #     del self._channels[:]
-
-    #     y_neurons = y_desc['neurons']
-    #     y_connections = y_desc['connections']
-
-    #     for y_neuron in y_neurons:
-    #         # y_neuron.update(y_neuron.pop("params"))
-    #         self.add_neuron_gene(Gene(**y_neuron))
-
-    #     for y_connection in y_connections:
-    #         # y_connection.update(y_connection.pop("params"))
-    #         self.add_connection_gene(ConnectionGene(**y_connection))
-
-    #     return self
+    def to_dict(self):
+        neuron_genes = list(g.to_dict() for g in self.neuron_genes())
+        conn_genes = list(g.to_dict() for g in self.connection_genes())
+        return {'neurons': neuron_genes, 'connections' : conn_genes}
 
 
     def to_yaml(self):
         if yaml_dump is None:
-            raise NotImplementedError("PyYaml not installed")
-
-        neuron_genes = list(g.to_dict() for g in self.neuron_genes())
-        conn_genes = list(g.to_dict() for g in self.connection_genes())
-        yaml_repr = {'neurons': neuron_genes, 'connections' : conn_genes}
-        return yaml_dump(yaml_repr, default_flow_style=False)
+            raise NotImplementedError("PyYaml is not installed")
+        return yaml_dump(self.to_dict(), default_flow_style=False)
 
 
     @staticmethod
