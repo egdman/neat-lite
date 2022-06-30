@@ -111,8 +111,8 @@ class GeneSpec:
     of a gene.
     '''
 
-    def __init__(self, type_name, *param_specs):
-        self.type_name = type_name
+    def __init__(self, type_id, *param_specs):
+        self.type_id = type_id
         self.immutable_param_specs = []
         self.mutable_param_specs = []
         for spec in param_specs:
@@ -124,16 +124,16 @@ class GeneSpec:
         self.mutable_param_specs = tuple(self.mutable_param_specs)
 
 
-    def copy_with_name(self, type_name):
+    def copy_with_id(self, type_id):
         c = self.__new__(GeneSpec)
-        c.type_name = type_name
+        c.type_id = type_id
         c.immutable_param_specs = self.immutable_param_specs
         c.mutable_param_specs = self.mutable_param_specs
         return c
 
 
     def __repr__(self):
-        return f"{self.type_name} spec"
+        return f"{self.type_id} spec"
 
 
     def iterate_param_names(self):

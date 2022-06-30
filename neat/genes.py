@@ -15,7 +15,7 @@ class Gene:
 
 
     def get_type(self):
-        return self.spec.type_name
+        return self.spec.type_id
 
 
     def get_params_with_names(self):
@@ -32,7 +32,7 @@ class Gene:
 
     def to_dict(self):
         d = dict(
-            gene_type=self.get_type(),
+            gene_type=str(self.get_type()),
             historical_mark=self.historical_mark,
         )
         d.update(self.get_params_with_names())
