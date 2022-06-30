@@ -72,7 +72,7 @@ connection_spec = GeneSpec(
 
 def produce_new_generation(pipeline, genome_fitness_list):
     for _ in range(len(genome_fitness_list) - elite_num):
-        g = pipeline.produce_new_genome(genome_fitness_list)
+        g = pipeline(genome_fitness_list)
         validate_genome(g, 'invalid genome')
         yield g
 
