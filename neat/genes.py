@@ -152,8 +152,8 @@ class Genome:
         return self._channels
 
 
-    def add_layer(self, spec, neuron_genes):
-        self._layers[spec] = ListWithEmpty(neuron_genes)
+    def add_layer(self, layer, neuron_genes):
+        self._layers[layer] = ListWithEmpty(neuron_genes)
 
 
     def add_channel(self, channel, connection_genes):
@@ -161,6 +161,14 @@ class Genome:
         self._channels[channel] = gs
         for g in gs:
             self._connections_index.add((g.mark_from, g.mark_to))
+
+
+    def num_neurons_in_layer(self, layer):
+        gs = self._layers.get(layer, None)
+        if gs is None:
+            return 0
+        else:
+            return gs.non_empty_count()
 
 
     def calc_channel_capacity(self, channel):
@@ -185,8 +193,8 @@ class Genome:
         return capacity - connections.non_empty_count()
 
 
-    def iterate_layer(self, spec):
-        gs = self._layers.get(spec, None)
+    def iterate_layer(self, layer):
+        gs = self._layers.get(layer, None)
         if gs is None:
             return ()
         else:

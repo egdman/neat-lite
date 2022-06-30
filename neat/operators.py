@@ -104,15 +104,52 @@ class Mutator:
         if self.neuron_factory is None:
             return self.add_random_connection(genome)
 
-        new_neuron_spec, new_neuron_params = self.neuron_factory()
+        new_neuron_layer, new_neuron_params = self.neuron_factory()
 
-        # find channels for this spec:
-        channels = tuple(ch for ch in self._channels if new_neuron_spec in ch)
-        if len(channels) == 0:
-            return self.add_random_connection(genome)
+        up_weights = []
+        up_layers = []
+        up_acc_weight = 0
+        down_weights = []
+        down_layers = []
+        down_acc_weight = 0
 
-        new_n = self.add_neuron(
-            genome, new_neuron_spec, new_neuron_params)
+        for src_l, dst_l in self._channels:
+            if src_l is new_neuron_layer:
+                layer_weight = genome.num_neurons_in_layer(dst_l)
+                down_acc_weight += layer_weight
+                down_weights.append(down_acc_weight)
+                down_layers.append(dst_l)
+
+                if src_l is dst_l:
+                    up_acc_weight += layer_weight
+                    up_weights.append(up_acc_weight)
+                    up_layers.append(src_l)
+
+            elif dst_l is new_neuron_layer:
+                up_acc_weight += genome.num_neurons_in_layer(src_l)
+                up_weights.append(up_acc_weight)
+                up_layers.append(src_l)
+
+        if up_acc_weight > 0:
+            up_layer, = random.choices(up_layers, k=1, cum_weights=up_weights)
+            up_neurons = genome.layers()[up_layer]
+            up_neuron = random.choice(up_neurons)
+            while up_neuron is None:
+                up_neuron = random.choice(up_neurons)
+
+        else:
+            up_neuron = None
+
+        if down_acc_weight > 0:
+            down_layer, = random.choices(down_layers, k=1, cum_weights=down_weights)
+            down_neurons = genome.layers()[down_layer]
+            down_neuron = random.choice(down_neurons)
+            while down_neuron is None:
+                down_neuron = random.choice(down_neurons)
+
+        else:
+            down_neuron = None
+
 
         def _connect(n0, n1, channel):
             new_connection_spec, new_connection_params = self.connection_factory()
@@ -124,34 +161,14 @@ class Mutator:
                 n1.historical_mark,
                 channel)
 
-        channel_weights = []
-        acc_weight = 0
-        for channel in channels:
-            acc_weight += genome.calc_channel_capacity(channel)
-            channel_weights.append(acc_weight)
+        new_neuron = self.add_neuron(
+            genome, new_neuron_layer, new_neuron_params)
 
-        if acc_weight == 0:
-            return False
+        if up_neuron is not None:
+            _connect(up_neuron, new_neuron, (up_layer, new_neuron_layer))
 
-        # TODO: see if can implement weighted random choice more efficiently using bisect
-        channel, = random.choices(channels, k=1, cum_weights=channel_weights)
-        src_type, dst_type = channel
-        src_neurons = genome.layers()[src_type]
-
-        if new_neuron_spec is dst_type or src_type is dst_type:
-            n0 = random.choice(src_neurons)
-            while n0 is None:
-                n0 = random.choice(src_neurons)
-
-            _connect(n0, new_n, channel)
-        else:
-            dst_neurons = genome.layers()[dst_type]
-
-            n1 = random.choice(dst_neurons)
-            while n1 is None:
-                n1 = random.choice(dst_neurons)
-
-            _connect(new_n, n1, channel)
+        if down_neuron is not None:
+            _connect(new_neuron, down_neuron, (new_neuron_layer, down_layer))
 
         return True
 
