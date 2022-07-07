@@ -20,8 +20,8 @@ from nn_impl import FeedForwardBuilder
 
 
 #### CONFIG #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
-generation_size = 20 # number of genomes in each generation across all species
-num_species = 4      # number of species
+generation_size = 48 # number of genomes in each generation across all species
+num_species = 8      # number of species
 elite_num = 1        # how many top performing members of a species will be
                      #   copied unchanged into the next generation
 
@@ -69,6 +69,10 @@ connection_spec = GeneSpec(
     'connection',
     PS('weight', gen.gauss(0, conn_sigma), mut.gauss(conn_sigma)),
 )
+
+
+def copy_with_mutation(pipeline, source_genome):
+    return pipeline.topology_augmentation_step(pipeline.parameters_mutation_step(source_genome.copy()))
 
 
 def produce_new_generation(pipeline, genome_fitness_list):
@@ -140,12 +144,9 @@ class Attempt:
                 n_neurons, n_conns, self.best_fitness))
 
 
-## CREATE INITIAL GENERATION ##
-def copy_with_mutation(pipeline, source_genome):
-    return pipeline.topology_augmentation_step(pipeline.parameters_mutation_step(source_genome.copy()))
 
-## CREATE MUTATOR ##
-
+## DEFINE NETWORK CONNECTIVITY ##
+# feed forward network with 2 hidden layers and a possibility to skip layers
 channels = (
     (input_spec, output_spec),
     (input_spec, hidden_spec),
@@ -155,6 +156,7 @@ channels = (
     (hidden_spec, hidden_spec_1),
 )
 
+# simple feed forward network with 1 hidden layer
 channels = (
     (input_spec, hidden_spec),
     (hidden_spec, output_spec),
@@ -163,6 +165,7 @@ channels = (
 
 nn_builder = FeedForwardBuilder(channels)
 
+## CREATE THE MUTATOR ##
 mutator = Mutator(
     neuron_factory=default_gene_factory(hidden_spec),
     connection_factory=default_gene_factory(connection_spec),
@@ -181,7 +184,6 @@ def make_attempt(num_epochs, gens_per_epoch):
 
     ## CREATE INITIAL GENOME ##
     # we specify initial input and output neurons and protect them from removal
-
     init_genome = mutator.produce_genome(
         in1=neuron(input_spec, non_removable=True),
         in2=neuron(input_spec, non_removable=True),
@@ -192,9 +194,11 @@ def make_attempt(num_epochs, gens_per_epoch):
         )
     )
 
-    current_gen = list(
-        list(copy_with_mutation(pipeline, init_genome) for _ in range(species_size)) \
-        for species_size in species_sizes(generation_size, num_species))
+    ## CREATE THE VERY FIRST GENERATION BY MUTATING THE INITIAL GENOME ##
+    current_gen = [
+        [copy_with_mutation(pipeline, init_genome) for _ in range(species_size)]
+        for species_size in species_sizes(generation_size, num_species)
+    ]
 
     attempt = Attempt()
 
@@ -236,9 +240,9 @@ start_timer = time.perf_counter()
 for attempt_id in range(num_attempts):
     # attempt_id += 100#20400
 
-    # attempt_id+=1000
+    # attempt_id+=30850
 
-    num_epochs = 20
+    num_epochs = 8
     gens_per_epoch = 250
 
     seed(attempt_id)
