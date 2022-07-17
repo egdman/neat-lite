@@ -21,7 +21,7 @@ from nn_impl import FeedForwardBuilder
 
 #### CONFIG #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 generation_size = 48 # number of genomes in each generation across all species
-num_species = 8      # number of species
+num_species = 4      # number of species
 elite_num = 1        # how many top performing members of a species will be
                      #   copied unchanged into the next generation
 
