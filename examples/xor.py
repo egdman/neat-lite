@@ -20,8 +20,8 @@ from nn_impl import FeedForwardBuilder
 
 
 #### CONFIG #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
-generation_size = 48 # number of genomes in each generation across all species
-num_species = 4      # number of species
+generation_size = 12 # number of genomes in each generation across all species
+num_species = 3      # number of species
 elite_num = 1        # how many top performing members of a species will be
                      #   copied unchanged into the next generation
 
@@ -58,7 +58,6 @@ conn_sigma = 10.     # mutation sigma value for connection params
 
 sigmoid_params = (
     PS('bias', gen.uniform(), mut.gauss(neuron_sigma), bounds(-1., 1.)),
-    PS('gain', gen.uniform(), mut.gauss(neuron_sigma), bounds(0., 1.)),
 )
 
 input_spec = GeneSpec('sigmoid-i', *sigmoid_params)
