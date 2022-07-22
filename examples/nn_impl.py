@@ -3,6 +3,11 @@ from functools import partial
 from itertools import chain
 
 try:
+    import numpy as np
+except ImportError:
+    np = None
+
+try:
     import torch
     from torch.nn.functional import linear as torch_linear
 except ImportError:
@@ -11,6 +16,9 @@ except ImportError:
 
 def sigmoid(x, bias):
     return 1. / (1. + math.exp(- x - bias))
+
+def np_sigmoid(x):
+    return 1. / (1. + np.exp(- x))
 
 
 class Node:
@@ -70,9 +78,56 @@ class PytorchSigmoidLayer:
 
             self.value = torch.sigmoid(in_values)
 
+    def get_values_list(self):
+        return self.value.tolist()
+
+
+class NumpySigmoidLayer:
+    def __init__(self, biases):
+        self.biases = biases
+        self.value = np.zeros(self.biases.shape, dtype=np.float64)
+        self.upstream = []
+
+    def add_upstream_layer(self, layer, weight_mtx):
+        self.upstream.append((layer, weight_mtx))
+
+    def update_from_values(self, values):
+        self.value = np_sigmoid(values + self.biases)
+
+    def update(self):
+        if len(self.upstream) == 0:
+            self.value = np_sigmoid(self.biases)
+
+        else:
+            layer, weight_mtx = self.upstream[0]
+            in_values = np.dot(weight_mtx, layer.value) + self.biases
+            for layer, weight_mtx in self.upstream[1:]:
+                in_values += np.dot(weight_mtx, layer.value)
+
+            self.value = np_sigmoid(in_values)
 
     def get_values_list(self):
         return self.value.tolist()
+
+
+class NumpyBuilder:
+    @staticmethod
+    def zeros_f64(shape):
+        return np.zeros(shape, dtype=np.float64)
+
+    @staticmethod
+    def sigmoid_layer(biases):
+        return NumpySigmoidLayer(biases)
+
+
+class PytorchBuilder:
+    @staticmethod
+    def zeros_f64(shape):
+        return torch.zeros(shape, dtype=torch.float64)
+
+    @staticmethod
+    def sigmoid_layer(biases):
+        return PytorchSigmoidLayer(biases)
 
 
 class NN:
@@ -122,7 +177,7 @@ class FeedForwardBuilder:
                 self.compute_order[o.type_id] = idx + 1
 
 
-    def build_pytorch(self, genome):
+    def build_with_tensors(self, genome, tensor_builder):
         stack = [[]]
 
         layers_map = {}
@@ -138,13 +193,13 @@ class FeedForwardBuilder:
                 stack.extend(([] for _ in range(len(stack), stack_idx + 1)))
 
             layer_size = neurons.non_empty_count()
-            layer_biases = torch.zeros((layer_size,), dtype=torch.float64)
+            layer_biases = tensor_builder.zeros_f64((layer_size,))
             for idx, neuron in enumerate(neurons.iter_non_empty()):
                 hmarks_to_ids[neuron.historical_mark] = idx
                 bias, = neuron.params
                 layer_biases[idx] = bias
 
-            layer_impl = PytorchSigmoidLayer(layer_biases)
+            layer_impl = tensor_builder.sigmoid_layer(layer_biases)
             layers_map[layer] = layer_impl
 
             stack[stack_idx].append(layer_impl)
@@ -160,7 +215,7 @@ class FeedForwardBuilder:
             if in_size == 0 or out_size == 0:
                 continue
 
-            weight_mtx = torch.zeros((out_size, in_size), dtype=torch.float64)
+            weight_mtx = tensor_builder.zeros_f64((out_size, in_size))
             for conn in conn_genes.iter_non_empty():
                 src_idx = hmarks_to_ids[conn.mark_from]
                 dst_idx = hmarks_to_ids[conn.mark_to]
@@ -174,11 +229,16 @@ class FeedForwardBuilder:
         return NN(stack)
 
 
-    def __call__(self, genome, use_pytorch=False):
-        if use_pytorch:
+    def __call__(self, genome, use_numpy=False, use_pytorch=False):
+        if use_numpy:
+            if np is None:
+                raise RuntimeError("called with use_numpy=True, but numpy is not installed")
+            return self.build_with_tensors(genome, NumpyBuilder)
+
+        elif use_pytorch:
             if torch is None:
                 raise RuntimeError("called with use_pytorch=True, but PyTorch is not installed")
-            return self.build_pytorch(genome)
+            return self.build_with_tensors(genome, PytorchBuilder)
 
         nodes_map = {}
 
