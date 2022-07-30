@@ -56,12 +56,12 @@ class NodeLayer:
 
 class PytorchSigmoidLayer:
     def __init__(self, biases):
-        self.biases = biases
-        self.value = torch.zeros(self.biases.shape, dtype=torch.float64)
+        self.biases = torch.from_numpy(biases)
+        self.value = torch.from_numpy(np.zeros(self.biases.shape, dtype=np.float64))
         self.upstream = []
 
     def add_upstream_layer(self, layer, weight_mtx):
-        self.upstream.append((layer, weight_mtx))
+        self.upstream.append((layer, torch.from_numpy(weight_mtx)))
 
     def update_from_values(self, values):
         self.value = torch.sigmoid(torch.DoubleTensor(values) + self.biases)
@@ -108,26 +108,6 @@ class NumpySigmoidLayer:
 
     def get_values_list(self):
         return self.value.tolist()
-
-
-class NumpyBuilder:
-    @staticmethod
-    def zeros_f64(shape):
-        return np.zeros(shape, dtype=np.float64)
-
-    @staticmethod
-    def sigmoid_layer(biases):
-        return NumpySigmoidLayer(biases)
-
-
-class PytorchBuilder:
-    @staticmethod
-    def zeros_f64(shape):
-        return torch.zeros(shape, dtype=torch.float64)
-
-    @staticmethod
-    def sigmoid_layer(biases):
-        return PytorchSigmoidLayer(biases)
 
 
 class NN:
@@ -177,7 +157,7 @@ class FeedForwardBuilder:
                 self.compute_order[o.type_id] = idx + 1
 
 
-    def build_with_tensors(self, genome, tensor_builder):
+    def build_with_tensors(self, genome, sigmoid_layer_ctor):
         stack = [[]]
 
         layers_map = {}
@@ -193,13 +173,13 @@ class FeedForwardBuilder:
                 stack.extend(([] for _ in range(len(stack), stack_idx + 1)))
 
             layer_size = neurons.non_empty_count()
-            layer_biases = tensor_builder.zeros_f64((layer_size,))
+            layer_biases = np.zeros((layer_size,), dtype=np.float64)
             for idx, neuron in enumerate(neurons.iter_non_empty()):
                 hmarks_to_ids[neuron.historical_mark] = idx
                 bias, = neuron.params
                 layer_biases[idx] = bias
 
-            layer_impl = tensor_builder.sigmoid_layer(layer_biases)
+            layer_impl = sigmoid_layer_ctor(layer_biases)
             layers_map[layer] = layer_impl
 
             stack[stack_idx].append(layer_impl)
@@ -215,7 +195,7 @@ class FeedForwardBuilder:
             if in_size == 0 or out_size == 0:
                 continue
 
-            weight_mtx = tensor_builder.zeros_f64((out_size, in_size))
+            weight_mtx = np.zeros((out_size, in_size), dtype=np.float64)
             for conn in conn_genes.iter_non_empty():
                 src_idx = hmarks_to_ids[conn.mark_from]
                 dst_idx = hmarks_to_ids[conn.mark_to]
@@ -233,12 +213,12 @@ class FeedForwardBuilder:
         if use_numpy:
             if np is None:
                 raise RuntimeError("called with use_numpy=True, but numpy is not installed")
-            return self.build_with_tensors(genome, NumpyBuilder)
+            return self.build_with_tensors(genome, NumpySigmoidLayer)
 
         elif use_pytorch:
             if torch is None:
                 raise RuntimeError("called with use_pytorch=True, but PyTorch is not installed")
-            return self.build_with_tensors(genome, PytorchBuilder)
+            return self.build_with_tensors(genome, PytorchSigmoidLayer)
 
         nodes_map = {}
 
