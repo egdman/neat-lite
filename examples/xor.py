@@ -89,9 +89,7 @@ def produce_new_generation(pipeline, genome_fitness_list):
 ## INPUT VALUES FOR EVALUATING FITNESS OF THE SOLUTIONS ##
 inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 
-def evaluate(genome):
-    nn = nn_builder(genome)
-
+def evaluate(nn):
     outp0, = nn.compute(inputs[0])
     outp1, = nn.compute(inputs[1])
     outp2, = nn.compute(inputs[2])
@@ -106,7 +104,7 @@ def complexity(species_list):
     c = (sum(1 for _ in ge.connection_genes()) for ge in chain(*species_list))
     return sum(n), sum(c)
 
-
+total_build_time = [0]
 total_eval_time = [0]
 total_neat_time = [0]
 
@@ -122,13 +120,18 @@ class Attempt:
         self.evals_num += count_members(current_gen)
 
         t0 = time.perf_counter()
-        evaluated = [[(genome, evaluate(genome)) for genome in species] for species in current_gen]
+        nets = [[(genome, nn_builder(genome, use_numpy=False)) for genome in species] for species in current_gen]
         t1 = time.perf_counter()
-        total_eval_time[0] += t1 - t0
+
+        evaluated = [[(genome, evaluate(nn)) for genome, nn in species] for species in nets]
+        t2 = time.perf_counter()
 
         next_gen = [list(produce_new_generation(pipeline, species)) for species in evaluated]
-        t2 = time.perf_counter()
-        total_neat_time[0] += t2 - t1
+        t3 = time.perf_counter()
+
+        total_build_time[0] += t1 - t0
+        total_eval_time[0] += t2 - t1
+        total_neat_time[0] += t3 - t2
 
         self.best_genome, self.best_fitness = max(chain(*evaluated), key=itemgetter(1))
         return next_gen
@@ -265,8 +268,9 @@ for attempt_id in range(num_attempts):
 
 total_time = time.perf_counter() - start_timer
 print(f"took {total_time} ticks")
-print(f"total eval time {total_eval_time[0]} ticks")
-print(f"total neat time {total_neat_time[0]} ticks")
+print(f"total build time {total_build_time[0]} ticks")
+print(f"total  eval time {total_eval_time[0]} ticks")
+print(f"total  neat time {total_neat_time[0]} ticks")
 print(f"eval time per 10000 evals: {10000*total_eval_time[0] / total_eval_num} ticks")
 print(f"neat time per 10000 evals: {10000*total_neat_time[0] / total_eval_num} ticks")
 print(f"neat time percentage = {100*total_neat_time[0] / total_time}")
